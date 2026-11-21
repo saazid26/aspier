@@ -1,3 +1,36 @@
 import { Schema, model } from 'mongoose';
-const schema = new Schema({ singleton: { type: String, default: 'main', unique: true, immutable: true }, siteName: { type: String, default: 'ASPIER: Aeronautical, Spatial, Planetary Institute for Environmental Research' }, heroTitle: String, heroSubtitle: String, heroImage: String, missionText: String, founderName: String, founderTitle: String, founderPhoto: String, founderPhotoIsPlaceholder: { type: Boolean, default: false }, founderBio: String, founderDescription: String, founderResearchDomains: { type: [String], default: [] }, founderGoogleScholarId: String, founderGoogleScholarUrl: String, contactEmail: String, contactPhone: String, address: String, bkashNumber: { type: String, default: '01603012448' }, nagadNumber: { type: String, default: '01603012448' }, membershipFee: { type: Number, default: 1000, min: 0 }, paymentInstructions: String, seoTitle: String, seoDescription: String }, { timestamps: true });
+const schema = new Schema({
+  singleton: { type: String, default: 'main', unique: true, immutable: true },
+  siteName: { type: String, default: 'ASPIER: Aeronautical, Spatial, Planetary Institute for Environmental Research' },
+  heroTitle: String,
+  heroSubtitle: String,
+  heroImage: String,
+  missionText: String,
+  founderName: String,
+  founderTitle: String,
+  founderPhoto: String,
+  founderPhotoIsPlaceholder: { type: Boolean, default: false },
+  founderBio: String,
+  founderDescription: String,
+  founderResearchDomains: { type: [String], default: [] },
+  founderGoogleScholarId: String,
+  founderGoogleScholarUrl: String,
+  founderGoogleScholar: String,
+  founderResearchGate: String,
+  founderLinkedin: String,
+  founderOrcid: String,
+  founderTwitter: String,
+  founderGithub: String,
+  founderFacebook: String,
+  founderWebsite: String,
+  contactEmail: String,
+  contactPhone: String,
+  address: String,
+  bkashNumber: { type: String, default: '01603012448' },
+  nagadNumber: { type: String, default: '01603012448' },
+  membershipFee: { type: Number, default: 1000, min: 0 },
+  paymentInstructions: String,
+  seoTitle: String,
+  seoDescription: String
+}, { timestamps: true });
 export default model('Setting', schema);

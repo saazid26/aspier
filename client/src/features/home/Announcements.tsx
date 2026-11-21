@@ -12,6 +12,7 @@ type Announcement = {
   excerpt?: string;
   coverImage?: string;
   category?: string;
+  publishedAt?: string;
 };
 
 export function Announcements() {
@@ -35,25 +36,36 @@ export function Announcements() {
           </Link>
         </div>
         <div className="grid announcement-grid">
-          {data.slice(0, 3).map((item) => (
-            <Link
-              className="card image-card news-card announcement-card"
-              key={item._id}
-              to={item.slug ? `/news/${item.slug}` : '/news'}
-            >
-              <CoverMedia
-                src={item.coverImage}
-                alt={`${item.title} cover`}
-                fallbackLabel={item.category || 'ASPIER announcement'}
-                className="news-card-media announcement-card-media"
-                fallbackClassName="news-cover-placeholder"
-              />
-              <div className="announcement-card-body">
-                <h3>{item.title}</h3>
-                <RichTextContent className="muted" content={item.excerpt || ''} />
-              </div>
-            </Link>
-          ))}
+          {data.slice(0, 3).map((item) => {
+            const targetUrl = `/announcements/${item.slug || item._id}`;
+            return (
+              <Link
+                className="card image-card news-card announcement-card"
+                key={item._id}
+                to={targetUrl}
+              >
+                <CoverMedia
+                  src={item.coverImage}
+                  alt={`${item.title} cover`}
+                  fallbackLabel={item.category || 'ASPIER announcement'}
+                  className="news-card-media announcement-card-media"
+                  fallbackClassName="news-cover-placeholder"
+                />
+                <div className="announcement-card-body">
+                  <div className="announcement-card-content">
+                    {item.category && <span className="announcement-category-tag">{item.category}</span>}
+                    <h3>{item.title}</h3>
+                    <RichTextContent className="muted" content={item.excerpt || ''} />
+                  </div>
+                  <div className="announcement-card-footer">
+                    <span className="button button-secondary button-sm announcement-view-btn">
+                      View Details &rarr;
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

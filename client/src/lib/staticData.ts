@@ -99,7 +99,11 @@ export const staticSupervisors = [
     designation: "Research Supervisor · Environmental Data Science",
     affiliation: "ASPIER Research Network",
     researchInterests: ["Remote Sensing", "Environmental Data", "Research Reproducibility"],
-    bio: "Research supervisor advancing trustworthy geospatial analysis and open environmental data."
+    bio: "Research supervisor advancing trustworthy geospatial analysis and open environmental data.",
+    googleScholar: "https://scholar.google.com/",
+    researchGate: "https://www.researchgate.net/",
+    orcid: "https://orcid.org/",
+    linkedin: "https://www.linkedin.com/"
   },
   {
     _id: "60d0fe4f5311236168a109f2",
@@ -108,7 +112,11 @@ export const staticSupervisors = [
     designation: "Research Supervisor · Atmospheric Physics",
     affiliation: "ASPIER Research Network",
     researchInterests: ["Hydrology", "Climate Variability", "Risk Communication"],
-    bio: "Research supervisor focused on hydrology, atmospheric processes, and transparent climate-risk communication."
+    bio: "Research supervisor focused on hydrology, atmospheric processes, and transparent climate-risk communication.",
+    googleScholar: "https://scholar.google.com/",
+    researchGate: "https://www.researchgate.net/",
+    linkedin: "https://www.linkedin.com/",
+    twitter: "https://x.com/"
   },
   {
     _id: "60d0fe4f5311236168a109f3",
@@ -117,7 +125,10 @@ export const staticSupervisors = [
     designation: "Research Supervisor · Applied Biotechnology",
     affiliation: "ASPIER Research Network",
     researchInterests: ["Environmental Microbiology", "Biotechnology", "Research Ethics"],
-    bio: "Research supervisor covering responsible biotechnology, environmental microbiology, and open laboratory practice."
+    bio: "Research supervisor covering responsible biotechnology, environmental microbiology, and open laboratory practice.",
+    googleScholar: "https://scholar.google.com/",
+    researchGate: "https://www.researchgate.net/",
+    orcid: "https://orcid.org/"
   },
   {
     _id: "60d0fe4f5311236168a109f4",
@@ -126,7 +137,10 @@ export const staticSupervisors = [
     designation: "Research Supervisor · Environmental Governance",
     affiliation: "ASPIER Research Network",
     researchInterests: ["Environmental Policy", "Resource Management", "Public Engagement"],
-    bio: "Research supervisor exploring environmental policy, resource governance, and community-centered research."
+    bio: "Research supervisor exploring environmental policy, resource governance, and community-centered research.",
+    googleScholar: "https://scholar.google.com/",
+    linkedin: "https://www.linkedin.com/",
+    orcid: "https://orcid.org/"
   }
 ];
 
@@ -139,7 +153,10 @@ export const staticScholars = [
     designation: "Young Scholar · Undergraduate",
     affiliation: "ASPIER Research Network",
     researchTopics: ["GIS", "Satellite Imagery", "Python"],
-    bio: "Student researcher exploring satellite-derived land-cover change and responsible geospatial analysis."
+    bio: "Student researcher exploring satellite-derived land-cover change and responsible geospatial analysis.",
+    googleScholar: "https://scholar.google.com/",
+    github: "https://github.com/",
+    linkedin: "https://www.linkedin.com/"
   },
   {
     _id: "60d0fe4f5311236168a10a02",
@@ -149,7 +166,10 @@ export const staticScholars = [
     designation: "Young Scholar · Undergraduate",
     affiliation: "ASPIER Research Network",
     researchTopics: ["UAV Systems", "Embedded Sensors", "Field Safety"],
-    bio: "Student researcher focused on safe UAV survey planning and environmental monitoring."
+    bio: "Student researcher focused on safe UAV survey planning and environmental monitoring.",
+    researchGate: "https://www.researchgate.net/",
+    github: "https://github.com/",
+    linkedin: "https://www.linkedin.com/"
   },
   {
     _id: "60d0fe4f5311236168a10a03",
@@ -159,7 +179,10 @@ export const staticScholars = [
     designation: "Young Scholar · Master’s student",
     affiliation: "ASPIER Research Network",
     researchTopics: ["Hydrology", "Climate Data", "Risk Communication"],
-    bio: "Graduate researcher examining hydrological data quality, seasonal change, and accessible risk information."
+    bio: "Graduate researcher examining hydrological data quality, seasonal change, and accessible risk information.",
+    googleScholar: "https://scholar.google.com/",
+    orcid: "https://orcid.org/",
+    linkedin: "https://www.linkedin.com/"
   },
   {
     _id: "60d0fe4f5311236168a10a04",
@@ -169,7 +192,10 @@ export const staticScholars = [
     designation: "Young Scholar · Master’s student",
     affiliation: "ASPIER Research Network",
     researchTopics: ["Air Quality", "Environmental Chemistry", "Data Visualization"],
-    bio: "Graduate researcher working on transparent environmental monitoring and exposure data."
+    bio: "Graduate researcher working on transparent environmental monitoring and exposure data.",
+    googleScholar: "https://scholar.google.com/",
+    linkedin: "https://www.linkedin.com/",
+    github: "https://github.com/"
   }
 ];
 

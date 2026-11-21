@@ -91,8 +91,17 @@ export function SiteSettings() {
         {fields.founderPhotoIsPlaceholder && <p className="muted">Illustrative avatar placeholder. Replace it with a verified founder portrait.</p>}
       </div>
       {fields.founderPhoto && <Button type="button" variant="danger" onClick={() => update('founderPhoto', '')}>Remove founder picture</Button>}
+      <div className="founder-social-fields-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))',gap:12,margin:'12px 0'}}>
+        <label>ResearchGate URL<Input type="url" placeholder="https://www.researchgate.net/profile/..." value={String(fields.founderResearchGate || '')} onChange={(event) => update('founderResearchGate', event.target.value)}/></label>
+        <label>Google Scholar Profile URL<Input type="url" placeholder="https://scholar.google.com/citations?user=..." value={String(fields.founderGoogleScholar || fields.founderGoogleScholarUrl || '')} onChange={(event) => { update('founderGoogleScholar', event.target.value); update('founderGoogleScholarUrl', event.target.value); }}/></label>
+        <label>LinkedIn URL<Input type="url" placeholder="https://linkedin.com/in/..." value={String(fields.founderLinkedin || '')} onChange={(event) => update('founderLinkedin', event.target.value)}/></label>
+        <label>ORCID URL / ID<Input placeholder="https://orcid.org/0000-..." value={String(fields.founderOrcid || '')} onChange={(event) => update('founderOrcid', event.target.value)}/></label>
+        <label>X (Twitter) URL<Input type="url" placeholder="https://x.com/..." value={String(fields.founderTwitter || '')} onChange={(event) => update('founderTwitter', event.target.value)}/></label>
+        <label>GitHub URL<Input type="url" placeholder="https://github.com/..." value={String(fields.founderGithub || '')} onChange={(event) => update('founderGithub', event.target.value)}/></label>
+        <label>Facebook URL<Input type="url" placeholder="https://facebook.com/..." value={String(fields.founderFacebook || '')} onChange={(event) => update('founderFacebook', event.target.value)}/></label>
+        <label>Website URL<Input type="url" placeholder="https://..." value={String(fields.founderWebsite || '')} onChange={(event) => update('founderWebsite', event.target.value)}/></label>
+      </div>
       <label>Google Scholar ID<Input value={String(fields.founderGoogleScholarId || '')} onChange={(event) => update('founderGoogleScholarId', event.target.value)}/></label>
-      <label>Google Scholar profile URL<Input type="url" value={String(fields.founderGoogleScholarUrl || '')} onChange={(event) => update('founderGoogleScholarUrl', event.target.value)}/></label>
       <label>Founder description / subtitle<Input value={String(fields.founderDescription || '')} onChange={(event) => update('founderDescription', event.target.value)}/></label>
       <label>Founder biography / statement<RichTextEditor value={String(fields.founderBio || '')} onChange={(value) => update('founderBio', value)}/></label>
       <label>Research domains<textarea className="textarea" rows={3} placeholder="Separate domains with commas" value={Array.isArray(fields.founderResearchDomains) ? fields.founderResearchDomains.join(', ') : ''} onChange={(event) => update('founderResearchDomains', event.target.value.split(',').map((item) => item.trim()).filter(Boolean))}/></label>

@@ -19,7 +19,6 @@ export function AcademyLayout(){
     </div>
     <div className={`nav-links ${menuOpen?'nav-links-open':''}`}>
       <Link className="nav-link" to="/" onClick={()=>setMenuOpen(false)}>Home</Link>
-      <Link className="nav-link" to="/academy" onClick={()=>setMenuOpen(false)}>Catalog</Link>
       <Link className="nav-link" to="/register" onClick={()=>setMenuOpen(false)}>Register</Link>
       <Link className="nav-link" to="/student/dashboard" onClick={()=>setMenuOpen(false)}>Student Portal</Link>
     </div>
