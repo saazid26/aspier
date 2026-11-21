@@ -146,7 +146,9 @@ export function Team() {
             </div>
           </div>
           <article className="card founder-card">
-            <ProfileAvatar name={founder.founderName || 'Md Saazid Bin Saif'} photo={founder.founderPhoto} />
+            <div className="founder-avatar-wrap mx-auto md:mx-0 flex justify-center md:justify-start">
+              <ProfileAvatar name={founder.founderName || 'Md Saazid Bin Saif'} photo={founder.founderPhoto} className="profile-photo founder-profile-photo mx-auto md:mx-0" />
+            </div>
             <div className="founder-copy">
               <span className="eyebrow founder-role-badge">Leadership</span>
               <h3>{founder.founderName || 'Md Saazid Bin Saif'}</h3>

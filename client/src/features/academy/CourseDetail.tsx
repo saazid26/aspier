@@ -51,7 +51,7 @@ export function CourseDetail() {
         <Link className="button button-primary" to={`/academy/courses/${id}/payment`}>Enroll & pay</Link>
         {!me && (
           <span className="muted" style={{ fontSize: '0.88rem' }}>
-            New learner? <Link to={`/register?redirect=${encodeURIComponent(`/academy/courses/${id}/payment`)}`} style={{ textDecoration: 'underline' }}>Create account</Link>
+            New learner? <Link to={`/academy/register?redirect=${encodeURIComponent(`/academy/courses/${id}/payment`)}`} style={{ textDecoration: 'underline' }}>Create account</Link>
           </span>
         )}
       </div>

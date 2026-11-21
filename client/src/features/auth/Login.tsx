@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api, getApiErrorMessage } from '../../lib/api';
 import { useCsrf } from '../../hooks/useCsrf';
@@ -12,7 +12,9 @@ import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/brow
 type Role = 'admin' | 'supervisor' | 'youngScholar' | 'learner';
 
 export function Login() {
-  const [role, setRole] = useState<Role>('admin');
+  const location = useLocation();
+  const isAcademy = location.pathname.startsWith('/academy');
+  const [role, setRole] = useState<Role>(() => location.pathname.startsWith('/academy') ? 'learner' : 'admin');
   const [mode, setMode] = useState<'login' | 'activate'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -95,7 +97,12 @@ export function Login() {
         return;
       }
       toast.success('Signed in');
-      const target = redirect || (['admin', 'superadmin'].includes(response.data.data.role) ? '/admin' : '/student/dashboard');
+      const defaultTarget = ['admin', 'superadmin'].includes(response.data.data.role)
+        ? '/admin'
+        : isAcademy
+        ? '/academy/portal'
+        : '/student/dashboard';
+      const target = redirect || defaultTarget;
       navigate(target);
     } catch (error: any) {
       const message = getApiErrorMessage(error, 'Login failed');
@@ -114,7 +121,12 @@ export function Login() {
       const credential = await startAuthentication({ optionsJSON: webAuthnChallenge.options });
       const response = await api.post('/auth/webauthn/login/verify', { challengeToken: webAuthnChallenge.token, response: credential });
       toast.success('Biometric verification complete.');
-      navigate(['admin', 'superadmin'].includes(response.data.data.role) ? '/admin' : '/student/dashboard');
+      const defaultTarget = ['admin', 'superadmin'].includes(response.data.data.role)
+        ? '/admin'
+        : isAcademy
+        ? '/academy/portal'
+        : '/student/dashboard';
+      navigate(redirect || defaultTarget);
     } catch (error: any) {
       const message = getApiErrorMessage(error, 'Biometric verification failed');
       setFormError(message);
@@ -187,8 +199,16 @@ export function Login() {
       {setupComplete && <Button onClick={() => navigate(['admin', 'superadmin'].includes(role) ? '/admin' : '/student/dashboard')}>Continue to ASPIER</Button>}
       {!memberRole && !setupToken && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: '0.88rem' }}>
-          <Link className="muted" to="/forgot">Forgot password?</Link>
-          <Link className="muted" to={redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : '/register'} style={{ textDecoration: 'underline' }}>Create Student Account</Link>
+          <Link className="muted" to={isAcademy ? '/academy/forgot' : '/forgot'}>Forgot password?</Link>
+          <Link
+            className="muted"
+            to={isAcademy
+              ? (redirect ? `/academy/register?redirect=${encodeURIComponent(redirect)}` : '/academy/register')
+              : (redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : '/register')}
+            style={{ textDecoration: 'underline' }}
+          >
+            Create Student Account
+          </Link>
         </div>
       )}
     </main>

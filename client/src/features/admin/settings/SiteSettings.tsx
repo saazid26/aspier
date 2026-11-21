@@ -6,6 +6,7 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { ImageUploader } from '../../../components/forms/ImageUploader';
 import { RichTextEditor } from '../../../components/forms/RichTextEditor';
+import { ChangePasswordSection } from './ChangePasswordSection';
 
 type Settings = Record<string, unknown> & {
   heroImage?: string;
@@ -107,5 +108,6 @@ export function SiteSettings() {
       <label>Research domains<textarea className="textarea" rows={3} placeholder="Separate domains with commas" value={Array.isArray(fields.founderResearchDomains) ? fields.founderResearchDomains.join(', ') : ''} onChange={(event) => update('founderResearchDomains', event.target.value.split(',').map((item) => item.trim()).filter(Boolean))}/></label>
       <Button disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
     </form>}
+    <ChangePasswordSection />
   </>;
 }

@@ -50,10 +50,10 @@ export function EnrollPayment() {
             You need a student account to enroll in courses, submit payments, and access learning materials.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link className="button button-primary" to={`/login?redirect=${encodeURIComponent(returnUrl)}`}>
+            <Link className="button button-primary" to={`/academy/login?redirect=${encodeURIComponent(returnUrl)}`}>
               Sign In
             </Link>
-            <Link className="button button-secondary" to={`/register?redirect=${encodeURIComponent(returnUrl)}`}>
+            <Link className="button button-secondary" to={`/academy/register?redirect=${encodeURIComponent(returnUrl)}`}>
               Create Student Account
             </Link>
           </div>

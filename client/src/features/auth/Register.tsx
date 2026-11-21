@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api, getApiErrorMessage } from '../../lib/api';
 import { Input } from '../../components/ui/Input';
@@ -12,6 +12,8 @@ export function Register() {
   const [formError, setFormError] = useState('');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAcademy = location.pathname.startsWith('/academy');
   const redirect = searchParams.get('redirect');
   const passwordHint = 'Use 8+ characters with uppercase, lowercase, and a number.';
 
@@ -43,7 +45,8 @@ export function Register() {
                 password: form.password
               });
               toast.success('Account created! Please sign in.');
-              const loginTarget = redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login';
+              const defaultLogin = isAcademy ? '/academy/login' : '/login';
+              const loginTarget = redirect ? `${defaultLogin}?redirect=${encodeURIComponent(redirect)}` : defaultLogin;
               navigate(loginTarget);
             } catch (error: any) {
               const msg = getApiErrorMessage(error, 'Registration failed');
@@ -89,7 +92,15 @@ export function Register() {
           <Button disabled={busy}>{busy ? 'Creating account…' : 'Create Student Account'}</Button>
         </form>
         <p className="muted" style={{ marginTop: 16, fontSize: '0.88rem', textAlign: 'center' }}>
-          Already have an account? <Link to={redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'} style={{ textDecoration: 'underline' }}>Sign in here</Link>
+          Already have an account?{' '}
+          <Link
+            to={redirect
+              ? (isAcademy ? `/academy/login?redirect=${encodeURIComponent(redirect)}` : `/login?redirect=${encodeURIComponent(redirect)}`)
+              : (isAcademy ? '/academy/login' : '/login')}
+            style={{ textDecoration: 'underline' }}
+          >
+            Sign in here
+          </Link>
         </p>
       </main>
     </>

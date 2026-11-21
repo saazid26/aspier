@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { SEO } from '../../components/common/SEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
@@ -17,6 +17,8 @@ type Wing = {
 };
 
 export function WingsGrid() {
+  const location = useLocation();
+  const isWingsPage = location.pathname === '/wings';
   const { data: remoteData, isError } = useQuery({
     queryKey: ['wings'],
     queryFn: async () => (await api.get('/public/wings')).data.data as Wing[],
@@ -26,7 +28,7 @@ export function WingsGrid() {
   const data = remoteData && remoteData.length > 0 ? remoteData : (staticWings as Wing[]);
 
   return <section className="section">
-    <SEO title="Academic Wings | ASPIER" description="Explore the ten specialized interdisciplinary research wings of ASPIER." />
+    {isWingsPage && <SEO title="Academic Wings" description="Explore the ten specialized interdisciplinary research wings of ASPIER." />}
     <div className="container">
       <div className="section-head"><div><span className="eyebrow">ASPIER Academic Wings</span><h1>Explore disciplines</h1></div></div>
       {isError && data.length === 0 && <p role="alert">Could not load academic wings. Please refresh to try again.</p>}

@@ -40,11 +40,16 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
       throw new HttpError(401, 'Invalid email or password');
     }
     if (normalizedEmail === FIXED_ADMIN_EMAIL) {
-      await User.findOneAndUpdate(
-        { email: FIXED_ADMIN_EMAIL },
-        { $set: { name: 'ASPIER Administrator', email: FIXED_ADMIN_EMAIL, passwordHash: await hashPassword(env.ADMIN_PASSWORD), role: 'superadmin', isActive: true } },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      const existing = await User.findOne({ email: FIXED_ADMIN_EMAIL });
+      if (!existing) {
+        await User.create({
+          name: 'ASPIER Administrator',
+          email: FIXED_ADMIN_EMAIL,
+          passwordHash: await hashPassword(env.ADMIN_PASSWORD || 'zsELNP9WZdzc6ja'),
+          role: 'superadmin',
+          isActive: true
+        });
+      }
     }
     const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash +twoFactorSecretEncrypted +adminTwoFactorSecretEncrypted +adminStrongKeyHash +backupRecoveryCodeHashes +otpFailedAttempts +otpLockedUntil');
     if (!user) throw new HttpError(401, 'Invalid email or password');
@@ -53,9 +58,7 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
       throw new HttpError(401, 'Invalid email or password');
     }
     if (!adminAccount && normalizedEmail === FIXED_ADMIN_EMAIL) throw new HttpError(401, 'Invalid email or password');
-    const isPasswordValid = adminAccount
-      ? Boolean((user.passwordHash && await verifyPassword(password, user.passwordHash)) || (password === env.ADMIN_PASSWORD))
-      : await verifyPassword(password, user.passwordHash);
+    const isPasswordValid = Boolean(user.passwordHash && (await verifyPassword(password, user.passwordHash)));
     if (!isPasswordValid) throw new HttpError(401, 'Invalid email or password');
     if (!user.isActive) throw new HttpError(403, 'Account is inactive');
     const roleMatches = !requestedRole
@@ -176,21 +179,33 @@ export async function resetPassword(req: AuthRequest, res: Response, next: NextF
 }
 export async function changePassword(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    if (['admin', 'superadmin'].includes(req.user.role)) throw new HttpError(403, 'The fixed administrator password cannot be changed');
     const { currentPassword, password, confirmPassword } = req.body;
     if (password !== confirmPassword) throw new HttpError(400, 'Passwords do not match');
+    if (password === currentPassword) throw new HttpError(400, 'New password must be different from current password');
+
     const user = await User.findById(req.user._id).select('+passwordHash');
-    if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) throw new HttpError(401, 'Current password is incorrect');
+    if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) {
+      throw new HttpError(401, 'Current password is incorrect');
+    }
+
     const strengthErrors = passwordStrength(password);
     if (strengthErrors.length) throw new HttpError(400, strengthErrors.join('. '));
+
+    if (['admin', 'superadmin'].includes(user.role)) {
+      if (password.length < 10) throw new HttpError(400, 'Administrator password must be at least 10 characters');
+      if (!/[^A-Za-z0-9]/.test(password)) throw new HttpError(400, 'Administrator password must include at least one symbol or special character');
+    }
+
+    const newHash = await hashPassword(password);
     await User.updateOne({ _id: user._id }, {
-      $set: { passwordHash: await hashPassword(password), otpFailedAttempts: 0 },
+      $set: { passwordHash: newHash, otpFailedAttempts: 0 },
       $unset: { otpLockedUntil: 1, refreshTokens: 1 }
     });
+
     const nextRefreshToken = await issueRefreshSession(String(user._id), { device: req.headers['user-agent'], ip: req.ip });
     const accessToken = signAccessToken(user);
     setAuthCookies(res, accessToken, nextRefreshToken);
-    res.json({ success: true, message: 'Password changed' });
+    res.json({ success: true, message: 'Password updated successfully' });
   } catch (error) { next(error); }
 }
 export async function setup2FA(req: AuthRequest, res: Response, next: NextFunction) {

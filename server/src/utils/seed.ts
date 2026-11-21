@@ -18,11 +18,16 @@ import { env, FIXED_ADMIN_EMAIL } from '../config/env.js';
 import { demoResearch, demoScholars, demoSupervisors, makeDemoAvatar, makeDemoCover } from './seedData/demoContent.js';
 
 export async function seedDatabase(): Promise<void> {
-  await User.updateOne(
-    { email: FIXED_ADMIN_EMAIL },
-    { $set: { name: 'ASPIER Administrator', passwordHash: await hashPassword(env.ADMIN_PASSWORD), role: 'superadmin', isActive: true } },
-    { upsert: true }
-  );
+  const adminExists = await User.exists({ email: FIXED_ADMIN_EMAIL });
+  if (!adminExists) {
+    await User.create({
+      name: 'ASPIER Administrator',
+      email: FIXED_ADMIN_EMAIL,
+      passwordHash: await hashPassword(env.ADMIN_PASSWORD || 'zsELNP9WZdzc6ja'),
+      role: 'superadmin',
+      isActive: true
+    });
+  }
   if (!await User.exists({ email: 'student@aspier.org' })) {
     await User.create({ name: 'Demo Student', email: 'student@aspier.org', passwordHash: await hashPassword('Student@1234'), role: 'student', isActive: true });
   }
