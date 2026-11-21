@@ -1,0 +1,685 @@
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+import type { NextFunction, Request, Response } from 'express';
+import { z } from 'zod';
+import MembershipApplication from '../models/MembershipApplication.js';
+import Setting from '../models/Setting.js';
+import Supervisor from '../models/Supervisor.js';
+import Scholar from '../models/Scholar.js';
+import Wing from '../models/Wing.js';
+import AuditLog from '../models/AuditLog.js';
+import { HttpError } from '../middleware/error.js';
+import type { AuthRequest } from '../middleware/auth.js';
+import { sha256 } from '../utils/crypto.js';
+import { saveMedia } from '../services/media.service.js';
+import MediaAsset from '../models/MediaAsset.js';
+import { slugify } from '../utils/slug.js';
+import { decrypt, encrypt } from '../utils/crypto.js';
+import User from '../models/User.js';
+import { hashPassword, passwordStrength } from '../services/password.service.js';
+import Notification from '../models/Notification.js';
+import { notifyAdmins, notifyMember } from '../services/notification.service.js';
+import { sendEmail } from '../services/email.service.js';
+import { createTotpQr, createTotpSecret, verifyTotp } from '../services/totp.service.js';
+import { env } from '../config/env.js';
+
+const initialSchema = z.preprocess((value) => {
+  if (!value || typeof value !== 'object') return value;
+  const body = value as Record<string, unknown>;
+  return {
+    ...body,
+    role: body.role ?? (body.category === 'teammate' ? 'supervisor' : body.category),
+    wing: body.wing ?? body.wingInterest
+  };
+}, z.object({
+  name: z.string().trim().min(2).max(120),
+  email: z.string().trim().email().max(254),
+  phone: z.string().trim().min(7).max(30),
+  wing: z.string().trim().min(1).max(160),
+  role: z.enum(['supervisor', 'youngScholar']),
+  statement: z.string().trim().max(3000).optional()
+}));
+
+const profileSchema = z.object({
+  accessCode: z.string().min(20).max(100),
+  name: z.string().trim().min(2).max(120),
+  presentAddress: z.string().trim().min(3).max(500),
+  permanentAddress: z.string().trim().min(3).max(500),
+  designation: z.string().trim().min(2).max(160),
+  institution: z.string().trim().min(2).max(200),
+  educationalBackground: z.string().trim().min(2).max(3000),
+  googleScholar: z.string().trim().max(500).optional().default(''),
+  researchGate: z.string().trim().max(500).optional().default(''),
+  orcid: z.string().trim().max(200).optional().default(''),
+  linkedin: z.string().trim().max(500).optional().default(''),
+  bio: z.string().trim().min(20).max(5000),
+  researchDomains: z.array(z.string().trim().min(1).max(100)).min(1).max(20),
+  photo: z.string().trim().min(1).max(1000),
+  paymentMethod: z.enum(['bKash', 'Nagad']).optional(),
+  trxId: z.string().trim().min(3).max(80).optional()
+});
+const paymentSchema = z.object({
+  accessCode: z.string().min(20).max(100),
+  paymentMethod: z.enum(['bKash', 'Nagad']),
+  trxId: z.string().trim().min(3).max(80)
+});
+
+function parseBody<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) throw new HttpError(400, parsed.error.issues.map((issue) => issue.message).join('. '));
+  return parsed.data;
+}
+
+async function findWithCode(id: string, accessCode: string) {
+  const application = await MembershipApplication.findOne({
+    $or: [
+      ...( /^[a-f\d]{24}$/i.test(id) ? [{ _id: id }] : []),
+      { publicApplicationId: id.toUpperCase() }
+    ]
+  }).select('+accessCodeHash +activationCodeEncrypted');
+  if (!application) throw new HttpError(404, 'Application not found or access code is invalid');
+  if (application.signupFlow) throw new HttpError(401, 'Sign-up applications must use application ID, access code, and authenticator verification');
+  const expected = Buffer.from(application.accessCodeHash, 'hex');
+  const supplied = Buffer.from(sha256(accessCode), 'hex');
+  if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) throw new HttpError(404, 'Application not found or access code is invalid');
+  return application;
+}
+
+const applicantSignupSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  email: z.string().trim().email().max(254),
+  phone: z.string().trim().min(7).max(30),
+  password: z.string().min(8).max(128),
+  role: z.enum(['supervisor', 'youngScholar']),
+  wing: z.string().trim().min(1).max(160),
+  institution: z.string().trim().min(2).max(200),
+  academicStatus: z.string().trim().min(2).max(120)
+});
+
+export async function submitApplicantSignup(req: Request, res: Response, next: NextFunction) {
+  try {
+    const data = parseBody(applicantSignupSchema, req.body);
+    const passwordErrors = passwordStrength(data.password);
+    if (passwordErrors.length) throw new HttpError(400, passwordErrors.join('. '));
+    const email = data.email.toLowerCase();
+    if (await MembershipApplication.exists({ email, signupFlow: true, status: { $ne: 'rejected' } })) {
+      throw new HttpError(409, 'A sign-up request for this email is already in review or approved');
+    }
+    const application = await MembershipApplication.create({
+      name: data.name,
+      email,
+      phone: data.phone,
+      institution: data.institution,
+      academicStatus: data.academicStatus,
+      wing: data.wing,
+      wingInterest: data.wing,
+      category: data.role,
+      role: data.role,
+      signupFlow: true,
+      signupPasswordHash: await hashPassword(data.password),
+      accessCodeHash: sha256(randomBytes(24).toString('base64url')),
+      status: 'signup_pending'
+    });
+    await notifyAdmins({
+      title: 'New applicant sign-up',
+      body: `${application.name} registered as ${application.role === 'youngScholar' ? 'Young Scholar' : 'Supervisor'} for ${application.wingInterest}.`,
+      category: 'applicant-signup',
+      link: '/admin/membership-applications'
+    });
+    res.status(201).json({ success: true, data: { status: application.status, createdAt: application.createdAt } });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function applicantLoginWithTwoFactor(req: Request, res: Response, next: NextFunction) {
+  try {
+    const data = parseBody(z.object({
+      applicationId: z.string().trim().min(1).max(80),
+      accessCode: z.string().trim().min(8).max(160),
+      totpCode: z.string().trim().regex(/^\d{6}$/).optional()
+    }), req.body);
+    const application = await MembershipApplication.findOne({ publicApplicationId: data.applicationId.toUpperCase(), signupFlow: true })
+      .select('+accessCodeHash +twoFactorSecretEncrypted');
+    if (!application || application.status !== 'signup_approved') throw new HttpError(401, 'Application ID or private access code is invalid');
+    const expected = Buffer.from(application.accessCodeHash, 'hex');
+    const supplied = Buffer.from(sha256(data.accessCode), 'hex');
+    if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) throw new HttpError(401, 'Application ID or private access code is invalid');
+    if (application.twoFactorLockedUntil && application.twoFactorLockedUntil > new Date()) {
+      throw new HttpError(429, 'Too many authenticator attempts. Try again later.');
+    }
+
+    if (!application.twoFactorEnabled) {
+      if (!application.twoFactorSecretEncrypted) {
+        const setup = await createTotpSecret(application.email);
+        application.twoFactorSecretEncrypted = setup.secretEncrypted;
+        await application.save();
+        return res.json({ success: true, data: { requiresSetup: true, qrDataUrl: setup.qrDataUrl, manualKey: setup.secret } });
+      }
+      if (!data.totpCode) {
+        const manualKey = decrypt(application.twoFactorSecretEncrypted);
+        const qrDataUrl = await createTotpQr(application.email, manualKey);
+        return res.json({ success: true, data: { requiresSetup: true, qrDataUrl, manualKey } });
+      }
+      if (!verifyTotp(data.totpCode, application.twoFactorSecretEncrypted)) {
+        application.twoFactorFailedAttempts += 1;
+        const locked = application.twoFactorFailedAttempts >= 5;
+        if (locked) {
+          application.twoFactorFailedAttempts = 0;
+          application.twoFactorLockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+        } else application.twoFactorLockedUntil = undefined;
+        await application.save();
+        throw new HttpError(locked ? 429 : 401, locked ? 'Too many authenticator attempts. Try again later.' : 'Invalid authenticator code');
+      }
+      application.twoFactorEnabled = true;
+      application.twoFactorFailedAttempts = 0;
+      application.twoFactorLockedUntil = undefined;
+      await application.save();
+    } else {
+      if (!data.totpCode) return res.json({ success: true, data: { requiresOtp: true } });
+      if (!verifyTotp(data.totpCode, application.twoFactorSecretEncrypted || '')) {
+        application.twoFactorFailedAttempts += 1;
+        const locked = application.twoFactorFailedAttempts >= 5;
+        if (locked) {
+          application.twoFactorFailedAttempts = 0;
+          application.twoFactorLockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+        } else application.twoFactorLockedUntil = undefined;
+        await application.save();
+        throw new HttpError(locked ? 429 : 401, locked ? 'Too many authenticator attempts. Try again later.' : 'Invalid authenticator code');
+      }
+      application.twoFactorFailedAttempts = 0;
+      application.twoFactorLockedUntil = undefined;
+      await application.save();
+    }
+
+    const notifications = await Notification.find({ applicationId: application._id, audience: 'member' })
+      .sort({ createdAt: -1 }).lean();
+    res.json({
+      success: true,
+      data: {
+        authenticated: true,
+        applicationId: application.publicApplicationId,
+        name: application.name,
+        email: application.email,
+        role: application.role,
+        wing: application.wingInterest,
+        status: application.status,
+        notifications
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function submitInitialApplication(req: Request, res: Response, next: NextFunction) {
+  try {
+    const data = parseBody(initialSchema, req.body);
+    const accessCode = randomBytes(24).toString('base64url');
+    const application = await MembershipApplication.create({
+      ...data,
+      email: data.email.toLowerCase(),
+      category: data.role,
+      role: data.role,
+      wing: data.wing,
+      wingInterest: data.wing,
+      accessCodeHash: sha256(accessCode)
+    });
+    await notifyAdmins({
+      title: 'New membership application',
+      body: `${application.name} applied as ${application.role === 'youngScholar' ? 'Young Scholar' : 'Supervisor'} for ${application.wingInterest}.`,
+      category: 'initial-application',
+      link: '/admin/membership-applications'
+    });
+    res.status(201).json({
+      success: true,
+      data: { applicationId: application.id, accessCode, name: application.name, status: application.status }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function membershipPortal(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { applicationId, accessCode } = parseBody(z.object({
+      applicationId: z.string().min(1),
+      accessCode: z.string().min(20).max(100)
+    }), req.body);
+    const application = await findWithCode(applicationId, accessCode);
+    const notifications = (await Notification.find({ applicationId: application._id, audience: 'member' }).select('+secretPayloadEncrypted').sort({ createdAt: -1 }).lean()).map(({ secretPayloadEncrypted, ...notice }) => ({
+      ...notice,
+      ...(secretPayloadEncrypted && !application.activationCodeUsedAt ? { activationCode: decrypt(secretPayloadEncrypted) } : {})
+    }));
+    const activationCode = application.activationCodeEncrypted && !application.activationCodeUsedAt
+      ? decrypt(application.activationCodeEncrypted)
+      : undefined;
+    const settings = await Setting.findOne({ singleton: 'main' });
+    const paymentAvailable = application.role === 'youngScholar'
+      && ['membership_pending', 'payment_pending', 'verification_pending'].includes(application.status);
+    res.json({
+      success: true,
+      data: {
+        applicationId: application.id,
+        name: application.name,
+        email: application.email,
+        category: application.category,
+        role: application.role || (application.category === 'teammate' ? 'supervisor' : application.category),
+        wing: application.wing || application.wingInterest,
+        wingInterest: application.wingInterest,
+        status: application.status,
+        ...(paymentAvailable ? {
+          membershipFee: 1000,
+          bkashNumber: application.paymentBkashNumber || settings?.bkashNumber || '01603012448',
+          nagadNumber: application.paymentNagadNumber || settings?.nagadNumber || '01603012448',
+          paymentInstructions: application.paymentInstructions || settings?.paymentInstructions || ''
+        } : {})
+        ,activationCode,
+        notifications
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function requestMembershipAccessCode(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { applicationId, email } = parseBody(z.object({
+      applicationId: z.string().regex(/^[a-f\d]{24}$/i),
+      email: z.string().trim().email().max(254)
+    }), req.body);
+    const application = await MembershipApplication.findOne({ _id: applicationId, email: email.toLowerCase() });
+    if (application) {
+      const accessCode = randomBytes(24).toString('base64url');
+      await MembershipApplication.updateOne({ _id: application._id }, { $set: { accessCodeHash: sha256(accessCode) } });
+      await notifyAdmins({
+        title: 'Applicant access code reset',
+        body: `Applicant ${application.name} (${application.email}) requested access recovery. New private access code: ${accessCode}`,
+        category: 'applicant-access-code',
+        link: '/admin/membership-applications'
+      });
+    }
+    res.json({ success: true, message: 'If the application details match, the access recovery request is available to an administrator.' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadMembershipPhoto(req: Request, res: Response, next: NextFunction) {
+  try {
+    const accessCode = req.header('x-application-code') || '';
+    const application = await findWithCode(String(req.params.id || ''), accessCode);
+    if (application.status !== 'membership_pending') throw new HttpError(409, 'Profile photo upload is available after initial approval');
+    if (!req.file) throw new HttpError(400, 'A profile image is required');
+    const media = await saveMedia(req.file, undefined, application.id);
+    res.status(201).json({ success: true, data: { url: media.url } });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function submitMembershipProfile(req: Request, res: Response, next: NextFunction) {
+  try {
+    const data = parseBody(profileSchema, req.body);
+    const application = await findWithCode(String(req.params.id || ''), data.accessCode);
+    if (application.status !== 'membership_pending') throw new HttpError(409, 'This application is not accepting a membership profile');
+    const isYoungScholar = application.role === 'youngScholar';
+    if (isYoungScholar) {
+      if (!data.paymentMethod || !data.trxId) throw new HttpError(400, 'Young Scholar Stage 2 requires payment method and TrxID');
+      if (await MembershipApplication.exists({ trxId: data.trxId, _id: { $ne: application._id } })) throw new HttpError(409, 'This transaction ID has already been submitted');
+    }
+    if (!await MediaAsset.exists({ url: data.photo, membershipApplicationId: application._id })) throw new HttpError(400, 'Upload your profile picture using the application photo field');
+    application.set({
+      name: data.name,
+      presentAddress: data.presentAddress,
+      permanentAddress: data.permanentAddress,
+      designation: data.designation,
+      institution: data.institution,
+      educationalBackground: data.educationalBackground,
+      googleScholar: data.googleScholar,
+      researchGate: data.researchGate,
+      orcid: data.orcid,
+      linkedin: data.linkedin,
+      bio: data.bio,
+      researchDomains: data.researchDomains,
+      photo: data.photo,
+      ...(isYoungScholar ? { paymentMethod: data.paymentMethod, trxId: data.trxId, membershipFee: 1000, status: 'verification_pending' } : { status: 'final_pending' })
+    });
+    await application.save();
+    await notifyAdmins({
+      title: isYoungScholar ? 'Young Scholar profile and payment submitted' : 'Supervisor profile submitted',
+      body: isYoungScholar
+        ? `${application.name} submitted a Young Scholar profile with ${data.paymentMethod} TrxID ${data.trxId} for verification.`
+        : `${application.name} submitted a Supervisor academic profile for review.`,
+      category: isYoungScholar ? 'payment-verification' : 'final-application',
+      link: '/admin/membership-applications'
+    });
+    await notifyMember({
+      applicationId: application._id,
+      title: isYoungScholar ? 'Stage 2 profile and payment received' : 'Supervisor profile received',
+      body: isYoungScholar
+        ? 'Your academic profile and BDT 1,000 payment TrxID have been submitted for verification.'
+        : 'Your academic profile has been submitted for review. Supervisor membership is fee-free.',
+      category: isYoungScholar ? 'payment-verification-received' : 'final-application-received',
+      link: '/join/portal'
+    });
+    res.status(201).json({ success: true, data: { applicationId: application.id, status: application.status } });
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 11000) next(new HttpError(409, 'This transaction ID has already been submitted'));
+    else next(error);
+  }
+}
+
+export async function submitMembershipPayment(req: Request, res: Response, next: NextFunction) {
+  try {
+    const data = parseBody(paymentSchema, req.body);
+    const application = await findWithCode(String(req.params.id || ''), data.accessCode);
+    if (application.role !== 'youngScholar') throw new HttpError(403, 'Supervisor membership is free and does not accept payment');
+    if (application.status !== 'payment_pending') throw new HttpError(409, 'Payment submission is available after final application acceptance');
+    if (await MembershipApplication.exists({ trxId: data.trxId, _id: { $ne: application._id } })) throw new HttpError(409, 'This transaction ID has already been submitted');
+    application.paymentMethod = data.paymentMethod;
+    application.trxId = data.trxId;
+    application.membershipFee = 1000;
+    application.status = 'verification_pending';
+    await application.save();
+    await notifyAdmins({
+      title: 'Membership payment submitted for verification',
+      body: `${application.name} submitted a ${data.paymentMethod} TrxID for verification.`,
+      category: 'payment-verification',
+      link: '/admin/membership-applications'
+    });
+    res.status(201).json({ success: true, data: { applicationId: application.id, status: application.status } });
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 11000) next(new HttpError(409, 'This transaction ID has already been submitted'));
+    else next(error);
+  }
+}
+
+export async function adminMembershipApplications(req: AuthRequest, res: Response) {
+  const status = req.query.status;
+  const filter = typeof status === 'string' ? { status } : {};
+  const applications = await MembershipApplication.find(filter).sort({ createdAt: -1 }).lean();
+  res.json({ success: true, data: applications });
+}
+
+export async function approveApplicantSignup(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { applicationId, accessCode } = parseBody(z.object({
+      applicationId: z.string().trim().regex(/^ASPIER-\d{4}-[A-Z0-9]{4,10}$/i),
+      accessCode: z.string().trim().min(16).max(160)
+    }), req.body);
+    const application = await MembershipApplication.findOne({ _id: req.params.id, signupFlow: true, status: 'signup_pending' });
+    if (!application) throw new HttpError(404, 'Pending applicant sign-up not found');
+    const assignedId = applicationId.toUpperCase();
+    if (await MembershipApplication.exists({ publicApplicationId: assignedId, _id: { $ne: application._id } })) {
+      throw new HttpError(409, 'That Application ID is already assigned');
+    }
+    application.publicApplicationId = assignedId;
+    application.accessCodeHash = sha256(accessCode);
+    application.status = 'signup_approved';
+    application.reviewedBy = req.user._id;
+    application.reviewedAt = new Date();
+    await application.save();
+
+    const loginUrl = new URL('/join/portal', env.CLIENT_URL).toString();
+    await notifyAdmins({
+      title: 'Applicant credentials ready to share',
+      body: `${application.name} (${application.email}) was approved. Application ID: ${assignedId}; Private Access Code: ${accessCode}; Applicant portal: ${loginUrl}`,
+      category: 'applicant-credentials',
+      link: '/admin/membership-applications'
+    });
+    await notifyMember({
+      applicationId: application._id,
+      title: 'Applicant registration approved',
+      body: `Your registration has been approved. Your Application ID and private access code are available in the Admin UI; contact ASPIER to receive them securely.`,
+      category: 'applicant-signup-approved',
+      link: '/join/portal'
+    });
+    await sendEmail({
+      to: application.email,
+      subject: 'ASPIER Applicant Registration Approved',
+      html: `<p>Hello ${application.name},</p><p>Your ASPIER fellowship/membership applicant registration has been approved.</p><p><strong>Application ID:</strong> ${assignedId}<br/><strong>Private Access Code:</strong> ${accessCode}</p><p>You can access your portal here: <a href="${loginUrl}">${loginUrl}</a></p>`
+    });
+    await AuditLog.create({ actorId: req.user._id, action: 'approve-applicant-signup', resource: 'MembershipApplication', resourceId: application.id, ip: req.ip, userAgent: req.headers['user-agent'] });
+    res.json({
+      success: true,
+      data: {
+        applicationId: assignedId,
+        accessCode,
+        email: application.email,
+        loginUrl,
+        confirmation: `Applicant approved. Application ID: ${assignedId}; Private Access Code: ${accessCode}; Applicant portal: ${loginUrl}`
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function approveInitialApplication(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const application = await MembershipApplication.findById(req.params.id);
+    if (!application) throw new HttpError(404, 'Application not found');
+    if (application.status !== 'initial_pending') throw new HttpError(409, 'Application is not awaiting initial review');
+    const settings = await Setting.findOne({ singleton: 'main' });
+    application.status = 'membership_pending';
+    if (application.role === 'youngScholar') {
+      application.membershipFee = 1000;
+      application.paymentBkashNumber = settings?.bkashNumber || '01603012448';
+      application.paymentNagadNumber = settings?.nagadNumber || '01603012448';
+      application.paymentInstructions = settings?.paymentInstructions || '';
+    } else {
+      application.membershipFee = undefined;
+      application.paymentBkashNumber = undefined;
+      application.paymentNagadNumber = undefined;
+      application.paymentInstructions = undefined;
+    }
+    application.reviewedBy = req.user._id;
+    application.reviewedAt = new Date();
+    await application.save();
+    const body = application.role === 'youngScholar'
+      ? `Congratulations ${application.name}, your Young Scholar Stage 1 application for ${application.wingInterest} is approved. Complete Stage 2 with your academic profile and BDT 1,000 payment via bKash or Nagad. Numbers: ${application.paymentBkashNumber}. ${application.paymentInstructions || 'Enter the TrxID and upload your profile in the applicant portal.'}`
+      : `Congratulations ${application.name}, your Supervisor application for ${application.wingInterest} is approved. Supervisor membership is free; complete Stage 2 by submitting your academic profile and photo in the applicant portal.`;
+    await notifyMember({
+      applicationId: application._id,
+      title: 'Your ASPIER application is approved',
+      body,
+      category: 'initial-approval',
+      link: '/join/portal'
+    });
+    await sendEmail({
+      to: application.email,
+      subject: 'Your ASPIER Application Has Been Approved',
+      html: `<p>Hello ${application.name},</p><p>${body}</p><p>Log in to your applicant portal using your Application ID and Access Code to proceed.</p>`
+    });
+    await AuditLog.create({ actorId: req.user._id, action: 'approve-membership-application', resource: 'MembershipApplication', resourceId: application.id, ip: req.ip, userAgent: req.headers['user-agent'] });
+    res.json({ success: true, data: { applicationId: application.id, status: application.status } });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function publishMembershipApplication(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const applicationId = String(req.params.id || '');
+    const candidate = await MembershipApplication.findById(applicationId);
+    if (!candidate) throw new HttpError(404, 'Application not found');
+    const isSupervisor = candidate.role === 'supervisor' || candidate.category === 'teammate';
+    const requiredStatus = isSupervisor ? 'final_pending' : 'verification_pending';
+    if (!isSupervisor && (!candidate.paymentMethod || !candidate.trxId || candidate.membershipFee !== 1000)) {
+      throw new HttpError(409, 'Young Scholar profile and BDT 1,000 payment must be submitted before approval');
+    }
+    const application = await MembershipApplication.findOneAndUpdate(
+      { _id: applicationId, status: requiredStatus },
+      { $set: { status: 'publishing', reviewedBy: req.user._id, reviewedAt: new Date() } },
+      { new: true }
+    );
+    if (!application) {
+      throw new HttpError(409, 'Application is not awaiting profile and payment review');
+    }
+    const activationCode = randomBytes(18).toString('base64url');
+    application.activationCodeHash = sha256(activationCode);
+    application.activationCodeEncrypted = encrypt(activationCode);
+    const slug = `${slugify(application.name) || 'aspier-member'}-${application.id.slice(-6)}`;
+    const wing = await Wing.findOne({ $or: [{ slug: application.wingInterest }, { name: application.wingInterest }] });
+    let profileId: typeof application._id | undefined;
+    try {
+      if (isSupervisor) {
+        const profile = await Supervisor.create({
+          name: application.name,
+          slug,
+          designation: application.designation,
+          affiliation: application.institution,
+          wingIds: wing ? [wing._id] : [],
+          bio: application.bio,
+          photo: application.photo,
+          email: application.email,
+          presentAddress: application.presentAddress,
+          permanentAddress: application.permanentAddress,
+          educationalBackground: application.educationalBackground,
+          googleScholar: application.googleScholar,
+          researchGate: application.researchGate,
+          orcid: application.orcid,
+          linkedin: application.linkedin,
+          researchInterests: application.researchDomains,
+          socialLinks: { linkedin: application.linkedin }
+        });
+        profileId = profile._id;
+        application.publishedProfileType = 'supervisor';
+      } else {
+        const profile = await Scholar.create({
+          name: application.name,
+          slug,
+          cohort: String(new Date().getFullYear()),
+          wingId: wing?._id,
+          bio: application.bio,
+          photo: application.photo,
+          presentAddress: application.presentAddress,
+          permanentAddress: application.permanentAddress,
+          designation: application.designation,
+          affiliation: application.institution,
+          educationalBackground: application.educationalBackground,
+          googleScholar: application.googleScholar,
+          researchGate: application.researchGate,
+          orcid: application.orcid,
+          linkedin: application.linkedin,
+          researchTopics: application.researchDomains,
+          socialLinks: { linkedin: application.linkedin }
+        });
+        profileId = profile._id;
+        application.publishedProfileType = 'scholar';
+      }
+
+      application.status = 'published';
+      application.publishedProfileId = profileId;
+      application.reviewedBy = req.user._id;
+      application.reviewedAt = new Date();
+      await application.save();
+    } catch (error) {
+      if (profileId) {
+        if (isSupervisor) await Supervisor.deleteOne({ _id: profileId });
+        else await Scholar.deleteOne({ _id: profileId });
+      }
+      await MembershipApplication.updateOne(
+        { _id: application._id, status: 'publishing' },
+        { $set: { status: requiredStatus }, $unset: { reviewedBy: 1, reviewedAt: 1 } }
+      );
+      throw error;
+    }
+    await AuditLog.create({ actorId: req.user._id, action: 'publish-membership-application', resource: 'MembershipApplication', resourceId: application.id, ip: req.ip, userAgent: req.headers['user-agent'] });
+    if (application.memberUserId) await User.updateOne({ _id: application.memberUserId }, { $set: { isActive: true } });
+    const publishMsg = isSupervisor
+      ? `Your Supervisor profile is published. Your membership has no fee. Use this one-time Secret Activation Code to register your account: ${activationCode}`
+      : `Your BDT 1,000 payment has been verified and your Young Scholar profile published. Use this one-time Secret Activation Code to register your account: ${activationCode}`;
+    await notifyMember({
+      applicationId: application._id,
+      ...(application.memberUserId ? { userId: application.memberUserId } : {}),
+      title: 'Your ASPIER membership is active',
+      body: publishMsg,
+      category: 'membership-published',
+      link: '/login',
+      secretPayload: activationCode
+    });
+    await sendEmail({
+      to: application.email,
+      subject: 'Your ASPIER Membership is Now Active!',
+      html: `<p>Hello ${application.name},</p><p>${publishMsg}</p><p><strong>Secret Activation Code:</strong></p><p style="font-family: monospace; font-size: 18px; font-weight: bold; background: #f3f4f6; padding: 12px; border-radius: 6px;">${activationCode}</p><p>Visit <a href="${env.CLIENT_URL}/login">${env.CLIENT_URL}/login</a> and use your activation code to finish setting up your account.</p>`
+    });
+    res.json({ success: true, data: { applicationId: application.id, status: application.status, profileId, profileType: application.publishedProfileType } });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function activateMemberAccount(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = parseBody(z.object({
+        role: z.enum(['supervisor', 'youngScholar']),
+        activationCode: z.string().min(12).max(100),
+        email: z.string().trim().email().max(254).refine((email) => email.toLowerCase().endsWith('@gmail.com'), 'Use a Gmail address ending in @gmail.com'),
+        password: z.string().min(8).max(128),
+        confirmPassword: z.string().min(8).max(128)
+      }).refine((body) => body.password === body.confirmPassword, { message: 'Passwords do not match' }), req.body);
+      const passwordErrors = passwordStrength(data.password);
+      if (passwordErrors.length) throw new HttpError(400, passwordErrors.join('. '));
+      const application = await MembershipApplication.findOne({
+        activationCodeHash: sha256(data.activationCode),
+        activationCodeUsedAt: { $exists: false },
+        status: 'published',
+        role: data.role
+      });
+      if (!application) throw new HttpError(400, 'Secret activation code is invalid, already used, or does not match the selected role');
+      const email = data.email.toLowerCase();
+      if (await User.exists({ email })) throw new HttpError(409, 'This Gmail address already has an account');
+      const claim = await MembershipApplication.findOneAndUpdate(
+        { _id: application._id, activationCodeHash: sha256(data.activationCode), activationCodeUsedAt: { $exists: false } },
+        { $set: { activationCodeUsedAt: new Date() } },
+        { new: true }
+      );
+      if (!claim) throw new HttpError(409, 'Secret activation code has already been used');
+      let createdUserId: string | undefined;
+      try {
+        const user = await User.create({
+          name: application.name,
+          email,
+          passwordHash: await hashPassword(data.password),
+          role: data.role,
+          isActive: true
+        });
+        createdUserId = String(user._id);
+        application.memberUserId = user._id;
+        await application.save();
+        await Notification.updateMany({ applicationId: application._id, audience: 'member' }, { $set: { userId: user._id } });
+        res.status(201).json({ success: true, data: { id: user.id, name: user.name, email: user.email, role: user.role } });
+      } catch (error) {
+        if (createdUserId) await User.deleteOne({ _id: createdUserId });
+        await MembershipApplication.updateOne({ _id: application._id, activationCodeUsedAt: claim.activationCodeUsedAt }, { $unset: { activationCodeUsedAt: 1 } });
+        throw error;
+      }
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 11000) next(new HttpError(409, 'This Gmail address already has an account'));
+      else next(error);
+    }
+  }
+
+export async function markMembershipNotificationRead(req: Request, res: Response, next: NextFunction) {
+    try {
+      const accessCode = String(req.body.accessCode || '');
+      const application = await findWithCode(String(req.params.id || ''), accessCode);
+      await Notification.updateOne({ _id: req.params.notificationId, applicationId: application._id, audience: 'member' }, { $set: { readAt: new Date() } });
+      res.json({ success: true });
+    } catch (error) {
+      next(error);
+  }
+}
+
+export async function deleteMembershipApplication(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const application = await MembershipApplication.findByIdAndDelete(req.params.id);
+    if (!application) throw new HttpError(404, 'Application not found');
+    await AuditLog.create({ actorId: req.user._id, action: 'delete-membership-application', resource: 'MembershipApplication', resourceId: application.id, ip: req.ip, userAgent: req.headers['user-agent'] });
+    res.json({ success: true, message: 'Application deleted' });
+  } catch (error) {
+    next(error);
+  }
+}

@@ -1,0 +1,3 @@
+import { Link, Outlet } from 'react-router-dom';
+import { NotificationBell } from '../../components/common/NotificationBell';
+export function StudentLayout(){return <div className="member-layout"><header className="member-header"><Link to="/student/dashboard">Member Portal</Link><NotificationBell audience="member"/></header><div className="layout"><aside className="sidebar"><Link to="/student/dashboard">Dashboard</Link><Link to="/student/courses">My Courses</Link><Link to="/student/payments">Payments</Link><Link to="/student/profile">Profile</Link><Link to="/student/security">Security settings</Link></aside><main className="content"><Outlet/></main></div></div>}

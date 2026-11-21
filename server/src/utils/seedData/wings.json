@@ -1,0 +1,102 @@
+[
+  {
+    "name": "Wings of Aeronautical Engineering & UAV Systems",
+    "slug": "aeronautical-engineering-uav-systems",
+    "shortDescription": "Design, build, and study aircraft and unmanned aerial systems.",
+    "description": "Interdisciplinary research in aircraft design, flight systems, autonomous platforms, and responsible UAV applications.",
+    "disciplines": ["Aerospace Engineering", "Mechanical Engineering", "Robotics", "Electrical Engineering"],
+    "objectives": ["Advance accessible aeronautical research", "Develop safe and reliable UAV systems", "Connect engineering research to environmental monitoring"],
+    "order": 1,
+    "isActive": true
+  },
+  {
+    "name": "Wings of Planetary Science & Astrobiology",
+    "slug": "planetary-science-astrobiology",
+    "shortDescription": "Investigate planets, planetary materials, and the origins of life.",
+    "description": "Research spanning planetary geology, astrophysics, theoretical models, and the conditions that support life.",
+    "disciplines": ["Astrophysics", "Planetary Geology", "Theoretical Physics", "Mathematics"],
+    "objectives": ["Study planetary formation and evolution", "Develop quantitative models of planetary environments", "Explore astrobiological questions through interdisciplinary research"],
+    "order": 2,
+    "isActive": true
+  },
+  {
+    "name": "Wings of Hydrology & Atmospheric Physics",
+    "slug": "hydrology-atmospheric-physics",
+    "shortDescription": "Understand water systems and the physics of the atmosphere.",
+    "description": "Integrated observation and modeling of weather, water, oceans, and water-resource engineering.",
+    "disciplines": ["Meteorology", "Hydrology", "Oceanography", "Civil Engineering (Water Resources)"],
+    "objectives": ["Improve understanding of coupled water and atmospheric systems", "Support flood and drought risk assessment", "Inform resilient water-resource planning"],
+    "order": 3,
+    "isActive": true
+  },
+  {
+    "name": "Wings of Geospatial Intelligence & Remote Sensing",
+    "slug": "geospatial-intelligence-remote-sensing",
+    "shortDescription": "Turn Earth observation and spatial data into actionable knowledge.",
+    "description": "Geospatial research combining GIS, computer vision, geography, and physical measurement.",
+    "disciplines": ["Geoinformatics (GIS)", "Computer Science (AI/Vision)", "Geography", "Physics"],
+    "objectives": ["Advance responsible geospatial intelligence", "Build reliable remote-sensing methods", "Apply spatial evidence to environmental challenges"],
+    "order": 4,
+    "isActive": true
+  },
+  {
+    "name": "Wings of Geomicrobiology & Biogeology",
+    "slug": "geomicrobiology-biogeology",
+    "shortDescription": "Explore interactions between microorganisms, geology, and life-supporting systems.",
+    "description": "Research at the intersection of microbial systems, geological processes, bioinformatics, and geochemistry.",
+    "disciplines": ["Microbiology", "Geology", "Bioinformatics", "Geochemistry"],
+    "objectives": ["Understand microbial influence on geological processes", "Characterize biogeochemical cycles", "Develop computational approaches for environmental biology"],
+    "order": 5,
+    "isActive": true
+  },
+  {
+    "name": "Wings of Environmental Chemistry & Toxicology",
+    "slug": "environmental-chemistry-toxicology",
+    "shortDescription": "Measure contaminants and understand their effects on ecosystems and health.",
+    "description": "Analytical and applied research into environmental pollutants, chemical processes, and toxicological impacts.",
+    "disciplines": ["Analytical Chemistry", "Chemical Engineering", "Toxicology", "Environmental Science"],
+    "objectives": ["Improve environmental contaminant detection", "Assess chemical risks to ecosystems and communities", "Support evidence-based pollution prevention"],
+    "order": 6,
+    "isActive": true
+  },
+  {
+    "name": "Wings of Applied Biotechnology",
+    "slug": "applied-biotechnology",
+    "shortDescription": "Apply biological innovation to environmental and societal needs.",
+    "description": "Research combining biotechnology, genetics, molecular biology, and pharmaceutical science.",
+    "disciplines": ["Biotechnology", "Genetic Engineering", "Molecular Biology", "Pharmacy"],
+    "objectives": ["Translate biological discovery into useful applications", "Promote responsible genetic and molecular research", "Develop interdisciplinary biotechnology capabilities"],
+    "order": 7,
+    "isActive": true
+  },
+  {
+    "name": "Wings of Agricultural Sciences & Food Security",
+    "slug": "agricultural-sciences-food-security",
+    "shortDescription": "Strengthen sustainable agriculture and resilient food systems.",
+    "description": "Research spanning crop science, soils, agricultural engineering, and food technology.",
+    "disciplines": ["Agronomy", "Soil Science", "Agricultural Engineering", "Food Technology"],
+    "objectives": ["Improve sustainable agricultural productivity", "Strengthen soil and crop resilience", "Support safe and reliable food systems"],
+    "order": 8,
+    "isActive": true
+  },
+  {
+    "name": "Wings of Economic Geography & Resource Management",
+    "slug": "economic-geography-resource-management",
+    "shortDescription": "Study the spatial distribution, use, and governance of resources.",
+    "description": "Interdisciplinary analysis connecting economics, cities, human geography, and data science.",
+    "disciplines": ["Economics", "Urban Planning", "Human Geography", "Data Science"],
+    "objectives": ["Analyze equitable and sustainable resource allocation", "Develop data-informed urban and regional planning", "Understand economic and human dimensions of environmental change"],
+    "order": 9,
+    "isActive": true
+  },
+  {
+    "name": "Wings of Environmental Policy & Governance",
+    "slug": "environmental-policy-governance",
+    "shortDescription": "Develop fair, effective approaches to environmental decision-making.",
+    "description": "Research on public policy, institutions, environmental law, and the social dimensions of governance.",
+    "disciplines": ["Public Policy", "Sociology", "Environmental Law", "Political Science"],
+    "objectives": ["Connect environmental evidence with practical policy", "Strengthen inclusive and accountable governance", "Evaluate legal and institutional responses to environmental challenges"],
+    "order": 10,
+    "isActive": true
+  }
+]

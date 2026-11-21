@@ -1,0 +1,53 @@
+import { Schema, model } from 'mongoose';
+
+const schema = new Schema({
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, lowercase: true, trim: true, index: true },
+  phone: { type: String, required: true },
+  wing: { type: String, trim: true },
+  wingInterest: { type: String, required: true },
+  category: { type: String, enum: ['supervisor', 'youngScholar', 'teammate'], required: true },
+  role: { type: String, enum: ['supervisor', 'youngScholar'], required: true },
+  signupFlow: { type: Boolean, default: false, index: true },
+  signupPasswordHash: { type: String, select: false },
+  publicApplicationId: { type: String, trim: true, uppercase: true },
+  twoFactorSecretEncrypted: { type: String, select: false },
+  twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorFailedAttempts: { type: Number, default: 0 },
+  twoFactorLockedUntil: Date,
+  academicStatus: String,
+  statement: String,
+  accessCodeHash: { type: String, required: true, select: false },
+  activationCodeHash: { type: String, select: false },
+  activationCodeEncrypted: { type: String, select: false },
+  activationCodeUsedAt: Date,
+  memberUserId: { type: Schema.Types.ObjectId, ref: 'User' },
+  status: { type: String, enum: ['signup_pending', 'signup_approved', 'initial_pending', 'membership_pending', 'final_pending', 'payment_pending', 'verification_pending', 'publishing', 'published', 'rejected'], default: 'initial_pending', index: true },
+  membershipFee: Number,
+  paymentBkashNumber: String,
+  paymentNagadNumber: String,
+  paymentInstructions: String,
+  presentAddress: String,
+  permanentAddress: String,
+  designation: String,
+  institution: String,
+  educationalBackground: String,
+  googleScholar: String,
+  researchGate: String,
+  orcid: String,
+  linkedin: String,
+  bio: String,
+  researchDomains: { type: [String], default: [] },
+  photo: String,
+  paymentMethod: { type: String, enum: ['bKash', 'Nagad'] },
+  trxId: String,
+  reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  reviewedAt: Date,
+  publishedProfileId: Schema.Types.ObjectId,
+  publishedProfileType: { type: String, enum: ['supervisor', 'scholar'] }
+}, { timestamps: true });
+
+schema.index({ status:  1, createdAt: -1 });
+schema.index({ trxId: 1 }, { unique: true, sparse: true });
+schema.index({ publicApplicationId: 1 }, { unique: true, sparse: true });
+export default model('MembershipApplication', schema);

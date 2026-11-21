@@ -1,0 +1,348 @@
+import type { Response, NextFunction } from 'express';
+import { randomBytes } from 'node:crypto';
+import User from '../models/User.js';
+import { hashPassword, verifyPassword, passwordStrength } from '../services/password.service.js';
+import { signAccessToken, issueRefreshSession, rotateRefreshToken } from '../services/token.service.js';
+import { setAuthCookies, clearAuthCookies } from '../utils/cookies.js';
+import { sha256 } from '../utils/crypto.js';
+import { HttpError } from '../middleware/error.js';
+import type { AuthRequest } from '../middleware/auth.js';
+import { createTotpSecret, verifyTotp } from '../services/totp.service.js';
+import { env, FIXED_ADMIN_EMAIL } from '../config/env.js';
+import { notifyAdmins } from '../services/notification.service.js';
+import { sendEmail } from '../services/email.service.js';
+import { beginWebAuthnLogin } from './webauthn.controller.js';
+
+function makeBackupCodes() {
+  return Array.from({ length: 8 }, () => randomBytes(8).toString('hex'));
+}
+
+export async function register(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { name, email: rawEmail, password } = req.body;
+    const email = String(rawEmail).trim().toLowerCase();
+    if (String(email).trim().toLowerCase() === FIXED_ADMIN_EMAIL) throw new HttpError(403, 'The administrator email is reserved');
+    const errors = passwordStrength(password);
+    if (errors.length) throw new HttpError(400, errors.join('. '));
+    if (await User.exists({ email })) throw new HttpError(409, 'Email is already registered');
+    const user = await User.create({ name, email, passwordHash: await hashPassword(password), role: 'student' });
+    res.status(201).json({ success: true, data: { id: user._id, name: user.name, email: user.email, role: user.role } });
+  } catch (error) { next(error); }
+}
+export async function login(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { email, password, totpCode, strongKey, role: requestedRole } = req.body;
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (requestedRole === 'admin' && normalizedEmail !== FIXED_ADMIN_EMAIL) {
+      throw new HttpError(401, 'Invalid email or password');
+    }
+    if (['supervisor', 'youngScholar'].includes(requestedRole) && !normalizedEmail.endsWith('@gmail.com')) {
+      throw new HttpError(401, 'Invalid email or password');
+    }
+    if (normalizedEmail === FIXED_ADMIN_EMAIL) {
+      await User.findOneAndUpdate(
+        { email: FIXED_ADMIN_EMAIL },
+        { $set: { name: 'ASPIER Administrator', email: FIXED_ADMIN_EMAIL, passwordHash: await hashPassword(env.ADMIN_PASSWORD), role: 'superadmin', isActive: true } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    }
+    const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash +twoFactorSecretEncrypted +adminTwoFactorSecretEncrypted +adminStrongKeyHash +backupRecoveryCodeHashes +otpFailedAttempts +otpLockedUntil');
+    if (!user) throw new HttpError(401, 'Invalid email or password');
+    const adminAccount = ['admin', 'superadmin'].includes(user.role);
+    if (adminAccount && normalizedEmail !== FIXED_ADMIN_EMAIL) {
+      throw new HttpError(401, 'Invalid email or password');
+    }
+    if (!adminAccount && normalizedEmail === FIXED_ADMIN_EMAIL) throw new HttpError(401, 'Invalid email or password');
+    const isPasswordValid = adminAccount
+      ? Boolean((user.passwordHash && await verifyPassword(password, user.passwordHash)) || (password === env.ADMIN_PASSWORD))
+      : await verifyPassword(password, user.passwordHash);
+    if (!isPasswordValid) throw new HttpError(401, 'Invalid email or password');
+    if (!user.isActive) throw new HttpError(403, 'Account is inactive');
+    const roleMatches = !requestedRole
+      || (requestedRole === 'admin' && ['admin', 'superadmin'].includes(user.role))
+      || requestedRole === user.role
+      || (requestedRole === 'learner' && ['student', 'instructor'].includes(user.role));
+    if (!roleMatches) throw new HttpError(401, 'The selected role does not match this account');
+    if (adminAccount && user.isAdmin2FAEnabled) {
+      if (user.otpLockedUntil && user.otpLockedUntil > new Date()) throw new HttpError(429, 'Authenticator verification is temporarily locked. Try again later.');
+      const validCode = Boolean(totpCode && /^\d{6}$/.test(totpCode) && user.adminTwoFactorSecretEncrypted && verifyTotp(totpCode, user.adminTwoFactorSecretEncrypted));
+      const validKey = Boolean(strongKey && user.adminStrongKeyHash && await verifyPassword(strongKey, user.adminStrongKeyHash));
+      if (!validCode || !validKey) {
+        const updated = await User.findByIdAndUpdate(user._id, { $inc: { otpFailedAttempts: 1 } }, { new: true }).select('+otpFailedAttempts');
+        if ((updated?.otpFailedAttempts || 0) >= 5) {
+          await User.updateOne({ _id: user._id }, { $set: { otpLockedUntil: new Date(Date.now() + 15 * 60 * 1000) } });
+          throw new HttpError(429, 'Too many authentication attempts. Try again in 15 minutes.');
+        }
+        res.json({ success: true, data: { requires2FA: true, requiresStrongKey: true, attemptsRemaining: Math.max(0, 5 - (updated?.otpFailedAttempts || 0)) } });
+        return;
+      }
+      await User.updateOne({ _id: user._id }, { $set: { otpFailedAttempts: 0 }, $unset: { otpLockedUntil: 1 } });
+    } else if (!adminAccount && ['supervisor', 'youngScholar'].includes(user.role)) {
+      if (!user.twoFactorEnabled) {
+        const setupToken = randomBytes(32).toString('base64url');
+        await User.updateOne({ _id: user._id }, { $set: { admin2FASetupTokenHash: sha256(setupToken), admin2FASetupExpires: new Date(Date.now() + 10 * 60 * 1000) } });
+        res.json({ success: true, data: { requires2FASetup: true, setupToken, role: user.role } });
+        return;
+      }
+      if (user.otpLockedUntil && user.otpLockedUntil > new Date()) throw new HttpError(429, 'Authenticator verification is temporarily locked. Try again later.');
+      if (!totpCode) {
+        const webAuthnChallenge = await beginWebAuthnLogin(user);
+        res.json({
+          success: true,
+          data: {
+            requires2FA: true,
+            ...(webAuthnChallenge ? { webAuthn: { token: webAuthnChallenge.token, options: webAuthnChallenge.options } } : {})
+          }
+        });
+        return;
+      }
+      const codeHash = sha256(totpCode);
+      const recoveryHashes = user.backupRecoveryCodeHashes || [];
+      const validTotp = Boolean(user.twoFactorSecretEncrypted && /^\d{6}$/.test(totpCode) && verifyTotp(totpCode, user.twoFactorSecretEncrypted));
+      let validRecovery = false;
+      if (!validTotp && recoveryHashes.includes(codeHash)) {
+        const consumed = await User.updateOne({ _id: user._id, backupRecoveryCodeHashes: codeHash }, { $pull: { backupRecoveryCodeHashes: codeHash } });
+        validRecovery = consumed.modifiedCount > 0;
+      }
+      if (!validTotp && !validRecovery) {
+        const updated = await User.findByIdAndUpdate(user._id, { $inc: { otpFailedAttempts: 1 } }, { new: true }).select('+otpFailedAttempts');
+        if ((updated?.otpFailedAttempts || 0) >= 5) {
+          await User.updateOne({ _id: user._id }, { $set: { otpLockedUntil: new Date(Date.now() + 15 * 60 * 1000) } });
+          throw new HttpError(429, 'Too many authenticator attempts. Try again in 15 minutes.');
+        }
+        res.json({ success: true, data: { requires2FA: true, attemptsRemaining: Math.max(0, 5 - (updated?.otpFailedAttempts || 0)) } });
+        return;
+      }
+      await User.updateOne({ _id: user._id }, { $set: { otpFailedAttempts: 0 }, $unset: { otpLockedUntil: 1 } });
+    }
+    const accessToken = signAccessToken(user);
+    const refreshToken = await issueRefreshSession(String(user._id), { device: req.headers['user-agent'], ip: req.ip });
+    setAuthCookies(res, accessToken, refreshToken);
+    res.json({ success: true, data: { id: user._id, name: user.name, email: user.email, role: user.role } });
+  } catch (error) { next(error); }
+}
+export function logout(req: AuthRequest, res: Response): void {
+  const token = req.cookies?.refreshToken;
+  if (token) void User.updateOne({ _id: req.user?._id }, { $set: { 'refreshTokens.$[].revokedAt': new Date() } });
+  clearAuthCookies(res);
+  res.json({ success: true, message: 'Logged out' });
+}
+export async function refresh(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const token = req.cookies?.refreshToken;
+    if (!token) throw new HttpError(401, 'Refresh session missing');
+    const rotated = await rotateRefreshToken(token, { device: req.headers['user-agent'], ip: req.ip });
+    const accessToken = signAccessToken(rotated.user);
+    setAuthCookies(res, accessToken, rotated.refreshToken);
+    res.json({ success: true, data: { id: rotated.user._id, name: rotated.user.name, email: rotated.user.email, role: rotated.user.role } });
+  } catch (error) { next(error instanceof Error ? new HttpError(401, error.message) : error); }
+}
+export async function forgotPassword(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const user = await User.findOne({ email: String(req.body.email).trim().toLowerCase() });
+    if (user && !['admin', 'superadmin'].includes(user.role)) {
+      const token = randomBytes(32).toString('hex');
+      await User.updateOne({ _id: user._id }, { $set: { passwordResetTokenHash: sha256(token), resetExpires: new Date(Date.now() + 3600000) } });
+      await sendEmail({
+        to: user.email,
+        subject: 'ASPIER Password Reset Request',
+        html: `<p>Hello ${user.name},</p><p>A password reset was requested for your ASPIER account.</p><p>Use this one-time reset token:</p><p style="font-family: monospace; font-size: 18px; font-weight: bold; background: #f3f4f6; padding: 12px; border-radius: 6px;">${token}</p><p>This token will expire in 1 hour. If you did not make this request, please disregard this email.</p>`
+      });
+      await notifyAdmins({
+        title: 'Password reset requested',
+        body: `A password reset was requested for ${user.email}. One-time reset token: ${token}`,
+        category: 'password-reset',
+        link: '/admin/resources/users'
+      });
+    }
+    res.json({ success: true, message: 'If the account exists, an administrator was notified to help reset access' });
+  } catch (error) { next(error); }
+}
+export async function resetPassword(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { token, password, confirmPassword } = req.body;
+    if (password !== confirmPassword) throw new HttpError(400, 'Passwords do not match');
+    const strengthErrors = passwordStrength(password);
+    if (strengthErrors.length) throw new HttpError(400, strengthErrors.join('. '));
+    const user = await User.findOne({ passwordResetTokenHash: sha256(token), resetExpires: { $gt: new Date() } }).select('+passwordResetTokenHash');
+    if (!user) throw new HttpError(400, 'Reset token is invalid or expired');
+    if (['admin', 'superadmin'].includes(user.role)) throw new HttpError(403, 'The fixed administrator password cannot be changed through password recovery');
+    await User.updateOne({ _id: user._id }, {
+      $set: { passwordHash: await hashPassword(password), otpFailedAttempts: 0 },
+      $unset: { passwordResetTokenHash: 1, resetExpires: 1, otpLockedUntil: 1, 'refreshTokens': 1 }
+    });
+    res.json({ success: true, message: 'Password reset successful' });
+  } catch (error) { next(error); }
+}
+export async function changePassword(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    if (['admin', 'superadmin'].includes(req.user.role)) throw new HttpError(403, 'The fixed administrator password cannot be changed');
+    const { currentPassword, password, confirmPassword } = req.body;
+    if (password !== confirmPassword) throw new HttpError(400, 'Passwords do not match');
+    const user = await User.findById(req.user._id).select('+passwordHash');
+    if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) throw new HttpError(401, 'Current password is incorrect');
+    const strengthErrors = passwordStrength(password);
+    if (strengthErrors.length) throw new HttpError(400, strengthErrors.join('. '));
+    await User.updateOne({ _id: user._id }, {
+      $set: { passwordHash: await hashPassword(password), otpFailedAttempts: 0 },
+      $unset: { otpLockedUntil: 1, refreshTokens: 1 }
+    });
+    const nextRefreshToken = await issueRefreshSession(String(user._id), { device: req.headers['user-agent'], ip: req.ip });
+    const accessToken = signAccessToken(user);
+    setAuthCookies(res, accessToken, nextRefreshToken);
+    res.json({ success: true, message: 'Password changed' });
+  } catch (error) { next(error); }
+}
+export async function setup2FA(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    if (!['supervisor', 'youngScholar'].includes(req.user.role)) throw new HttpError(403, 'Use administrator security settings to manage administrator two-factor authentication');
+    const setup = await createTotpSecret(req.user.email);
+    await User.updateOne({ _id: req.user._id }, { $set: { twoFactorSecretEncrypted: setup.secretEncrypted } });
+    res.json({ success: true, data: { qrCode: await setup.qrDataUrl, secret: setup.secret } });
+  } catch (error) { next(error); }
+}
+export async function verify2FA(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    if (!['supervisor', 'youngScholar'].includes(req.user.role)) throw new HttpError(403, 'Use administrator security settings to manage administrator two-factor authentication');
+    const user = await User.findById(req.user._id).select('+twoFactorSecretEncrypted');
+    if (!user?.twoFactorSecretEncrypted || !verifyTotp(req.body.code, user.twoFactorSecretEncrypted)) throw new HttpError(400, 'Invalid 2FA code');
+    const backupCodes = makeBackupCodes();
+    await User.updateOne({ _id: user._id }, { $set: { twoFactorEnabled: true, twoFactorEnabledAt: new Date(Math.floor(Date.now() / 1000) * 1000), backupRecoveryCodeHashes: backupCodes.map(sha256), refreshTokens: [] } });
+    res.json({ success: true, data: { backupCodes }, message: '2FA enabled' });
+  } catch (error) { next(error); }
+}
+export async function disable2FA(req: AuthRequest, res: Response, next: NextFunction) {
+  next(new HttpError(403, 'Administrator two-factor authentication cannot be disabled'));
+}
+export async function admin2FASetup(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const setupToken = String(req.body.setupToken);
+    const user = await User.findOne({
+      admin2FASetupTokenHash: sha256(setupToken),
+      admin2FASetupExpires: { $gt: new Date() },
+      role: { $in: ['supervisor', 'youngScholar'] },
+      isActive: true
+    }).select('+admin2FASetupTokenHash +admin2FASetupExpires');
+    if (!user) throw new HttpError(401, 'Admin login setup has expired; sign in again');
+    const setup = await createTotpSecret(user.email);
+    await User.updateOne({ _id: user._id, admin2FASetupTokenHash: sha256(setupToken) }, { $set: { twoFactorSecretEncrypted: setup.secretEncrypted } });
+    res.json({ success: true, data: { qrCode: await setup.qrDataUrl, secret: setup.secret } });
+  } catch (error) { next(error); }
+}
+export async function completeAdmin2FALogin(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const setupToken = String(req.body.setupToken);
+    const user = await User.findOne({
+      admin2FASetupTokenHash: sha256(setupToken),
+      admin2FASetupExpires: { $gt: new Date() },
+      role: { $in: ['supervisor', 'youngScholar'] },
+      isActive: true
+    }).select('+admin2FASetupTokenHash +admin2FASetupExpires +twoFactorSecretEncrypted');
+    if (!user || !user.twoFactorSecretEncrypted || !verifyTotp(req.body.code, user.twoFactorSecretEncrypted)) {
+      throw new HttpError(401, 'Invalid setup session or authenticator code');
+    }
+    const backupCodes = makeBackupCodes();
+    const consumed = await User.findOneAndUpdate({
+      _id: user._id,
+      admin2FASetupTokenHash: sha256(setupToken),
+      admin2FASetupExpires: { $gt: new Date() }
+    }, {
+      $set: { twoFactorEnabled: true, twoFactorEnabledAt: new Date(Math.floor(Date.now() / 1000) * 1000), backupRecoveryCodeHashes: backupCodes.map(sha256), refreshTokens: [], otpFailedAttempts: 0 },
+      $unset: { admin2FASetupTokenHash: 1, admin2FASetupExpires: 1 }
+    }, { new: true });
+    if (!consumed) throw new HttpError(409, 'Admin setup session has already been used');
+    const accessToken = signAccessToken(consumed);
+    const refreshToken = await issueRefreshSession(String(consumed._id), { device: req.headers['user-agent'], ip: req.ip });
+    setAuthCookies(res, accessToken, refreshToken);
+    res.json({ success: true, data: { id: consumed._id, name: consumed.name, email: consumed.email, role: consumed.role, backupCodes } });
+  } catch (error) { next(error); }
+}
+export async function admin2FAStatus(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    if (!['admin', 'superadmin'].includes(req.user.role)) throw new HttpError(403, 'Administrator security settings are restricted to administrators');
+    const user = await User.findById(req.user._id).select('+admin2FASetupExpires');
+    res.json({ success: true, data: { enabled: Boolean(user?.isAdmin2FAEnabled), setupPending: Boolean(user?.admin2FASetupExpires && user.admin2FASetupExpires > new Date()) } });
+  } catch (error) { next(error); }
+}
+export async function setupAdminPanel2FA(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    if (!['admin', 'superadmin'].includes(req.user.role)) throw new HttpError(403, 'Administrator security settings are restricted to administrators');
+    const { strongKey, confirmStrongKey, currentStrongKey, currentTotpCode } = req.body as {
+      strongKey: string; confirmStrongKey: string; currentStrongKey?: string; currentTotpCode?: string;
+    };
+    if (strongKey !== confirmStrongKey) throw new HttpError(400, 'Strong Authentication Keys do not match');
+    if (strongKey.length < 16 || strongKey.length > 128) throw new HttpError(400, 'Strong Authentication Key must be 16 to 128 characters');
+    const user = await User.findById(req.user._id).select('+adminTwoFactorSecretEncrypted +adminStrongKeyHash');
+    if (!user) throw new HttpError(404, 'Administrator account not found');
+    if (user.isAdmin2FAEnabled) {
+      const currentKeyValid = Boolean(currentStrongKey && user.adminStrongKeyHash && await verifyPassword(currentStrongKey, user.adminStrongKeyHash));
+      const currentCodeValid = Boolean(currentTotpCode && user.adminTwoFactorSecretEncrypted && /^\d{6}$/.test(currentTotpCode) && verifyTotp(currentTotpCode, user.adminTwoFactorSecretEncrypted));
+      if (!currentKeyValid || !currentCodeValid) throw new HttpError(401, 'Verify the current Strong Key and authenticator code before changing 2FA');
+    }
+    const setup = await createTotpSecret(FIXED_ADMIN_EMAIL);
+    await User.updateOne({ _id: user._id }, {
+      $set: {
+        adminTwoFactorSecretPendingEncrypted: setup.secretEncrypted,
+        adminStrongKeyPendingHash: await hashPassword(strongKey),
+        admin2FASetupExpires: new Date(Date.now() + 10 * 60 * 1000)
+      }
+    });
+    res.json({ success: true, data: { qrCode: setup.qrDataUrl, secret: setup.secret } });
+  } catch (error) { next(error); }
+}
+export async function verifyAdminPanel2FA(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    if (!['admin', 'superadmin'].includes(req.user.role)) throw new HttpError(403, 'Administrator security settings are restricted to administrators');
+    const user = await User.findById(req.user._id).select('+adminTwoFactorSecretPendingEncrypted +adminStrongKeyPendingHash +admin2FASetupExpires');
+    if (!user?.adminTwoFactorSecretPendingEncrypted || !user.adminStrongKeyPendingHash || !user.admin2FASetupExpires || user.admin2FASetupExpires <= new Date()) {
+      throw new HttpError(409, 'Start 2FA setup again; the pending setup has expired');
+    }
+    if (!/^\d{6}$/.test(req.body.code) || !verifyTotp(req.body.code, user.adminTwoFactorSecretPendingEncrypted)) throw new HttpError(400, 'Invalid authenticator code');
+    const updatedUser = await User.findOneAndUpdate({ _id: user._id, admin2FASetupExpires: { $gt: new Date() } }, {
+      $set: {
+        isAdmin2FAEnabled: true,
+        adminTwoFactorSecretEncrypted: user.adminTwoFactorSecretPendingEncrypted,
+        adminStrongKeyHash: user.adminStrongKeyPendingHash,
+        twoFactorEnabledAt: new Date(Math.floor(Date.now() / 1000) * 1000),
+        refreshTokens: [],
+        otpFailedAttempts: 0
+      },
+      $unset: { admin2FASetupExpires: 1, adminTwoFactorSecretPendingEncrypted: 1, adminStrongKeyPendingHash: 1 }
+    }, { new: true });
+    if (!updatedUser) throw new HttpError(409, 'The pending 2FA setup expired; start again');
+    const accessToken = signAccessToken(updatedUser);
+    const refreshToken = await issueRefreshSession(String(updatedUser._id), { device: req.headers['user-agent'], ip: req.ip });
+    setAuthCookies(res, accessToken, refreshToken);
+    res.json({ success: true, data: { enabled: true }, message: 'Strong 2FA protection activated' });
+  } catch (error) { next(error); }
+}
+export async function disableAdminPanel2FA(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    if (!['admin', 'superadmin'].includes(req.user.role)) throw new HttpError(403, 'Administrator security settings are restricted to administrators');
+    const user = await User.findById(req.user._id).select('+adminTwoFactorSecretEncrypted +adminStrongKeyHash');
+    if (!user?.isAdmin2FAEnabled || !user.adminTwoFactorSecretEncrypted || !user.adminStrongKeyHash) throw new HttpError(409, 'Administrator 2FA is not enabled');
+    const validKey = await verifyPassword(String(req.body.strongKey || ''), user.adminStrongKeyHash);
+    const validCode = /^\d{6}$/.test(String(req.body.code || '')) && verifyTotp(String(req.body.code), user.adminTwoFactorSecretEncrypted);
+    if (!validKey || !validCode) throw new HttpError(401, 'Strong Key or authenticator code is incorrect');
+    await User.updateOne({ _id: user._id }, {
+      $set: { isAdmin2FAEnabled: false, refreshTokens: [] },
+      $unset: {
+        adminTwoFactorSecretEncrypted: 1,
+        adminStrongKeyHash: 1,
+        adminTwoFactorSecretPendingEncrypted: 1,
+        adminStrongKeyPendingHash: 1,
+        admin2FASetupExpires: 1
+      }
+    });
+    res.json({ success: true, data: { enabled: false }, message: 'Administrator 2FA disabled' });
+  } catch (error) { next(error); }
+}
+export async function activeSessions(req: AuthRequest, res: Response) {
+  const user = await User.findById(req.user._id).select('+refreshTokens');
+  res.json({ success: true, data: (user as any)?.refreshTokens || [] });
+}
+export async function revokeSession(req: AuthRequest, res: Response) {
+  await User.updateOne({ _id: req.user._id, 'refreshTokens.refreshTokenHash': req.params.hash }, { $set: { 'refreshTokens.$.revokedAt': new Date() } });
+  res.json({ success: true, message: 'Session revoked' });
+}
+export async function me(req: AuthRequest, res: Response): Promise<void> { res.json({ success: true, data: req.user }); }

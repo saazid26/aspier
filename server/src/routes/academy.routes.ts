@@ -1,0 +1,15 @@
+import { Router } from 'express';
+import { catalog, courseDetail, learn, classSchedule, joinMeet, recording, instructorProfile } from '../controllers/academy.controller.js';
+import { authenticate } from '../middleware/auth.js';
+import { noStore } from '../middleware/noStore.js';
+import { requireActiveEnrollment } from '../middleware/requireActiveEnrollment.js';
+const router = Router();
+router.get('/courses', catalog);
+router.get('/courses/:id', courseDetail);
+router.get('/courses/:courseId/lessons/:lessonId', authenticate, noStore, requireActiveEnrollment, learn);
+router.get('/classes', classSchedule);
+router.get('/courses/:courseId/classes', classSchedule);
+router.get('/classes/:classId/join', authenticate, noStore, requireActiveEnrollment, joinMeet);
+router.get('/classes/:classId/recording', authenticate, noStore, requireActiveEnrollment, recording);
+router.get('/instructors/:id', instructorProfile);
+export default router;

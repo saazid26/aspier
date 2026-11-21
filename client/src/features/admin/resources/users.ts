@@ -1,0 +1,1 @@
+export const usersResource={name:'users',title:'Users',endpoint:'/admin/users',fields:[{name:'name',label:'Name'},{name:'email',label:'Email',type:'email'},{name:'password',label:'Initial password',type:'password'},{name:'role',label:'Role'},{name:'isActive',label:'Active',type:'boolean'}]};

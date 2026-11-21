@@ -1,0 +1,15 @@
+{
+  "name": "aspier-platform",
+  "private": true,
+  "workspaces": ["shared", "server", "client"],
+  "scripts": {
+    "dev": "concurrently -n server,client -c red,green \"npm run --prefix server dev\" \"npm run --prefix client dev\"",
+    "install:all": "npm install --include=dev",
+    "seed": "npm run --prefix server seed",
+    "test": "npm run --prefix server test",
+    "build": "npm run --prefix shared build && npm run --prefix server build && npm run --prefix client build && node -e \"const fs=require('fs'); if(fs.existsSync('client/dist')) { fs.cpSync('client/dist', 'dist', {recursive: true}); }\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
