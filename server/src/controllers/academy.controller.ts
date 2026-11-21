@@ -6,15 +6,26 @@ import ClassModel from '../models/Class.js';
 import Instructor from '../models/Instructor.js';
 import { HttpError } from '../middleware/error.js';
 import { encrypt, decrypt } from '../utils/crypto.js';
+import { fallbackCourses } from '../utils/fallbackData.js';
 export async function catalog(_req: AuthRequest, res: Response) {
-  res.json({ success: true, data: await Course.find({ status: 'published' }).populate('instructorId', 'name title photo').sort({ createdAt: -1 }) });
+  try {
+    const courses = await Course.find({ status: 'published' }).populate('instructorId', 'name title photo').sort({ createdAt: -1 });
+    if (courses && courses.length > 0) return res.json({ success: true, data: courses });
+  } catch (err) {
+    console.warn('[academy/catalog] fallback:', err instanceof Error ? err.message : err);
+  }
+  return res.json({ success: true, data: fallbackCourses });
 }
 export async function courseDetail(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const id = typeof req.params.id === 'string' ? req.params.id : '';
     const query = /^[0-9a-f]{24}$/i.test(id) ? { $or: [{ _id: id }, { slug: id }] } : { slug: id };
     const course = await Course.findOne(query).populate('instructorId');
-    if (!course) throw new HttpError(404, 'Course not found');
+    if (!course) {
+      const fallback = fallbackCourses.find((c) => c._id === id || c.slug === id);
+      if (fallback) return res.json({ success: true, data: fallback });
+      throw new HttpError(404, 'Course not found');
+    }
     const isAdmin = Boolean(req.user && ['admin', 'superadmin'].includes(req.user.role));
     if (course.status !== 'published' && !isAdmin) throw new HttpError(404, 'Course not found');
     let active = isAdmin;
@@ -23,7 +34,12 @@ export async function courseDetail(req: AuthRequest, res: Response, next: NextFu
     const safe = course.toObject();
     if (!active) (safe as any).modules = (safe as any).modules.map((module: any) => ({ ...module, lessons: module.lessons.map((lesson: any) => ({ ...lesson, youtubeVideoId: lesson.isFreePreview ? lesson.youtubeVideoId : undefined })) }));
     res.json({ success: true, data: safe });
-  } catch (error) { next(error); }
+  } catch (error) {
+    const id = typeof req.params.id === 'string' ? req.params.id : '';
+    const fallback = fallbackCourses.find((c) => c._id === id || c.slug === id);
+    if (fallback) return res.json({ success: true, data: fallback });
+    next(error);
+  }
 }
 export async function learn(req: AuthRequest, res: Response, next: NextFunction) {
   try {

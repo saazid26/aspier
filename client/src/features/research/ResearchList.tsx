@@ -7,6 +7,8 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { CoverMedia } from '../../components/common/CoverMedia';
+import { SEO } from '../../components/common/SEO';
+import { staticResearch } from '../../lib/staticData';
 
 type ResearchItem = {
   _id: string;
@@ -34,10 +36,15 @@ export function ResearchList() {
   const [cv, setCv] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', institution: '', academicStatus: '', city: '', country: '', skills: '', statement: '', googleScholar: '', researchGate: '' });
-  const { data = [], isLoading, isError } = useQuery({
+  
+  const fallbackForCategory = staticResearch.filter((item) => item.category === category);
+  const { data: remoteData } = useQuery({
     queryKey: ['research', category],
-    queryFn: async () => (await api.get('/public/research', { params: { category } })).data.data as ResearchItem[]
+    queryFn: async () => (await api.get('/public/research', { params: { category } })).data.data as ResearchItem[],
+    initialData: fallbackForCategory as ResearchItem[]
   });
+  const data = remoteData && remoteData.length > 0 ? remoteData : (fallbackForCategory as ResearchItem[]);
+
   useEffect(() => {
     const applicationId = searchParams.get('apply');
     const project = data.find((item) => item._id === applicationId);
@@ -68,14 +75,13 @@ export function ResearchList() {
   };
 
   return <section className="section">
+    <SEO title="Research Portal | ASPIER" description="Discover ongoing, past, and future interdisciplinary research at ASPIER." />
     <div className="container">
       <span className="eyebrow">Research portal</span><h1>Research & collaboration</h1>
       <div className="tabs research-tabs" role="tablist" aria-label="Research categories">
         {categories.map((item) => <button key={item.id} className={`tab ${category === item.id ? 'active' : ''}`} role="tab" aria-selected={category === item.id} type="button" onClick={() => setCategory(item.id)}>{item.label}</button>)}
       </div>
-      {isLoading && <p role="status">Loading research…</p>}
-      {isError && <p role="alert">Could not load research. Please try again.</p>}
-      {!isLoading && !isError && !data.length && <p className="card muted">No research is currently listed in this category.</p>}
+      {!data.length && <p className="card muted">No research is currently listed in this category.</p>}
       <div className="grid research-grid">{data.map((item) => <article className="card research-card" key={item._id}>
         <Link className="research-media" to={`/research/${item.slug}`}>
           <CoverMedia

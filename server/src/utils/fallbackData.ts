@@ -1,0 +1,216 @@
+import { demoResearch, demoScholars, demoSupervisors, makeDemoCover, makeDemoAvatar } from './seedData/demoContent.js';
+
+export const fallbackWings = [
+  {
+    _id: "60d0fe4f5311236168a109ca",
+    name: "Wings of Aeronautical Engineering & UAV Systems",
+    slug: "aeronautical-engineering-uav-systems",
+    shortDescription: "Design, build, and study aircraft and unmanned aerial systems.",
+    description: "Interdisciplinary research in aircraft design, flight systems, autonomous platforms, and responsible UAV applications.",
+    disciplines: ["Aerospace Engineering", "Mechanical Engineering", "Robotics", "Electrical Engineering"],
+    objectives: ["Advance accessible aeronautical research", "Develop safe and reliable UAV systems", "Connect engineering research to environmental monitoring"],
+    order: 1,
+    isActive: true,
+    coverImage: makeDemoCover("Aeronautical Engineering & UAV Systems")
+  },
+  {
+    _id: "60d0fe4f5311236168a109cb",
+    name: "Wings of Planetary Science & Astrobiology",
+    slug: "planetary-science-astrobiology",
+    shortDescription: "Investigate planets, planetary materials, and the origins of life.",
+    description: "Research spanning planetary geology, astrophysics, theoretical models, and the conditions that support life.",
+    disciplines: ["Astrophysics", "Planetary Geology", "Theoretical Physics", "Mathematics"],
+    objectives: ["Study planetary formation and evolution", "Develop quantitative models of planetary environments", "Explore astrobiological questions through interdisciplinary research"],
+    order: 2,
+    isActive: true,
+    coverImage: makeDemoCover("Planetary Science & Astrobiology")
+  },
+  {
+    _id: "60d0fe4f5311236168a109cc",
+    name: "Wings of Hydrology & Atmospheric Physics",
+    slug: "hydrology-atmospheric-physics",
+    shortDescription: "Understand water systems and the physics of the atmosphere.",
+    description: "Integrated observation and modeling of weather, water, oceans, and water-resource engineering.",
+    disciplines: ["Meteorology", "Hydrology", "Oceanography", "Civil Engineering (Water Resources)"],
+    objectives: ["Improve understanding of coupled water and atmospheric systems", "Support flood and drought risk assessment", "Inform resilient water-resource planning"],
+    order: 3,
+    isActive: true,
+    coverImage: makeDemoCover("Hydrology & Atmospheric Physics")
+  },
+  {
+    _id: "60d0fe4f5311236168a109cd",
+    name: "Wings of Geospatial Intelligence & Remote Sensing",
+    slug: "geospatial-intelligence-remote-sensing",
+    shortDescription: "Turn Earth observation and spatial data into actionable knowledge.",
+    description: "Geospatial research combining GIS, computer vision, geography, and physical measurement.",
+    disciplines: ["Geoinformatics (GIS)", "Computer Science (AI/Vision)", "Geography", "Physics"],
+    objectives: ["Advance responsible geospatial intelligence", "Build reliable remote-sensing methods", "Apply spatial evidence to environmental challenges"],
+    order: 4,
+    isActive: true,
+    coverImage: makeDemoCover("Geospatial Intelligence & Remote Sensing")
+  },
+  {
+    _id: "60d0fe4f5311236168a109ce",
+    name: "Wings of Geomicrobiology & Biogeology",
+    slug: "geomicrobiology-biogeology",
+    shortDescription: "Explore interactions between microorganisms, geology, and life-supporting systems.",
+    description: "Research at the intersection of microbial systems, geological processes, bioinformatics, and geochemistry.",
+    disciplines: ["Microbiology", "Geology", "Bioinformatics", "Geochemistry"],
+    objectives: ["Understand microbial influence on geological processes", "Characterize biogeochemical cycles", "Develop computational approaches for environmental biology"],
+    order: 5,
+    isActive: true,
+    coverImage: makeDemoCover("Geomicrobiology & Biogeology")
+  },
+  {
+    _id: "60d0fe4f5311236168a109cf",
+    name: "Wings of Environmental Chemistry & Toxicology",
+    slug: "environmental-chemistry-toxicology",
+    shortDescription: "Measure contaminants and understand their effects on ecosystems and health.",
+    description: "Analytical and applied research into environmental pollutants, chemical processes, and toxicological impacts.",
+    disciplines: ["Analytical Chemistry", "Chemical Engineering", "Toxicology", "Environmental Science"],
+    objectives: ["Improve environmental contaminant detection", "Assess chemical risks to ecosystems and communities", "Support evidence-based pollution prevention"],
+    order: 6,
+    isActive: true,
+    coverImage: makeDemoCover("Environmental Chemistry & Toxicology")
+  },
+  {
+    _id: "60d0fe4f5311236168a109d0",
+    name: "Wings of Applied Biotechnology",
+    slug: "applied-biotechnology",
+    shortDescription: "Apply biological innovation to environmental and societal needs.",
+    description: "Research combining biotechnology, genetics, molecular biology, and pharmaceutical science.",
+    disciplines: ["Biotechnology", "Genetic Engineering", "Molecular Biology", "Pharmacy"],
+    objectives: ["Translate biological discovery into useful applications", "Promote responsible genetic and molecular research", "Develop interdisciplinary biotechnology capabilities"],
+    order: 7,
+    isActive: true,
+    coverImage: makeDemoCover("Applied Biotechnology")
+  },
+  {
+    _id: "60d0fe4f5311236168a109d1",
+    name: "Wings of Agricultural Sciences & Food Security",
+    slug: "agricultural-sciences-food-security",
+    shortDescription: "Strengthen sustainable agriculture and resilient food systems.",
+    description: "Research spanning crop science, soils, agricultural engineering, and food technology.",
+    disciplines: ["Agronomy", "Soil Science", "Agricultural Engineering", "Food Technology"],
+    objectives: ["Improve sustainable agricultural productivity", "Strengthen soil and crop resilience", "Support safe and reliable food systems"],
+    order: 8,
+    isActive: true,
+    coverImage: makeDemoCover("Agricultural Sciences & Food Security")
+  },
+  {
+    _id: "60d0fe4f5311236168a109d2",
+    name: "Wings of Economic Geography & Resource Management",
+    slug: "economic-geography-resource-management",
+    shortDescription: "Study the spatial distribution, use, and governance of resources.",
+    description: "Interdisciplinary analysis connecting economics, cities, human geography, and data science.",
+    disciplines: ["Economics", "Urban Planning", "Human Geography", "Data Science"],
+    objectives: ["Analyze equitable and sustainable resource allocation", "Develop data-informed urban and regional planning", "Understand economic and human dimensions of environmental change"],
+    order: 9,
+    isActive: true,
+    coverImage: makeDemoCover("Economic Geography & Resource Management")
+  },
+  {
+    _id: "60d0fe4f5311236168a109d3",
+    name: "Wings of Environmental Policy & Governance",
+    slug: "environmental-policy-governance",
+    shortDescription: "Develop fair, effective approaches to environmental decision-making.",
+    description: "Research on public policy, institutions, environmental law, and the social dimensions of governance.",
+    disciplines: ["Public Policy", "Sociology", "Environmental Law", "Political Science"],
+    objectives: ["Connect environmental evidence with practical policy", "Strengthen inclusive and accountable governance", "Evaluate legal and institutional responses to environmental challenges"],
+    order: 10,
+    isActive: true,
+    coverImage: makeDemoCover("Environmental Policy & Governance")
+  }
+];
+
+export const fallbackSettings = {
+  siteName: "ASPIER",
+  heroTitle: "Research for our planet and beyond",
+  heroSubtitle: "The Aeronautical, Spatial, Planetary Institute for Environmental Research advances discovery across Earth and space.",
+  missionText: "ASPIER advances rigorous research and inclusive education across science, technology, and society.",
+  founderName: "Md Saazid Bin Saif",
+  founderTitle: "Founder, ASPIER",
+  founderDescription: "Founder, ASPIER",
+  founderBio: "<p>Founder of the Aeronautical, Spatial, Planetary Institute for Environmental Research (ASPIER), advancing collaborative inquiry, open data practices, and research education.</p>",
+  founderResearchDomains: [
+    "Aeronautical & Spatial Systems",
+    "Environmental Research",
+    "Remote Sensing & Geospatial Intelligence"
+  ],
+  founderGoogleScholarUrl: "https://scholar.google.com/",
+  bkashNumber: "01603012448",
+  nagadNumber: "01603012448",
+  membershipFee: 1000
+};
+
+export const fallbackCourses = [
+  {
+    _id: "60d0fe4f5311236168a109e1",
+    title: "Higher Study Oriented Basic to Advance Research Paper Writing Course",
+    slug: "higher-study-research-paper-writing",
+    description: "Comprehensive guidance from foundational research concepts through publication in peer-reviewed journals.",
+    duration: "8 weeks",
+    mode: "Online and Live",
+    startDate: "2026-12-20",
+    targetAudience: "Undergraduate and graduate students preparing for higher studies abroad",
+    price: 2500,
+    level: "beginner",
+    status: "published",
+    thumbnail: makeDemoCover("Research Paper Writing")
+  },
+  {
+    _id: "60d0fe4f5311236168a109e2",
+    title: "Responsible AI Foundations",
+    slug: "responsible-ai-foundations",
+    description: "Eight-week course covering machine-learning foundations, fairness, transparency, and responsible deployment.",
+    duration: "8 weeks",
+    mode: "Online and Live",
+    startDate: "2026-12-15",
+    targetAudience: "Students and early-career researchers beginning applied AI study",
+    price: 2500,
+    level: "beginner",
+    status: "published",
+    thumbnail: makeDemoCover("Responsible AI Foundations")
+  },
+  {
+    _id: "60d0fe4f5311236168a109e3",
+    title: "Climate Data Modeling",
+    slug: "climate-data-modeling",
+    description: "Intermediate course in climate data workflows, analysis, visualization, and uncertainty.",
+    duration: "10 weeks",
+    mode: "Online and Recorded",
+    startDate: "2027-01-12",
+    targetAudience: "Learners with introductory statistics or environmental-science experience",
+    price: 3000,
+    level: "intermediate",
+    status: "published",
+    thumbnail: makeDemoCover("Climate Data Modeling")
+  }
+];
+
+export const fallbackNews = [
+  {
+    _id: "60d0fe4f5311236168a109f1",
+    title: "ASPIER Academic Wings and Research Fellowships 2026 Announced",
+    slug: "aspier-academic-wings-fellowships-2026",
+    excerpt: "ASPIER announces the opening of ten interdisciplinary research wings spanning aeronautics, planetary science, hydrology, and environmental policy.",
+    content: "<p>ASPIER announces the opening of ten interdisciplinary research wings spanning aeronautics, planetary science, hydrology, and environmental policy.</p>",
+    category: "announcement",
+    isAnnouncement: true,
+    publishedAt: new Date().toISOString(),
+    coverImage: makeDemoCover("ASPIER Fellowships 2026")
+  },
+  {
+    _id: "60d0fe4f5311236168a109f2",
+    title: "Winter Research Paper Writing Course Applications Now Open",
+    slug: "winter-research-writing-course-open",
+    excerpt: "Enrollment is now live for the Higher Study Oriented Basic to Advance Research Paper Writing Course at ASPIER Academy.",
+    content: "<p>Enrollment is now live for the Higher Study Oriented Basic to Advance Research Paper Writing Course at ASPIER Academy.</p>",
+    category: "academy",
+    isAnnouncement: true,
+    publishedAt: new Date().toISOString(),
+    coverImage: makeDemoCover("Research Paper Writing Course")
+  }
+];
+
+export { demoResearch, demoSupervisors, demoScholars };

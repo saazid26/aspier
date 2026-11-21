@@ -1,17 +1,23 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { SEO } from '../../components/common/SEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { CoverMedia } from '../../components/common/CoverMedia';
 import { useMe } from '../auth/useMe';
+import { staticCourses } from '../../lib/staticData';
 
 export function CourseDetail() {
   const { id } = useParams();
   const { me } = useMe();
-  const { data, isLoading, isError } = useQuery({
+  const fallback = staticCourses.find((c) => c.slug === id || c._id === id);
+  const { data: remoteData, isError } = useQuery({
     queryKey: ['course', id],
-    queryFn: async () => (await api.get(`/academy/courses/${id}`)).data.data
+    queryFn: async () => (await api.get(`/academy/courses/${id}`)).data.data,
+    initialData: fallback
   });
+  const data = remoteData || fallback;
+
   const deliveryMode = data?.deliveryMode || data?.mode;
   const normalizedDeliveryMode = deliveryMode === 'Online / Live' ? 'Online and Live' : deliveryMode || 'Online and Live';
   const formatStartDate = (startDate?: string) => {
@@ -22,9 +28,12 @@ export function CourseDetail() {
     }
     return startDate;
   };
-  if (isLoading) return <main className="container section"><p role="status">Loading course…</p></main>;
-  if (isError || !data) return <main className="container section"><h1>Course unavailable</h1><p className="muted">This course may have been unpublished or removed.</p><Link to="/academy">Back to Academy</Link></main>;
+
+  if (!data && isError) return <main className="container section"><h1>Course unavailable</h1><p className="muted">This course may have been unpublished or removed.</p><Link to="/academy">Back to Academy</Link></main>;
+  if (!data) return <main className="container section"><p role="status">Loading course…</p></main>;
+
   return <main className="container section">
+    <SEO title={`${data.title} | ASPIER Academy`} description={data.description || `Course details for ${data.title}`} />
     <CoverMedia src={data.thumbnail} alt={`${data.title} course banner`} fallbackLabel={data.title} className="research-detail-cover course-detail-cover" fallbackClassName="course-image-placeholder"/>
     {data.sampleData && <span className="badge-sample">Sample course</span>}
     <span className="eyebrow">{data.level} course · ASPIER Academy</span>

@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { SEO } from '../../components/common/SEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { CoverMedia } from '../../components/common/CoverMedia';
+import { staticCourses } from '../../lib/staticData';
 
 type Course = {
   _id: string;
@@ -33,11 +35,15 @@ function formatStartDate(startDate?: string) {
 }
 
 export function Catalog() {
-  const { data = [], isLoading, isError } = useQuery({
+  const { data: remoteData } = useQuery({
     queryKey: ['courses'],
-    queryFn: async () => (await api.get('/academy/courses')).data.data as Course[]
+    queryFn: async () => (await api.get('/academy/courses')).data.data as Course[],
+    initialData: staticCourses as Course[]
   });
+  const data = remoteData && remoteData.length > 0 ? remoteData : (staticCourses as Course[]);
+
   return <main className="container section academy-catalog">
+    <SEO title="ASPIER Academy" description="Explore online and live research paper writing courses, AI foundations, and specialized training programs." />
     <header className="academy-catalog-header">
       <span className="eyebrow">ASPIER Academy</span>
       <h1>Research learning for every stage</h1>
@@ -47,8 +53,6 @@ export function Catalog() {
         <Link className="button button-secondary" to="/login">Student Login</Link>
       </div>
     </header>
-    {isLoading && <p role="status">Loading courses…</p>}
-    {isError && <p role="alert">Could not load courses. Please try again.</p>}
     <div className="grid academy-course-grid">{data.map((course) => <Link className="card image-card course-card" key={course._id} to={`/academy/courses/${course.slug || course._id}`}>
       <CoverMedia src={course.thumbnail} alt={`${course.title} course thumbnail`} fallbackLabel={course.title} className="course-card-media" imageClassName="card-cover" fallbackClassName="course-image-placeholder"/>
       {course.sampleData && <span className="badge-sample">Sample course</span>}

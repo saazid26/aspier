@@ -58,7 +58,13 @@ export function PublicLayout() {
         </div>
         <div ref={navLinksRef} className={`nav-links ${menuOpen ? 'nav-links-open' : ''}`}>
           {links.map(({to,label,end}) => <NavLink key={to} to={to} end={end} className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} onClick={() => setMenuOpen(false)}>{label}</NavLink>)}
-          <button className="nav-link nav-signup" type="button" title="Apply for ASPIER Fellowship / Team Membership" onClick={() => { window.dispatchEvent(new Event('aspier-open-signup')); setMenuOpen(false); }}>Join / Apply</button>
+          <NavLink to="/team#apply" className={({isActive}) => isActive ? 'nav-link nav-apply active' : 'nav-link nav-apply'} onClick={() => {
+            setMenuOpen(false);
+            if (location.pathname === '/team') {
+              const el = document.getElementById('apply');
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }}>Apply</NavLink>
           <NavLink to="/login" className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} onClick={() => setMenuOpen(false)}>Login</NavLink>
         </div>
       </div>

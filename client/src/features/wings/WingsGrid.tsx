@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { SEO } from '../../components/common/SEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { CoverMedia } from '../../components/common/CoverMedia';
+import { staticWings } from '../../lib/staticData';
 
 type Wing = {
   _id: string;
@@ -15,16 +17,19 @@ type Wing = {
 };
 
 export function WingsGrid() {
-  const { data = [], isLoading, isError } = useQuery({
+  const { data: remoteData, isError } = useQuery({
     queryKey: ['wings'],
-    queryFn: async () => (await api.get('/public/wings')).data.data as Wing[]
+    queryFn: async () => (await api.get('/public/wings')).data.data as Wing[],
+    initialData: staticWings as Wing[],
   });
 
+  const data = remoteData && remoteData.length > 0 ? remoteData : (staticWings as Wing[]);
+
   return <section className="section">
+    <SEO title="Academic Wings | ASPIER" description="Explore the ten specialized interdisciplinary research wings of ASPIER." />
     <div className="container">
       <div className="section-head"><div><span className="eyebrow">ASPIER Academic Wings</span><h1>Explore disciplines</h1></div></div>
-      {isLoading && <p role="status">Loading academic wings…</p>}
-      {isError && <p role="alert">Could not load academic wings. Please refresh to try again.</p>}
+      {isError && data.length === 0 && <p role="alert">Could not load academic wings. Please refresh to try again.</p>}
       <div className="grid wing-grid">{data.map((wing, index) => <Link className="card wing-card" key={wing._id || wing.slug} to={`/wings/${wing.slug}`}>
         <CoverMedia
           src={wing.coverImage}

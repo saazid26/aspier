@@ -69,16 +69,7 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
     return () => query.removeEventListener('change', update);
   }, []);
 
-  useEffect(() => {
-    const openSignup = () => {
-      setMode('signup');
-      setOpen(true);
-      onOpenChange?.(true);
-      setSignupError('');
-    };
-    window.addEventListener('aspier-open-signup', openSignup);
-    return () => window.removeEventListener('aspier-open-signup', openSignup);
-  }, []);
+
   useEffect(() => {
     if (!open) return;
     const closeOutside = (event: MouseEvent | TouchEvent) => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { api } from '../../lib/api';
+import { SEO } from '../../components/common/SEO';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getApiErrorMessage } from '../../lib/api';
@@ -26,6 +27,7 @@ export function ContactForm() {
     }
   };
   return <main className="container section" style={{maxWidth:680}}>
+    <SEO title="Contact ASPIER" description="Get in touch with the Aeronautical, Spatial, Planetary Institute for Environmental Research." />
     <h1>Contact ASPIER</h1>
     <form className="form" onSubmit={submit}>
       {error && <p className="applicant-error-message" role="alert">{error}</p>}

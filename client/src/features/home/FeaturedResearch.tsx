@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { CoverMedia } from '../../components/common/CoverMedia';
+import { staticResearch } from '../../lib/staticData';
 
 type FeaturedItem = {
   _id: string;
@@ -16,18 +17,17 @@ type FeaturedItem = {
 };
 
 export function FeaturedResearch() {
-  const { data = [], isLoading, isError } = useQuery({
+  const { data: remoteData } = useQuery({
     queryKey: ['research-featured'],
-    queryFn: async () => (await api.get('/public/research', { params: { category: 'ongoing' } })).data.data as FeaturedItem[]
+    queryFn: async () => (await api.get('/public/research', { params: { category: 'ongoing' } })).data.data as FeaturedItem[],
+    initialData: staticResearch as FeaturedItem[]
   });
-  const featured = data.filter((item) => item.featured).slice(0, 3);
+  const data = remoteData && remoteData.length > 0 ? remoteData : (staticResearch as FeaturedItem[]);
+  const featured = data.filter((item) => item.featured !== false).slice(0, 3);
 
   return <section className="section featured-research-section">
     <div className="container featured-research-container">
       <div className="section-head featured-research-head"><div><span className="eyebrow">Featured research</span><h2>Current inquiry</h2></div></div>
-      {isLoading && <p role="status">Loading featured research…</p>}
-      {isError && <p role="alert">Could not load featured research. Please try again later.</p>}
-      {!isLoading && !isError && featured.length === 0 && <p className="muted">No current inquiries are featured yet.</p>}
       <div className="grid featured-research-grid">{featured.map((item) => <Link className="card image-card research-card" key={item._id} to={`/research/${item.slug}`}>
         <CoverMedia
           src={item.coverImage}

@@ -1,9 +1,11 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { SEO } from '../../components/common/SEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { ProfileAvatar } from '../../components/common/ProfileAvatar';
+import { staticSupervisors, staticScholars } from '../../lib/staticData';
 
 type Supervisor = {
   _id: string;
@@ -54,6 +56,20 @@ type Founder = {
 };
 
 export function Team() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash === '#apply' || window.location.hash === '#apply') {
+      const scrollTimer = setTimeout(() => {
+        const el = document.getElementById('apply');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+      return () => clearTimeout(scrollTimer);
+    }
+  }, [location.hash]);
+
   const founderQuery = useQuery({
     queryKey: ['team-founder'],
     queryFn: async () => (await api.get('/public/settings')).data.data as Founder
@@ -66,11 +82,20 @@ export function Team() {
     queryKey: ['team-scholars'],
     queryFn: async () => (await api.get('/public/scholars')).data.data as Scholar[]
   });
+
   const founder = founderQuery.data || {
     founderName: 'Md Saazid Bin Saif',
     founderTitle: 'Founder, ASPIER',
     founderResearchDomains: ['Aeronautical & Spatial Systems', 'Environmental Research', 'Remote Sensing & Geospatial Intelligence']
   };
+
+  const supervisors: Supervisor[] = (supervisorsQuery.data && supervisorsQuery.data.length > 0)
+    ? supervisorsQuery.data
+    : (staticSupervisors as unknown as Supervisor[]);
+
+  const scholars: Scholar[] = (scholarsQuery.data && scholarsQuery.data.length > 0)
+    ? scholarsQuery.data
+    : (staticScholars as unknown as Scholar[]);
 
   return <>
     <SEO title="ASPIER Team" description="Meet the ASPIER supervisors and research scholars."/>
@@ -89,7 +114,6 @@ export function Team() {
         <div className="section-head">
           <div><span className="eyebrow">Vision & leadership</span><h2>Meet our Founder</h2></div>
         </div>
-        {founderQuery.isError && <p className="applicant-error-message" role="alert">Could not load the latest founder profile.</p>}
         <article className="card founder-card">
           <ProfileAvatar name={founder.founderName || 'Md Saazid Bin Saif'} photo={founder.founderPhoto}/>
           <div className="founder-copy">
@@ -112,11 +136,8 @@ export function Team() {
         <div className="section-head">
           <div><span className="eyebrow">Leadership & guidance</span><h2>Meet our Supervisors</h2></div>
         </div>
-        {supervisorsQuery.isLoading && <p role="status">Loading supervisors…</p>}
-        {supervisorsQuery.isError && <p className="applicant-error-message" role="alert">Could not load supervisors.</p>}
-        {!supervisorsQuery.isLoading && !supervisorsQuery.isError && !supervisorsQuery.data?.length && <p className="muted">No supervisors are listed yet.</p>}
         <div className="grid">
-          {(supervisorsQuery.data || []).map((supervisor) =>
+          {supervisors.map((supervisor) =>
             <article className="card profile-card" key={supervisor._id}>
               <ProfileAvatar name={supervisor.name} photo={supervisor.photo}/>
               <h3><Link to={`/supervisors/${supervisor.slug}`}>{supervisor.name}</Link></h3>
@@ -139,11 +160,8 @@ export function Team() {
         <div className="section-head">
           <div><span className="eyebrow">Research community</span><h2>Meet our Young Scholars</h2></div>
         </div>
-        {scholarsQuery.isLoading && <p role="status">Loading scholars…</p>}
-        {scholarsQuery.isError && <p className="applicant-error-message" role="alert">Could not load scholars.</p>}
-        {!scholarsQuery.isLoading && !scholarsQuery.isError && !scholarsQuery.data?.length && <p className="muted">No scholars are listed yet.</p>}
         <div className="grid">
-          {(scholarsQuery.data || []).map((scholar) =>
+          {scholars.map((scholar) =>
             <article className="card profile-card" key={scholar._id}>
               <ProfileAvatar name={scholar.name} photo={scholar.photo}/>
               <h3><Link to={`/scholars/${scholar.slug}`}>{scholar.name}</Link></h3>
@@ -162,11 +180,17 @@ export function Team() {
       </div>
     </section>
 
-    <section className="section">
+    <section className="section apply-section" id="apply">
       <div className="container">
-        <div className="cta-band">
-          <div><span className="eyebrow">Join the community</span><h2>Become an ASPIER scholar</h2></div>
-          <Link className="button button-primary" to="/join">Submit your interest</Link>
+        <div className="cta-band apply-cta-band">
+          <div>
+            <span className="eyebrow">Join the community</span>
+            <h2>Become an ASPIER scholar</h2>
+            <p className="muted" style={{marginTop: 6, maxWidth: 560}}>
+              Collaborate across aeronautical, spatial, planetary, and environmental research wings. Submit your interest to start your fellowship journey.
+            </p>
+          </div>
+          <Link className="button button-primary button-lg" to="/join">Submit your interest</Link>
         </div>
       </div>
     </section>

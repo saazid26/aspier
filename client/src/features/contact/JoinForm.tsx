@@ -3,16 +3,20 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { api } from '../../lib/api';
+import { SEO } from '../../components/common/SEO';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { staticWings } from '../../lib/staticData';
 
 type ApplicationReceipt = { applicationId: string; accessCode: string };
 
 export function JoinForm() {
-  const { data: wings = [] } = useQuery({
+  const { data: remoteWings = [] } = useQuery({
     queryKey: ['wings'],
-    queryFn: async () => (await api.get('/public/wings')).data.data as Array<{ slug: string; name: string }>
+    queryFn: async () => (await api.get('/public/wings')).data.data as Array<{ slug: string; name: string }>,
+    initialData: staticWings
   });
+  const wings = remoteWings && remoteWings.length > 0 ? remoteWings : staticWings;
   const [form, setForm] = useState({ name: '', email: '', phone: '', wing: '', role: '', statement: '' });
   const [receipt, setReceipt] = useState<ApplicationReceipt | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,6 +40,7 @@ export function JoinForm() {
   };
 
   if (receipt) return <main className="container section" style={{ maxWidth: 720 }}>
+    <SEO title="Application Submitted | ASPIER" description="Your ASPIER fellowship application has been received." />
     <article className="card">
       <span className="eyebrow">Application received</span>
       <h1>Thank you for applying to ASPIER</h1>
@@ -48,6 +53,7 @@ export function JoinForm() {
   </main>;
 
   return <main className="container section" style={{ maxWidth: 720 }}>
+    <SEO title="Apply for ASPIER Fellowship" description="Apply to join ASPIER as a supervisor, young scholar, or research fellow." />
     <span className="eyebrow">Membership application</span>
     <h1>Join the ASPIER Team</h1>
     <p className="muted">Stage 1 is free for all applicants. If approved, Supervisors complete a fee-free academic profile; Young Scholars submit their profile and BDT 1,000 payment details in Stage 2.</p>
