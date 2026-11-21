@@ -42,27 +42,56 @@ export function Catalog() {
   });
   const data = remoteData && remoteData.length > 0 ? remoteData : (staticCourses as Course[]);
 
-  return <main className="container section academy-catalog">
-    <SEO title="ASPIER Academy" description="Explore online and live research paper writing courses, AI foundations, and specialized training programs." />
-    <header className="academy-catalog-header">
-      <span className="eyebrow">ASPIER Academy</span>
-      <h1>Research learning for every stage</h1>
-      <p className="muted">Courses are managed in Admin → ASPIER Academy / Courses.</p>
-      <div className="academy-header-actions">
-        <Link className="button button-primary" to="/register">Register</Link>
-        <Link className="button button-secondary" to="/login">Student Login</Link>
+  return (
+    <main className="container section academy-catalog">
+      <SEO
+        title="ASPIER Academy"
+        description="Explore online and live research paper writing courses, AI foundations, and specialized training programs."
+      />
+      <header className="academy-catalog-header">
+        <span className="eyebrow">ASPIER Academy</span>
+        <h1>Research learning for every stage</h1>
+        <p className="muted">Courses are managed in Admin → ASPIER Academy / Courses.</p>
+        <div className="academy-header-actions">
+          <Link className="button button-primary" to="/register">Register</Link>
+          <Link className="button button-secondary" to="/login">Student Login</Link>
+        </div>
+      </header>
+      <div className="grid academy-course-grid">
+        {data.map((course) => (
+          <Link
+            className="card image-card course-card"
+            key={course._id}
+            to={`/academy/courses/${course.slug || course._id}`}
+          >
+            <CoverMedia
+              src={course.thumbnail}
+              alt={`${course.title} course thumbnail`}
+              fallbackLabel={course.title}
+              className="course-card-media"
+              imageClassName="card-cover"
+              fallbackClassName="course-image-placeholder"
+            />
+            <div className="course-card-body">
+              <div className="course-card-content">
+                {course.sampleData && <span className="badge-sample">Sample course</span>}
+                <h2 className="course-card-title" title={course.title}>
+                  {course.title}
+                </h2>
+                <RichTextContent className="muted course-description" content={course.description} />
+                <div className="course-card-meta">
+                  {course.duration && <span>{course.duration}</span>}
+                  <span>{normalizeDeliveryMode(course.deliveryMode || course.mode)}</span>
+                </div>
+              </div>
+              <div className="course-card-footer">
+                <p className="course-start-date">{formatStartDate(course.startDate)}</p>
+                <strong className="course-price">৳{course.price} BDT</strong>
+              </div>
+            </div>
+          </Link>
+        ))}
       </div>
-    </header>
-    <div className="grid academy-course-grid">{data.map((course) => <Link className="card image-card course-card" key={course._id} to={`/academy/courses/${course.slug || course._id}`}>
-      <CoverMedia src={course.thumbnail} alt={`${course.title} course thumbnail`} fallbackLabel={course.title} className="course-card-media" imageClassName="card-cover" fallbackClassName="course-image-placeholder"/>
-      {course.sampleData && <span className="badge-sample">Sample course</span>}
-      <h2>{course.title}</h2><RichTextContent className="muted course-description" content={course.description}/>
-      <div className="course-card-meta">
-        {course.duration && <span>{course.duration}</span>}
-        <span>{normalizeDeliveryMode(course.deliveryMode || course.mode)}</span>
-      </div>
-      <p className="course-start-date">{formatStartDate(course.startDate)}</p>
-      <strong>৳{course.price} BDT</strong>
-    </Link>)}</div>
-  </main>;
+    </main>
+  );
 }
