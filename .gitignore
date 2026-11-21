@@ -11,3 +11,5 @@ server/uploads
 **/dist
 server/.env
 
+
+.github
