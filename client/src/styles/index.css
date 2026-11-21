@@ -468,6 +468,7 @@ img,video,iframe,canvas,svg{max-width:100%}
 .form,.form label,.form input,.form textarea,.form select{min-width:0}
 .button{max-width:100%;white-space:normal;text-align:center}
 .hero-grid,.cta-band,.founder-card,.curriculum-module-head,.course-enroll-bar{min-width:0}
+#founder,#supervisors,#young-scholars,#scholars,#apply{scroll-margin-top:86px}
 @media(max-width:1023px){
   .announcement-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
 }

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { PublicLayout } from './layouts/PublicLayout';
@@ -60,7 +60,28 @@ const ResearchApplications = lazy(() => import('../features/admin/research/Resea
 
 function Guard({children,roles}:{children:ReactNode;roles: string[]}){const [state,setState]=useState<{loading:boolean;role?:string}>({loading:true});useEffect(()=>{api.get('/auth/me').then(r=>setState({loading:false,role:r.data.data.role})).catch(()=>setState({loading:false}))},[]);if(state.loading)return <main className="container section">Loading...</main>;if(!state.role)return <Navigate to="/login" replace/>;if(!roles.includes(state.role))return <Navigate to="/" replace/>;return <>{children}</>}
 function Home(){return <><Hero/><MissionSection/><WingsGrid/><FeaturedResearch/><TeamPreview/><Announcements/><section className="section"><div className="container"><div className="stats-grid"><div className="card stat-card"><strong>10</strong><p className="muted">Academic wings</p></div><div className="card stat-card"><strong>25+</strong><p className="muted">Research domains</p></div><div className="card stat-card"><strong>3</strong><p className="muted">Academy tracks</p></div><div className="card stat-card"><strong>24/7</strong><p className="muted">Digital access</p></div></div></div></section><section className="section"><div className="container"><div className="cta-band"><div><span className="eyebrow">Explore ASPIER</span><h2>Discover research that moves forward</h2></div><Link className="button button-primary" to="/research">Explore research</Link></div></div></section></>}
-export function AppRouter(){return <BrowserRouter><Suspense fallback={<main className="container section"><div className="skeleton" style={{height:80}}/></main>}><Routes>
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (hash) {
+      const targetId = hash.replace(/^#/, '');
+      const scrollTimer = setTimeout(() => {
+        const el = document.getElementById(targetId) ||
+          (targetId === 'scholars' ? document.getElementById('young-scholars') : null) ||
+          (targetId === 'young-scholars' ? document.getElementById('scholars') : null);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+      return () => clearTimeout(scrollTimer);
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [pathname, hash]);
+  return null;
+}
+
+export function AppRouter(){return <BrowserRouter><ScrollToTop/><Suspense fallback={<main className="container section"><div className="skeleton" style={{height:80}}/></main>}><Routes>
 <Route element={<PublicLayout/>}><Route index element={<Home/>}/><Route path="wings" element={<WingsGrid/>}/><Route path="wings/:slug" element={<WingPage/>}/><Route path="research" element={<ResearchList/>}/><Route path="research/:slug" element={<ResearchDetail/>}/><Route path="team" element={<Team/>}/><Route path="supervisors" element={<SupervisorList/>}/><Route path="supervisors/:slug" element={<SupervisorProfile/>}/><Route path="scholars" element={<ScholarList/>}/><Route path="scholars/:slug" element={<ScholarProfile/>}/><Route path="news" element={<NewsList/>}/><Route path="news/:slug" element={<NewsDetail/>}/><Route path="contact" element={<ContactForm/>}/><Route path="join" element={<JoinForm/>}/><Route path="join/portal" element={<MembershipPortal/>}/><Route path="login" element={<Login/>}/><Route path="register" element={<Register/>}/><Route path="forgot" element={<Forgot/>}/><Route path="reset" element={<Reset/>}/></Route>
 <Route element={<AcademyLayout/>}><Route path="academy" element={<Catalog/>}/><Route path="academy/courses/:id" element={<CourseDetail/>}/><Route path="academy/courses/:id/payment" element={<EnrollPayment/>}/><Route path="academy/courses/:id/payment-status" element={<PaymentStatus/>}/><Route path="academy/courses/:courseId/learn/:lessonId" element={<Guard roles={['student','instructor','admin','superadmin']}><Player/></Guard>}/><Route path="academy/classes" element={<ClassSchedule/>}/><Route path="academy/instructors/:id" element={<InstructorProfile/>}/></Route>
 <Route element={<Guard roles={['student','instructor','supervisor','youngScholar','admin','superadmin']}><StudentLayout/></Guard>}><Route path="student/dashboard" element={<StudentDashboard/>}/><Route path="student/courses" element={<MyCourses/>}/><Route path="student/payments" element={<PaymentHistory/>}/><Route path="student/profile" element={<Profile/>}/><Route path="student/security" element={<WebAuthnSettings/>}/></Route>

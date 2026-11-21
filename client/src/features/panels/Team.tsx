@@ -59,16 +59,21 @@ export function Team() {
   const location = useLocation();
 
   useEffect(() => {
-    if (location.hash === '#apply' || window.location.hash === '#apply') {
+    if (location.hash) {
+      const targetId = location.hash.replace(/^#/, '');
       const scrollTimer = setTimeout(() => {
-        const el = document.getElementById('apply');
+        const el = document.getElementById(targetId) ||
+          (targetId === 'scholars' ? document.getElementById('young-scholars') : null) ||
+          (targetId === 'young-scholars' ? document.getElementById('scholars') : null);
         if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-      }, 150);
+      }, 100);
       return () => clearTimeout(scrollTimer);
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }
-  }, [location.hash]);
+  }, [location.pathname, location.hash]);
 
   const founderQuery = useQuery({
     queryKey: ['team-founder'],
@@ -155,7 +160,8 @@ export function Team() {
       </div>
     </section>
 
-    <section className="section" id="scholars" style={{background:'rgba(255,255,255,.018)',borderBlock:'1px solid rgba(255,255,255,.06)'}}>
+    <section className="section" id="young-scholars" style={{background:'rgba(255,255,255,.018)',borderBlock:'1px solid rgba(255,255,255,.06)'}}>
+      <span id="scholars" style={{position:'relative',top:'-86px',display:'block',visibility:'hidden'}}/>
       <div className="container">
         <div className="section-head">
           <div><span className="eyebrow">Research community</span><h2>Meet our Young Scholars</h2></div>
