@@ -136,7 +136,6 @@ export function ResearchDetail() {
                     <span>{member.name}</span>
                   )}
                 </h3>
-                {member.sampleData && <span className="badge-sample">Sample profile</span>}
                 <p className="muted" style={{ minHeight: 24, fontSize: '0.9rem', margin: '0.25rem 0 0.5rem 0' }}>
                   {member.designation || member.roleTitle || member.role || 'ASPIER Researcher'}
                   {member.affiliation ? ` • ${member.affiliation}` : ''}

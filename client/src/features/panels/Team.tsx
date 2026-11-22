@@ -176,9 +176,6 @@ export function Team() {
               <span className="eyebrow founder-role-badge">Leadership</span>
               <h3>{founder.founderName || 'Md Saazid Bin Saif'}</h3>
               <h4>{founder.founderTitle || founder.founderDescription || 'Founder & Executive Director, ASPIER'}</h4>
-              {founder.founderPhoto && founder.founderPhotoIsPlaceholder && (
-                <span className="badge-sample">Illustrative avatar · replace with verified portrait</span>
-              )}
               {founder.founderBio ? (
                 <RichTextContent content={founder.founderBio} className="muted founder-bio" />
               ) : (
@@ -214,8 +211,7 @@ export function Team() {
               <article className="card profile-card founding-card" key={member._id}>
                 <ProfileAvatar name={member.name} photo={member.photo} />
                 <h3>{member.name}</h3>
-                {member.sampleData && <span className="badge-sample">Illustrative sample profile</span>}
-                <p className="muted founding-role" style={{ minHeight: 24 }}>
+                <p className="muted founding-role">
                   <span style={{ color: '#0d736e', fontWeight: 600 }}>{member.role || member.designation || 'Founding Member'}</span>
                   {member.affiliation ? ` • ${member.affiliation}` : ''}
                 </p>
@@ -252,13 +248,12 @@ export function Team() {
           </div>
           <div className="grid">
             {supervisors.map((supervisor) => (
-              <article className="card profile-card" key={supervisor._id}>
+              <article className="card profile-card supervisor-card" key={supervisor._id}>
                 <ProfileAvatar name={supervisor.name} photo={supervisor.photo} />
                 <h3>
                   <Link to={`/supervisors/${supervisor.slug}`}>{supervisor.name}</Link>
                 </h3>
-                {supervisor.sampleData && <span className="badge-sample">Illustrative sample profile</span>}
-                <p className="muted" style={{ minHeight: 24 }}>
+                <p className="muted profile-role">
                   {supervisor.designation}{supervisor.affiliation ? ` • ${supervisor.affiliation}` : ''}
                 </p>
                 <div className="domain-list">
@@ -297,13 +292,12 @@ export function Team() {
           </div>
           <div className="grid">
             {scholars.map((scholar) => (
-              <article className="card profile-card" key={scholar._id}>
+              <article className="card profile-card scholar-card" key={scholar._id}>
                 <ProfileAvatar name={scholar.name} photo={scholar.photo} />
                 <h3>
                   <Link to={`/scholars/${scholar.slug}`}>{scholar.name}</Link>
                 </h3>
-                {scholar.sampleData && <span className="badge-sample">Illustrative sample profile</span>}
-                <p className="muted">
+                <p className="muted profile-role">
                   ASPIER Scholar{scholar.cohort ? ` • Cohort ${scholar.cohort}` : ''}
                 </p>
                 <div className="domain-list">

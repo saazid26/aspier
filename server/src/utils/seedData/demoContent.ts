@@ -28,8 +28,7 @@ export function makeDemoAvatar(initials: string): string {
     <circle cx="200" cy="150" r="72" fill="#f3c9a8"/>
     <path d="M123 149c2-66 37-99 78-99 46 0 78 39 78 99-26-19-52-28-78-28s-52 9-78 28" fill="#294a58"/>
     <path d="M65 400c7-100 55-151 135-151s128 51 135 151" fill="#147d76"/>
-    <text x="200" y="335" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="34" font-weight="700">${safeInitials}</text>
-    <text x="200" y="378" text-anchor="middle" fill="#e1fff7" font-family="Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="2">ILLUSTRATIVE AVATAR</text>
+    <text x="200" y="350" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="38" font-weight="700">${safeInitials}</text>
   </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }

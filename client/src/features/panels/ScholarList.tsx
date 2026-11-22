@@ -21,7 +21,6 @@ export function ScholarList() {
       {!data.length && <p className="muted">No scholars are listed yet.</p>}
       <div className="grid">{data.map((item: any) => <Link className="card profile-card" key={item._id} to={`/scholars/${item.slug}`}>
         <ProfileAvatar name={item.name} photo={item.photo}/>
-        {item.sampleData && <span className="badge-sample">Illustrative sample profile</span>}
         <h2>{item.name}</h2><p className="muted">{item.designation || 'Young Scholar'}{item.cohort ? ` · Cohort ${item.cohort}` : ''}</p>
         <RichTextContent content={item.bio || ''} className="muted"/>
       </Link>)}</div>

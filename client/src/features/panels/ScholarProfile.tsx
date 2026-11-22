@@ -18,7 +18,6 @@ export function ScholarProfile() {
   return (
     <main className="container section profile-detail">
       <ProfileAvatar name={data.name} photo={data.photo} />
-      {data.sampleData && <span className="badge-sample">Illustrative sample profile</span>}
       <h1>{data.name}</h1>
       <p className="muted">{[data.designation, data.affiliation, data.cohort ? `Cohort ${data.cohort}` : ''].filter(Boolean).join(' · ')}</p>
       {!!data.researchTopics?.length && (

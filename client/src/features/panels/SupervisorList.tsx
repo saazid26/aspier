@@ -21,7 +21,6 @@ export function SupervisorList() {
       {!data.length && <p className="muted">No supervisors are listed yet.</p>}
       <div className="grid">{data.map((item: any) => <Link className="card profile-card" key={item._id} to={`/supervisors/${item.slug}`}>
         <ProfileAvatar name={item.name} photo={item.photo}/>
-        {item.sampleData && <span className="badge-sample">Illustrative sample profile</span>}
         <h2>{item.name}</h2><p className="muted">{item.designation}</p><p className="muted">{item.affiliation}</p>
         <RichTextContent content={item.bio || ''} className="muted"/>
       </Link>)}</div>
