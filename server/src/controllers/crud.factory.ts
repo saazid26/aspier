@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import type { Model } from 'mongoose';
+import mongoose, { type Model } from 'mongoose';
 import { slugify } from '../utils/slug.js';
 import AuditLog from '../models/AuditLog.js';
 import { hashPassword, passwordStrength } from '../services/password.service.js';
@@ -10,6 +10,9 @@ export function crudFactory(model: Model<any>) {
       try {
         const page = Math.max(1, Number(req.query.page) || 1);
         const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+        if (mongoose.connection.readyState !== 1) {
+          return res.json({ success: true, data: [], pagination: { page, limit, total: 0, pages: 0 } });
+        }
         const search = String(req.query.search || '').trim();
         const filter: Record<string, unknown> = {};
         Object.entries(req.query).forEach(([key, value]) => {

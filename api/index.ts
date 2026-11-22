@@ -1,43 +1,60 @@
 import type { Request, Response } from 'express';
-import { app } from '../server/dist/app.js';
-import { connectDatabase } from '../server/dist/config/db.js';
-import { seedDatabase } from '../server/dist/utils/seed.js';
 
-let databaseConnection: Promise<void> | undefined;
-let seedPromise: Promise<void> | undefined;
+let appInstance: any = null;
+let dbPromise: Promise<void> | null = null;
+let seedPromise: Promise<void> | null = null;
 
-async function ensureDatabaseConnection(): Promise<void> {
-  if (!databaseConnection) {
-    databaseConnection = connectDatabase().catch((error: unknown) => {
-      databaseConnection = undefined;
-      console.warn('[api] Database connection note:', error instanceof Error ? error.message : error);
-    });
+async function getApp(): Promise<any> {
+  if (!appInstance) {
+    const [appMod, dbMod, seedMod] = await Promise.all([
+      import('../server/dist/app.js'),
+      import('../server/dist/config/db.js'),
+      import('../server/dist/utils/seed.js')
+    ]);
+    appInstance = appMod.app;
+
+    if (!dbPromise) {
+      dbPromise = dbMod.connectDatabase().catch((err: unknown) => {
+        dbPromise = null;
+        console.warn('[api] connectDatabase error:', err instanceof Error ? err.message : err);
+      });
+    }
+
+    if (!seedPromise) {
+      seedPromise = (async () => {
+        try {
+          await dbPromise;
+          await seedMod.seedDatabase();
+        } catch (err: unknown) {
+          seedPromise = null;
+          console.warn('[api] seedDatabase error:', err instanceof Error ? err.message : err);
+        }
+      })();
+    }
   }
-  await databaseConnection;
-  if (!seedPromise) {
-    seedPromise = seedDatabase().catch((error: unknown) => {
-      seedPromise = undefined;
-      console.warn('[api] Seed database note:', error instanceof Error ? error.message : error);
-    });
-  }
+  return appInstance;
 }
 
 export const maxDuration = 30;
 
 export default async function handler(req: Request, res: Response): Promise<void> {
   try {
-    await ensureDatabaseConnection();
-  } catch (error) {
-    console.warn('[api] ensureDatabaseConnection note:', error instanceof Error ? error.message : error);
-  }
+    const app = await getApp();
 
-  const requestUrl = new URL(req.url || '/', 'http://localhost');
-  const apiPath = requestUrl.searchParams.get('path');
-  if (!apiPath || !apiPath.startsWith('v1/')) {
-    res.status(404).json({ success: false, message: 'API route not found' });
-    return;
+    const requestUrl = new URL(req.url || '/', 'http://localhost');
+    const apiPath = requestUrl.searchParams.get('path');
+    if (!apiPath || !apiPath.startsWith('v1/')) {
+      res.status(404).json({ success: false, message: 'API route not found' });
+      return;
+    }
+    requestUrl.searchParams.delete('path');
+    req.url = `/api/${apiPath}${requestUrl.search}`;
+    app(req, res);
+  } catch (error: any) {
+    console.error('[api] Serverless handler error:', error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'Serverless function execution error'
+    });
   }
-  requestUrl.searchParams.delete('path');
-  req.url = `/api/${apiPath}${requestUrl.search}`;
-  app(req, res);
 }
