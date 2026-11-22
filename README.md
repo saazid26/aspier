@@ -13,7 +13,7 @@ Frontend: http://localhost:5173
 
 Backend health: http://localhost:5000/api/v1/health
 
-Administrator sign-in is restricted to `s2310956146@ru.ac.bd`. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the ignored `server/.env`; never put a live password in tracked source or documentation. The development seed synchronizes that account from the configured credentials. Admin login is direct until Strong 2FA is explicitly enabled under **Admin → Security**.
+Administrator sign-in is restricted to `admin@gmail.com`. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the ignored `server/.env`; never put a live password in tracked source or documentation. The development seed synchronizes that account from the configured credentials. Admin login is direct until Strong 2FA is explicitly enabled under **Admin → Security**.
 
 Demo student: `student@aspier.org` / `Student@1234`
 

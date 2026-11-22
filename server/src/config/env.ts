@@ -5,12 +5,13 @@ import { z } from 'zod';
 const devFallback = (name: 'access' | 'refresh' | 'field' | 'adminPass') =>
   randomBytes(32).toString('hex');
 
-export const DEFAULT_ADMIN_EMAIL = 's2310956146@ru.ac.bd';
+export const DEFAULT_ADMIN_EMAIL = 'admin@gmail.com';
+export const DEFAULT_ADMIN_PASSWORD = 'admin123';
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(5000),
   ADMIN_EMAIL: z.string().email().default(DEFAULT_ADMIN_EMAIL).transform((v) => v.trim().toLowerCase()),
-  ADMIN_PASSWORD: z.string().min(12).optional().default('zsELNP9WZdzc6ja'),
+  ADMIN_PASSWORD: z.string().min(6).optional().default(DEFAULT_ADMIN_PASSWORD),
   MONGO_URI: z.string().optional().default(''),
   CLIENT_URL: z.string().url().default('http://localhost:5173'),
   JWT_ACCESS_SECRET: z.string().min(32).optional().transform((v) => v || devFallback('access')),

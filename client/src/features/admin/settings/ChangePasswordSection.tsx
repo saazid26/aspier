@@ -83,7 +83,7 @@ export function ChangePasswordSection() {
         </h3>
       </div>
       <p className="muted" style={{ fontSize: '0.92rem', marginBottom: 20 }}>
-        Update the primary credentials for the administrator account (<code>s2310956146@ru.ac.bd</code>). The updated password is cryptographically hashed with bcrypt and stored strictly in the database.
+        Update the primary credentials for the administrator account (<code>admin@gmail.com</code>). The updated password is cryptographically hashed with bcrypt and stored strictly in the database.
       </p>
 
       {error && (
