@@ -260,7 +260,10 @@ export function WingsResearchManager() {
                   abstract: '',
                   content: '',
                   authors: [],
+                  category: 'ongoing',
                   status: 'ongoing',
+                  publicationUrl: '',
+                  doiUrl: '',
                   coverImage: ''
                 });
                 setResearchModalOpen(true);
@@ -503,6 +506,24 @@ export function WingsResearchManager() {
                 <option value="past">Past Research (Completed / Published)</option>
                 <option value="future">Future Research (Proposed / Planned)</option>
               </select>
+            </label>
+
+            <label>
+              Published Paper / DOI Link
+              <Input
+                value={editingResearch.publicationUrl || editingResearch.doiUrl || ''}
+                onChange={(e) => setEditingResearch({
+                  ...editingResearch,
+                  publicationUrl: e.target.value,
+                  doiUrl: e.target.value
+                })}
+                placeholder="https://doi.org/10.1016/... or https://journal.org/paper-123"
+              />
+              <span className="muted" style={{ fontSize: '0.82rem', display: 'block', marginTop: 4 }}>
+                {editingResearch.category === 'past'
+                  ? 'For Past Research, saving this link automatically displays a prominent "Read Paper" button on both the summary card and detail page.'
+                  : 'Optional DOI or publication URL for external reference.'}
+              </span>
             </label>
 
             <div style={{ marginTop: 12 }}>

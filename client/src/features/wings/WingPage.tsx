@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { FileText, ExternalLink } from 'lucide-react';
 import { api } from '../../lib/api';
 import { SEO } from '../../components/common/SEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
@@ -16,6 +17,8 @@ type ResearchItem = {
   coverImage?: string;
   authors?: string[];
   status?: string;
+  publicationUrl?: string;
+  doiUrl?: string;
 };
 
 export function WingPage() {
@@ -161,7 +164,20 @@ export function WingPage() {
                       <strong>Contributors:</strong> {item.authors.join(', ')}
                     </p>
                   )}
-                  <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle, #f1f5f9)' }}>
+                  <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle, #f1f5f9)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {activeResearchTab === 'past' && (item.publicationUrl || item.doiUrl) && (
+                      <a
+                        className="button button-primary read-paper-btn"
+                        href={(item.publicationUrl || item.doiUrl)!.startsWith('http') ? (item.publicationUrl || item.doiUrl) : `https://${item.publicationUrl || item.doiUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ width: '100%', textAlign: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 600 }}
+                      >
+                        <FileText size={15} />
+                        Read Paper
+                        <ExternalLink size={13} style={{ opacity: 0.8 }} />
+                      </a>
+                    )}
                     <Link className="button button-secondary" to={`/wings/${slug}/research/${item.slug}`} style={{ width: '100%', textAlign: 'center', display: 'block' }}>
                       View Research Details →
                     </Link>

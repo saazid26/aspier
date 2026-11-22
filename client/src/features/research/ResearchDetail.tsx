@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { FileText, ExternalLink } from 'lucide-react';
 import { api } from '../../lib/api';
 import { SEO } from '../../components/common/SEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
@@ -18,6 +19,7 @@ type ResearchDetailData = {
   objectives?: string;
   coverImage?: string;
   publicationUrl?: string;
+  doiUrl?: string;
   sampleData?: boolean;
   authors?: string[];
   supervisors?: string[];
@@ -96,10 +98,27 @@ export function ResearchDetail() {
           <RichTextContent content={data.objectives}/>
         </section>
       )}
-      {data.publicationUrl && (
-        <div style={{ marginTop: 16 }}>
-          <a className="publication-link" href={data.publicationUrl.startsWith('http') ? data.publicationUrl : `https://${data.publicationUrl}`} target="_blank" rel="noreferrer">
-            {data.sampleData ? 'Sample publication reference' : 'Publication / DOI'}
+      {(data.publicationUrl || data.doiUrl) && (
+        <div style={{ marginTop: 24, marginBottom: 16 }}>
+          <a
+            className="button button-primary read-paper-btn"
+            href={(data.publicationUrl || data.doiUrl)!.startsWith('http') ? (data.publicationUrl || data.doiUrl) : `https://${data.publicationUrl || data.doiUrl}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '11px 24px',
+              fontSize: '1rem',
+              fontWeight: 600,
+              borderRadius: 9999,
+              boxShadow: '0 4px 14px rgba(20, 143, 131, 0.25)'
+            }}
+          >
+            <FileText size={18} />
+            Read Paper
+            <ExternalLink size={15} style={{ opacity: 0.85 }} />
           </a>
         </div>
       )}

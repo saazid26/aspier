@@ -329,6 +329,8 @@ export const staticResearch = [
     title: "Urban Heat Exposure and Tree Canopy: A Sample Rajshahi Case Study",
     slug: "sample-urban-heat-canopy",
     abstract: "A retrospective analysis of how urban tree cover and built form relate to daytime heat exposure.",
+    publicationUrl: "https://doi.org/10.1016/j.envres.2024.118942",
+    doiUrl: "https://doi.org/10.1016/j.envres.2024.118942",
     featured: false,
     status: "published"
   },

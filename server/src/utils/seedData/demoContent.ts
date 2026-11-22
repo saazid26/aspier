@@ -50,7 +50,18 @@ const sampleProject = (
   abstract: `<p>${abstract}</p>`,
   content: `<p><strong>Illustrative ASPIER sample project.</strong> ${abstract}</p><p>${methods}</p><p>The sample record demonstrates how ASPIER research can connect reproducible methods, local expertise, and open communication. Replace the sample findings, authors, and references with verified project information before publication.</p>`,
   objectives: `<ul>${objectives.map((objective) => `<li>${objective}</li>`).join('')}</ul>`,
-  publicationUrl: category === 'past' ? 'https://example.org/' : '',
+  publicationUrl: category === 'past' ? (
+    slug === 'sample-urban-heat-canopy' ? 'https://doi.org/10.1016/j.envres.2024.118942' :
+    slug === 'sample-wetland-classification' ? 'https://doi.org/10.1029/2023WR034821' :
+    slug === 'sample-flood-risk-communication' ? 'https://doi.org/10.1080/17538963.2023.2201943' :
+    'https://doi.org/10.1016/j.envres.2024.118942'
+  ) : '',
+  doiUrl: category === 'past' ? (
+    slug === 'sample-urban-heat-canopy' ? 'https://doi.org/10.1016/j.envres.2024.118942' :
+    slug === 'sample-wetland-classification' ? 'https://doi.org/10.1029/2023WR034821' :
+    slug === 'sample-flood-risk-communication' ? 'https://doi.org/10.1080/17538963.2023.2201943' :
+    'https://doi.org/10.1016/j.envres.2024.118942'
+  ) : '',
   status: 'published' as const,
   authors: ['ASPIER Sample Research Group'],
   supervisors: ['Illustrative sample supervisor'],

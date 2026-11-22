@@ -8,6 +8,7 @@ const schema = new Schema({
   content: String,
   objectives: String,
   publicationUrl: String,
+  doiUrl: String,
   status: { type: String, enum: ['draft', 'under_review', 'published'], default: 'draft', index: true },
   authors: [String],
   supervisors: [String],
