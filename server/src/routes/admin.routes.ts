@@ -28,7 +28,7 @@ import { upsertClass, deleteClass } from '../controllers/class.controller.js';
 import ClassModel from '../models/Class.js';
 import { paymentQueue } from '../controllers/payment.controller.js';
 import { adminMembershipApplications, approveApplicantSignup, approveInitialApplication, deleteMembershipApplication, publishMembershipApplication } from '../controllers/membership.controller.js';
-import { listAdminNotifications, markAdminNotificationRead } from '../controllers/notification.controller.js';
+import { listAdminNotifications, markAdminNotificationRead, markAllAdminNotificationsRead } from '../controllers/notification.controller.js';
 import { deleteResearchApplication, downloadResearchApplicationCv, listResearchApplications, updateResearchApplicationStatus } from '../controllers/researchApplication.controller.js';
 import { demoFoundingMembers, demoSupervisors, demoScholars } from '../utils/fallbackData.js';
 
@@ -45,6 +45,7 @@ router.get('/dashboard', async (_req, res) => {
   }
 });
 router.get('/notifications', listAdminNotifications);
+router.patch('/notifications/read-all', markAllAdminNotificationsRead);
 router.patch('/notifications/:id/read', markAdminNotificationRead);
 router.get('/research-applications', listResearchApplications);
 router.get('/research-applications/:id/cv', downloadResearchApplicationCv);

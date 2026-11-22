@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { register, login, logout, refresh, forgotPassword, resetPassword, changePassword, setup2FA, verify2FA, disable2FA, activeSessions, revokeSession, revokeAllOtherSessions, updateAdminCredentials, me, admin2FASetup, completeAdmin2FALogin, admin2FAStatus, setupAdminPanel2FA, verifyAdminPanel2FA, disableAdminPanel2FA } from '../controllers/auth.controller.js';
-import { listMemberNotifications, markMemberNotificationRead } from '../controllers/notification.controller.js';
+import { listMemberNotifications, markMemberNotificationRead, markAllMemberNotificationsRead } from '../controllers/notification.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { authLimiter, forgotLimiter, slowAuth } from '../middleware/rateLimit.js';
@@ -37,6 +37,7 @@ router.get('/webauthn/credentials', authenticate, noStore, listWebAuthnCredentia
 router.delete('/webauthn/credentials/:id', authenticate, noStore, revokeWebAuthnCredential);
 router.post('/admin/update-credentials', authenticate, authorize('admin', 'superadmin'), noStore, updateAdminCredentials);
 router.get('/notifications', authenticate, noStore, listMemberNotifications);
+router.patch('/notifications/read-all', authenticate, noStore, markAllMemberNotificationsRead);
 router.patch('/notifications/:id/read', authenticate, noStore, markMemberNotificationRead);
 router.post('/logout', authenticate, noStore, logout);
 router.post('/refresh', refresh);

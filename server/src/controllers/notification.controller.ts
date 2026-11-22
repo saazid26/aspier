@@ -33,8 +33,18 @@ export async function markAdminNotificationRead(req: AuthRequest, res: Response)
   res.json({ success: true });
 }
 
+export async function markAllAdminNotificationsRead(_req: AuthRequest, res: Response) {
+  await Notification.updateMany({ audience: 'admin', readAt: { $exists: false } }, { $set: { readAt: new Date() } });
+  res.json({ success: true });
+}
+
 export async function markMemberNotificationRead(req: AuthRequest, res: Response) {
   const result = await Notification.updateOne({ _id: req.params.id, audience: 'member', userId: req.user._id }, { $set: { readAt: new Date() } });
   if (!result.matchedCount) throw new HttpError(404, 'Notification not found');
+  res.json({ success: true });
+}
+
+export async function markAllMemberNotificationsRead(req: AuthRequest, res: Response) {
+  await Notification.updateMany({ audience: 'member', userId: req.user._id, readAt: { $exists: false } }, { $set: { readAt: new Date() } });
   res.json({ success: true });
 }
