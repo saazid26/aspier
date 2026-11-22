@@ -30,6 +30,7 @@ import { paymentQueue } from '../controllers/payment.controller.js';
 import { adminMembershipApplications, approveApplicantSignup, approveInitialApplication, deleteMembershipApplication, publishMembershipApplication } from '../controllers/membership.controller.js';
 import { listAdminNotifications, markAdminNotificationRead } from '../controllers/notification.controller.js';
 import { deleteResearchApplication, downloadResearchApplicationCv, listResearchApplications, updateResearchApplicationStatus } from '../controllers/researchApplication.controller.js';
+import { demoFoundingMembers, demoSupervisors, demoScholars } from '../utils/fallbackData.js';
 
 const router = Router();
 router.use(authenticate, authorize('admin', 'superadmin'), noStore);
@@ -49,6 +50,36 @@ router.get('/research-applications', listResearchApplications);
 router.get('/research-applications/:id/cv', downloadResearchApplicationCv);
 router.patch('/research-applications/:id/status', updateResearchApplicationStatus);
 router.delete('/research-applications/:id', deleteResearchApplication);
+
+router.get('/founding-members', audit('list', 'FoundingMember'), async (_req, res) => {
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const list = await FoundingMember.find().sort({ order: 1, createdAt: 1 });
+      if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
+    }
+  } catch {}
+  return res.json({ success: true, data: demoFoundingMembers, pagination: { page: 1, limit: 100, total: demoFoundingMembers.length, pages: 1 } });
+});
+
+router.get('/supervisors', audit('list', 'Supervisor'), async (_req, res) => {
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const list = await Supervisor.find().sort({ order: 1, createdAt: 1 });
+      if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
+    }
+  } catch {}
+  return res.json({ success: true, data: demoSupervisors, pagination: { page: 1, limit: 100, total: demoSupervisors.length, pages: 1 } });
+});
+
+router.get('/scholars', audit('list', 'Scholar'), async (_req, res) => {
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const list = await Scholar.find().sort({ order: 1, createdAt: 1 });
+      if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
+    }
+  } catch {}
+  return res.json({ success: true, data: demoScholars, pagination: { page: 1, limit: 100, total: demoScholars.length, pages: 1 } });
+});
 
 const mountCrud = (path: string, model: any) => {
   const crud = crudFactory(model);

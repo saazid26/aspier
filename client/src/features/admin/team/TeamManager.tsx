@@ -9,6 +9,7 @@ import { Table } from '../../../components/ui/Table';
 import { Modal } from '../../../components/ui/Modal';
 import { ImageUploader } from '../../../components/forms/ImageUploader';
 import { RichTextEditor } from '../../../components/forms/RichTextEditor';
+import { staticFoundingMembers, staticSupervisors, staticScholars } from '../../../lib/staticData';
 
 export function TeamManager() {
   const queryClient = useQueryClient();
@@ -21,22 +22,25 @@ export function TeamManager() {
   });
 
   // Founding Members Query
-  const { data: foundingMembers = [], refetch: refetchFoundingMembers } = useQuery({
+  const { data: foundingMembersData, refetch: refetchFoundingMembers } = useQuery({
     queryKey: ['admin-founding-members'],
     queryFn: async () => (await api.get('/admin/founding-members')).data.data as any[]
   });
+  const foundingMembers = foundingMembersData && foundingMembersData.length > 0 ? foundingMembersData : staticFoundingMembers;
 
   // Supervisors Query
-  const { data: supervisors = [], refetch: refetchSupervisors } = useQuery({
+  const { data: supervisorsData, refetch: refetchSupervisors } = useQuery({
     queryKey: ['admin-supervisors'],
     queryFn: async () => (await api.get('/admin/supervisors')).data.data as any[]
   });
+  const supervisors = supervisorsData && supervisorsData.length > 0 ? supervisorsData : staticSupervisors;
 
   // Young Scholars Query
-  const { data: scholars = [], refetch: refetchScholars } = useQuery({
+  const { data: scholarsData, refetch: refetchScholars } = useQuery({
     queryKey: ['admin-scholars'],
     queryFn: async () => (await api.get('/admin/scholars')).data.data as any[]
   });
+  const scholars = scholarsData && scholarsData.length > 0 ? scholarsData : staticScholars;
 
   // Founder Form State
   const [founderForm, setFounderForm] = useState<Record<string, any> | null>(null);
