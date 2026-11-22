@@ -12,7 +12,16 @@ import { env } from './config/env.js';
 import { globalLimiter } from './middleware/rateLimit.js';
 import { requireCsrf } from './middleware/csrf.js';
 import { notFound, errorHandler } from './middleware/error.js';
-import sanitizeHtml from 'sanitize-html';
+
+function stripDangerousHtml(value: string): string {
+  return value
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/on\w+\s*=\s*(["']).*?\1/gi, '')
+    .replace(/javascript:/gi, '');
+}
+
 export const app = express();
 app.disable('x-powered-by');
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
@@ -49,7 +58,7 @@ app.use((req, _res, next) => {
   const sanitize = (value: unknown): unknown => {
     if (!value || typeof value !== 'object') return value;
     if (Array.isArray(value)) return value.map(sanitize);
-    return Object.fromEntries(Object.entries(value as Record<string, unknown>).filter(([key]) => !key.startsWith('$') && !key.includes('.')).map(([key, val]) => [key, typeof val === 'string' ? sanitizeHtml(val, { allowedTags: ['p', 'br', 'ul', 'ol', 'li', 'strong', 'b', 'em', 'i', 'u'], allowedAttributes: {} }) : sanitize(val)]));
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).filter(([key]) => !key.startsWith('$') && !key.includes('.')).map(([key, val]) => [key, typeof val === 'string' ? stripDangerousHtml(val) : sanitize(val)]));
   };
   if (req.body) req.body = sanitize(req.body);
   if (req.query) req.query = sanitize(req.query) as typeof req.query;
