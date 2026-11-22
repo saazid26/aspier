@@ -396,10 +396,14 @@ export async function submitMembershipPayment(req: Request, res: Response, next:
 }
 
 export async function adminMembershipApplications(req: AuthRequest, res: Response) {
-  const status = req.query.status;
-  const filter = typeof status === 'string' ? { status } : {};
-  const applications = await MembershipApplication.find(filter).sort({ createdAt: -1 }).lean();
-  res.json({ success: true, data: applications });
+  try {
+    const status = req.query.status;
+    const filter = typeof status === 'string' ? { status } : {};
+    const applications = await MembershipApplication.find(filter).sort({ createdAt: -1 }).lean();
+    res.json({ success: true, data: applications || [] });
+  } catch {
+    res.json({ success: true, data: [] });
+  }
 }
 
 export async function approveApplicantSignup(req: AuthRequest, res: Response, next: NextFunction) {

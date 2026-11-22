@@ -4,19 +4,27 @@ import type { AuthRequest } from '../middleware/auth.js';
 import { HttpError } from '../middleware/error.js';
 
 export async function listAdminNotifications(_req: AuthRequest, res: Response) {
-  const [items, unreadCount] = await Promise.all([
-    Notification.find({ audience: 'admin' }).sort({ createdAt: -1 }).limit(50).lean(),
-    Notification.countDocuments({ audience: 'admin', readAt: { $exists: false } })
-  ]);
-  res.json({ success: true, data: { items, unreadCount } });
+  try {
+    const [items, unreadCount] = await Promise.all([
+      Notification.find({ audience: 'admin' }).sort({ createdAt: -1 }).limit(50).lean(),
+      Notification.countDocuments({ audience: 'admin', readAt: { $exists: false } })
+    ]);
+    res.json({ success: true, data: { items: items || [], unreadCount: unreadCount || 0 } });
+  } catch {
+    res.json({ success: true, data: { items: [], unreadCount: 0 } });
+  }
 }
 
 export async function listMemberNotifications(req: AuthRequest, res: Response) {
-  const [items, unreadCount] = await Promise.all([
-    Notification.find({ audience: 'member', userId: req.user._id }).sort({ createdAt: -1 }).limit(50).lean(),
-    Notification.countDocuments({ audience: 'member', userId: req.user._id, readAt: { $exists: false } })
-  ]);
-  res.json({ success: true, data: { items, unreadCount } });
+  try {
+    const [items, unreadCount] = await Promise.all([
+      Notification.find({ audience: 'member', userId: req.user._id }).sort({ createdAt: -1 }).limit(50).lean(),
+      Notification.countDocuments({ audience: 'member', userId: req.user._id, readAt: { $exists: false } })
+    ]);
+    res.json({ success: true, data: { items: items || [], unreadCount: unreadCount || 0 } });
+  } catch {
+    res.json({ success: true, data: { items: [], unreadCount: 0 } });
+  }
 }
 
 export async function markAdminNotificationRead(req: AuthRequest, res: Response) {

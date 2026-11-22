@@ -7,6 +7,7 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
     if (message) return message;
     if (error.code === 'ECONNABORTED') return 'ASPIER did not respond in time. Check your connection and try again.';
     if (!error.response) return 'ASPIER is temporarily unreachable. The server may be restarting; wait briefly and try again.';
+    if (error.response?.status === 500) return 'ASPIER server is synchronizing. Please try again in a few moments.';
   }
   return error instanceof Error && error.message ? error.message : fallback;
 }

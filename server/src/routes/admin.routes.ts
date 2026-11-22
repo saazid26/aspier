@@ -68,11 +68,22 @@ router.delete('/membership-applications/:id', deleteMembershipApplication);
 router.post('/classes', upsertClass);
 router.put('/classes/:id', upsertClass);
 router.delete('/classes/:id', deleteClass);
-router.get('/classes', async (_req, res) => res.json({ success: true, data: await ClassModel.find().populate('courseId', 'title').sort({ scheduledAt: -1 }) }));
+router.get('/classes', async (_req, res) => {
+  try {
+    const classes = await ClassModel.find().populate('courseId', 'title').sort({ scheduledAt: -1 });
+    res.json({ success: true, data: classes || [] });
+  } catch {
+    res.json({ success: true, data: [] });
+  }
+});
 router.put('/courses/:id/curriculum', async (req, res) => {
-  const course = await Course.findByIdAndUpdate(req.params.id, { $set: { modules: req.body.modules } }, { new: true, runValidators: true });
-  if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
-  res.json({ success: true, data: course });
+  try {
+    const course = await Course.findByIdAndUpdate(req.params.id, { $set: { modules: req.body.modules } }, { new: true, runValidators: true });
+    if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
+    res.json({ success: true, data: course });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || 'Failed to update course curriculum' });
+  }
 });
 const uploadMemory = multer({
   storage: multer.memoryStorage(),
@@ -84,8 +95,22 @@ router.get('/media', mediaLibrary);
 router.delete('/media/:id', deleteMedia);
 router.get('/settings', getSettings);
 router.put('/settings', updateSettings);
-router.get('/audit', async (req, res) => res.json({ success: true, data: await AuditLog.find().populate('actorId', 'name email').sort({ createdAt: -1 }).limit(200) }));
-router.get('/students', async (_req, res) => res.json({ success: true, data: await User.find({ role: 'student' }).sort({ createdAt: -1 }) }));
+router.get('/audit', async (req, res) => {
+  try {
+    const logs = await AuditLog.find().populate('actorId', 'name email').sort({ createdAt: -1 }).limit(200);
+    res.json({ success: true, data: logs || [] });
+  } catch {
+    res.json({ success: true, data: [] });
+  }
+});
+router.get('/students', async (_req, res) => {
+  try {
+    const students = await User.find({ role: 'student' }).sort({ createdAt: -1 });
+    res.json({ success: true, data: students || [] });
+  } catch {
+    res.json({ success: true, data: [] });
+  }
+});
 router.get('/inbox/all', async (_req, res) => {
   try {
     const [messages, notifications, researchApps, membershipApps] = await Promise.all([

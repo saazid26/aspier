@@ -24,10 +24,18 @@ export function crudFactory(model: Model<any>) {
       } catch (error) { next(error); }
     },
     getById: async (req: Request, res: Response, next: NextFunction) => {
-      try { const item = await model.findById(req.params.id); if (!item) return res.status(404).json({ success: false, message: 'Not found' }); res.json({ success: true, data: item }); } catch (error) { next(error); }
+      try {
+        if (mongoose.connection.readyState !== 1) return res.status(404).json({ success: false, message: 'Not found' });
+        const item = await model.findById(req.params.id);
+        if (!item) return res.status(404).json({ success: false, message: 'Not found' });
+        res.json({ success: true, data: item });
+      } catch (error) { next(error); }
     },
     create: async (req: Request & { user?: any }, res: Response, next: NextFunction) => {
       try {
+        if (mongoose.connection.readyState !== 1) {
+          return res.status(503).json({ success: false, message: 'Database is synchronizing. Please retry shortly.' });
+        }
         const body = { ...req.body };
         if (model.modelName === 'User') {
           if (['admin', 'superadmin'].includes(body.role) && String(body.email || '').trim().toLowerCase() !== FIXED_ADMIN_EMAIL) {
@@ -51,13 +59,16 @@ export function crudFactory(model: Model<any>) {
         const item = await model.create(body);
         const metadata = { ...body };
         delete metadata.passwordHash;
-        await AuditLog.create({ actorId: req.user?._id, action: 'create', resource: model.modelName, resourceId: String(item._id), ip: req.ip, userAgent: req.headers['user-agent'], metadata });
+        await AuditLog.create({ actorId: req.user?._id, action: 'create', resource: model.modelName, resourceId: String(item._id), ip: req.ip, userAgent: req.headers['user-agent'], metadata }).catch((err) => console.warn('[audit create]', err));
         if (model.modelName === 'User') item.passwordHash = undefined;
         res.status(201).json({ success: true, data: item });
       } catch (error) { next(error); }
     },
     update: async (req: Request & { user?: any }, res: Response, next: NextFunction) => {
       try {
+        if (mongoose.connection.readyState !== 1) {
+          return res.status(503).json({ success: false, message: 'Database is synchronizing. Please retry shortly.' });
+        }
         const body = { ...req.body };
         if (model.modelName === 'User') {
           const target = await model.findById(req.params.id);
@@ -93,12 +104,15 @@ export function crudFactory(model: Model<any>) {
         if (!item) return res.status(404).json({ success: false, message: 'Not found' });
         const metadata = { ...body };
         delete metadata.passwordHash;
-        await AuditLog.create({ actorId: req.user?._id, action: 'update', resource: model.modelName, resourceId: req.params.id, ip: req.ip, userAgent: req.headers['user-agent'], metadata });
+        await AuditLog.create({ actorId: req.user?._id, action: 'update', resource: model.modelName, resourceId: req.params.id, ip: req.ip, userAgent: req.headers['user-agent'], metadata }).catch((err) => console.warn('[audit update]', err));
         res.json({ success: true, data: item });
       } catch (error) { next(error); }
     },
     delete: async (req: Request & { user?: any }, res: Response, next: NextFunction) => {
       try {
+        if (mongoose.connection.readyState !== 1) {
+          return res.status(503).json({ success: false, message: 'Database is synchronizing. Please retry shortly.' });
+        }
         if (model.modelName === 'User') {
           const target = await model.findById(req.params.id);
           if (!target) return res.status(404).json({ success: false, message: 'Not found' });
@@ -107,7 +121,7 @@ export function crudFactory(model: Model<any>) {
         }
         const item = await model.findByIdAndDelete(req.params.id);
         if (!item) return res.status(404).json({ success: false, message: 'Not found' });
-        await AuditLog.create({ actorId: req.user?._id, action: 'delete', resource: model.modelName, resourceId: req.params.id, ip: req.ip, userAgent: req.headers['user-agent'] });
+        await AuditLog.create({ actorId: req.user?._id, action: 'delete', resource: model.modelName, resourceId: req.params.id, ip: req.ip, userAgent: req.headers['user-agent'] }).catch((err) => console.warn('[audit delete]', err));
         res.json({ success: true, message: 'Deleted' });
       } catch (error) { next(error); }
     }

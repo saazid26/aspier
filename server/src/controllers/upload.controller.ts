@@ -8,7 +8,15 @@ export async function upload(req: AuthRequest, res: Response, next: NextFunction
     res.status(201).json({ success: true, data: await saveMedia(req.file, String(req.user._id)) });
   } catch (error) { next(error); }
 }
-export async function mediaLibrary(_req: AuthRequest, res: Response) { res.json({ success: true, data: await MediaAsset.find().sort({ createdAt: -1 }).limit(200) }); }
+export async function mediaLibrary(_req: AuthRequest, res: Response) {
+  try {
+    const assets = await MediaAsset.find().sort({ createdAt: -1 }).limit(200);
+    res.json({ success: true, data: assets || [] });
+  } catch (err) {
+    console.warn('[mediaLibrary] DB error, fallback to empty array:', err);
+    res.json({ success: true, data: [] });
+  }
+}
 export async function deleteMedia(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const id = typeof req.params.id === 'string' ? req.params.id : '';

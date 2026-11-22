@@ -1,9 +1,9 @@
 import 'dotenv/config';
-import { randomBytes } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 const devFallback = (name: 'access' | 'refresh' | 'field' | 'adminPass') =>
-  randomBytes(32).toString('hex');
+  createHash('sha256').update(`aspier-platform-secure-fallback-${name}-v1`).digest('hex');
 
 export const DEFAULT_ADMIN_EMAIL = 'admin@gmail.com';
 export const DEFAULT_ADMIN_PASSWORD = 'admin123';

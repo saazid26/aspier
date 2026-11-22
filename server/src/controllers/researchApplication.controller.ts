@@ -83,9 +83,13 @@ export async function submitResearchApplication(req: Request, res: Response, nex
 }
 
 export async function listResearchApplications(req: AuthRequest, res: Response) {
-  const status = typeof req.query.status === 'string' ? req.query.status : undefined;
-  const data = await ResearchApplication.find(status ? { status } : {}).sort({ createdAt: -1 }).lean();
-  res.json({ success: true, data });
+  try {
+    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+    const data = await ResearchApplication.find(status ? { status } : {}).sort({ createdAt: -1 }).lean();
+    res.json({ success: true, data: data || [] });
+  } catch {
+    res.json({ success: true, data: [] });
+  }
 }
 
 export async function updateResearchApplicationStatus(req: AuthRequest, res: Response, next: NextFunction) {

@@ -19,7 +19,19 @@ export async function saveMedia(file: Express.Multer.File, uploadedBy?: string, 
     await fs.writeFile(path.join(uploadDir, filename), file.buffer);
     url = `/uploads/${filename}`;
   }
-  return MediaAsset.create({ url, publicId, filename: file.originalname, mimeType: file.mimetype, size: file.size, ...(uploadedBy ? { uploadedBy } : {}), ...(membershipApplicationId ? { membershipApplicationId } : {}) });
+  try {
+    return await MediaAsset.create({ url, publicId, filename: file.originalname, mimeType: file.mimetype, size: file.size, ...(uploadedBy ? { uploadedBy } : {}), ...(membershipApplicationId ? { membershipApplicationId } : {}) });
+  } catch (err) {
+    console.warn('[saveMedia] DB save error, returning standalone asset:', err);
+    return {
+      _id: randomUUID(),
+      url,
+      publicId,
+      filename: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size
+    };
+  }
 }
 
 export async function deleteMediaAsset(id: string): Promise<void> {

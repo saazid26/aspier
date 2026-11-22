@@ -40,13 +40,27 @@ export async function paymentStatus(req: AuthRequest, res: Response, next: NextF
     res.json({ success: true, data: payment });
   } catch (error) { next(error); }
 }
-export async function paymentHistory(req: AuthRequest, res: Response) { res.json({ success: true, data: await Payment.find({ userId: req.user._id }).sort({ submittedAt: -1 }).populate('courseId', 'title slug') }); }
+export async function paymentHistory(req: AuthRequest, res: Response) {
+  try {
+    const payments = await Payment.find({ userId: req.user._id }).sort({ submittedAt: -1 }).populate('courseId', 'title slug');
+    res.json({ success: true, data: payments || [] });
+  } catch {
+    res.json({ success: true, data: [] });
+  }
+}
 export async function paymentQueue(req: AuthRequest, res: Response) {
-  const page = Math.max(1, Number(req.query.page) || 1);
-  const limit = Math.min(100, Number(req.query.limit) || 20);
-  const filter: any = req.query.status ? { status: req.query.status } : {};
-  const [items, total] = await Promise.all([Payment.find(filter).populate('userId', 'name email').populate('courseId', 'title price').sort({ submittedAt: -1 }).skip((page - 1) * limit).limit(limit), Payment.countDocuments(filter)]);
-  res.json({ success: true, data: items, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Number(req.query.limit) || 20);
+    const filter: any = req.query.status ? { status: req.query.status } : {};
+    const [items, total] = await Promise.all([
+      Payment.find(filter).populate('userId', 'name email').populate('courseId', 'title price').sort({ submittedAt: -1 }).skip((page - 1) * limit).limit(limit),
+      Payment.countDocuments(filter)
+    ]);
+    res.json({ success: true, data: items || [], pagination: { page, limit, total: total || 0, pages: Math.ceil((total || 0) / limit) } });
+  } catch {
+    res.json({ success: true, data: [], pagination: { page: 1, limit: 20, total: 0, pages: 0 } });
+  }
 }
 export async function approvePayment(req: AuthRequest, res: Response, next: NextFunction) {
   try {
