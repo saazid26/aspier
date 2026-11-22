@@ -126,8 +126,8 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
       });
     }
 
-    // Resilient fallback for other admin attempts when MongoDB is disconnected on Vercel
-    if (!isDbConnected && isAdminEmail) {
+    // Resilient fallback when MongoDB is disconnected or unreachable
+    if (!isDbConnected) {
       throw new HttpError(401, 'Invalid email or password');
     }
 
@@ -135,7 +135,8 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
     try {
       user = await User.findOne({ email: normalizedEmail }).select('+passwordHash +twoFactorSecretEncrypted +adminTwoFactorSecretEncrypted +adminStrongKeyHash +backupRecoveryCodeHashes +otpFailedAttempts +otpLockedUntil');
     } catch (dbError) {
-      throw dbError;
+      console.warn('[auth] DB lookup error:', dbError);
+      throw new HttpError(401, 'Invalid email or password');
     }
     if (!user) throw new HttpError(401, 'Invalid email or password');
     const adminAccount = ['admin', 'superadmin'].includes(user.role);

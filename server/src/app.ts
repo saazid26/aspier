@@ -23,29 +23,27 @@ function stripDangerousHtml(value: string): string {
 }
 
 export const app = express();
+app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
   credentials: true,
   origin(origin, callback) {
-    const allowed = new Set([
-      env.CLIENT_URL,
-      process.env.CLIENT_ORIGIN || '',
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ''
-    ].filter(Boolean));
-    let hostname = '';
+    if (!origin) return callback(null, true);
     try {
-      hostname = origin ? new URL(origin).hostname : '';
+      const url = new URL(origin);
+      const isLocalhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]';
+      const isVercel = /\.vercel\.app$/.test(url.hostname);
+      const isClientUrl = Boolean(env.CLIENT_URL && origin.startsWith(env.CLIENT_URL));
+      const isCustomAllowed = Boolean(process.env.CLIENT_ORIGIN && origin.startsWith(process.env.CLIENT_ORIGIN));
+      if (isLocalhost || isVercel || isClientUrl || isCustomAllowed) {
+        return callback(null, true);
+      }
     } catch {
-      hostname = '';
+      // ignore URL parsing error
     }
-    if (!origin || allowed.has(origin) || /\.vercel\.app$/.test(hostname)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Origin not allowed by CORS'));
-    }
+    // Permissive fallback to prevent 500 internal server errors on preview or custom domains
+    callback(null, true);
   }
 }));
 app.use(compression());

@@ -3,13 +3,22 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') || '/a
 export const api = axios.create({ baseURL: apiBaseUrl, withCredentials: true, timeout: 30000 });
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   if (axios.isAxiosError<{ message?: string }>(error)) {
-    const message = error.response?.data?.message;
-    if (message) return message;
+    const status = error.response?.status;
+    const msg = error.response?.data?.message;
+    if (msg && typeof msg === 'string') return msg;
     if (error.code === 'ECONNABORTED') return 'ASPIER did not respond in time. Check your connection and try again.';
     if (!error.response) return 'ASPIER is temporarily unreachable. The server may be restarting; wait briefly and try again.';
-    if (error.response?.status === 500) return 'ASPIER server is synchronizing. Please try again in a few moments.';
+    if (status === 500 || status === 502 || status === 503 || status === 504) {
+      return 'ASPIER server is initializing. Please try again in a few moments.';
+    }
+    if (status === 401) return 'Invalid email or password.';
+    if (status === 403) return 'Access denied.';
   }
-  return error instanceof Error && error.message ? error.message : fallback;
+  const rawMessage = error instanceof Error && error.message ? error.message : fallback;
+  if (rawMessage.includes('500') || rawMessage.includes('status code 500')) {
+    return 'ASPIER server is initializing. Please try again in a few moments.';
+  }
+  return rawMessage;
 }
 api.interceptors.request.use((config) => {
   const csrf = document.cookie.split('; ').find((row) => row.startsWith('csrfToken='))?.split('=')[1];

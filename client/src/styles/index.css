@@ -575,7 +575,8 @@ img,video,iframe,canvas,svg{max-width:100%}
 .founding-members-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;max-width:980px;margin:0 auto}
 @media(max-width:768px){.founding-members-grid{grid-template-columns:1fr;gap:16px;max-width:100%}}
 .founding-card{display:flex!important;flex-direction:column!important;text-align:center;padding:22px;height:100%}
-.founding-card .profile-photo{width:88px!important;height:88px!important;margin:0 auto 12px!important;border-radius:50%!important;border:2px solid rgba(20,143,131,.35)!important;flex-shrink:0}
+.founding-card .profile-photo{width:88px!important;height:88px!important;min-width:88px!important;max-width:88px!important;min-height:88px!important;max-height:88px!important;margin:0 auto 12px!important;border-radius:50%!important;border:2px solid rgba(20,143,131,.35)!important;flex-shrink:0!important;overflow:hidden!important;align-self:center!important}
+.founding-card .profile-photo img{width:100%!important;height:100%!important;max-width:88px!important;max-height:88px!important;object-fit:cover!important;border-radius:50%!important;display:block!important}
 .founding-card .profile-photo-fallback{font-size:1.65rem!important}
 .founding-card h3{font-size:1.18rem;margin:8px 0 4px;color:#1b5660}
 .founding-card .founding-role{font-size:.88rem;min-height:22px;margin:2px 0 10px}
