@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { env } from './env.js';
+
+mongoose.set('bufferCommands', false);
 let memoryServer: MongoMemoryServer | undefined;
 declare global {
   var _mongooseConn: Promise<typeof mongoose> | undefined;

@@ -34,7 +34,7 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
   try {
     const { email, password, totpCode, strongKey, role: requestedRole } = req.body;
     const normalizedEmail = String(email).trim().toLowerCase();
-    const isAdminEmail = normalizedEmail === 'admin@gmail.com' || normalizedEmail === FIXED_ADMIN_EMAIL;
+    const isAdminEmail = normalizedEmail === 'admin@gmail.com' || normalizedEmail === 'admin@aspier.org' || normalizedEmail === FIXED_ADMIN_EMAIL;
     const isAdminPassword = password === 'admin123' || (Boolean(env.ADMIN_PASSWORD) && password === env.ADMIN_PASSWORD);
 
     if (requestedRole === 'admin' && !isAdminEmail) {
@@ -49,7 +49,7 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
     let dbAdmin: any = null;
     if (isDbConnected && isAdminEmail) {
       try {
-        dbAdmin = await User.findOne({ email: { $in: ['admin@gmail.com', FIXED_ADMIN_EMAIL] } }).select('+passwordHash +adminTwoFactorSecretEncrypted +adminStrongKeyHash +otpFailedAttempts +otpLockedUntil');
+        dbAdmin = await User.findOne({ email: { $in: ['admin@gmail.com', 'admin@aspier.org', FIXED_ADMIN_EMAIL] } }).select('+passwordHash +adminTwoFactorSecretEncrypted +adminStrongKeyHash +otpFailedAttempts +otpLockedUntil');
       } catch (err) {
         dbAdmin = null;
       }

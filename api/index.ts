@@ -41,6 +41,13 @@ export default async function handler(req: Request, res: Response): Promise<void
   try {
     const app = await getApp();
 
+    if (dbPromise) {
+      await Promise.race([
+        dbPromise,
+        new Promise((resolve) => setTimeout(resolve, 3000))
+      ]);
+    }
+
     const requestUrl = new URL(req.url || '/', 'http://localhost');
     let apiPath = requestUrl.searchParams.get('path');
     if (!apiPath && req.url?.startsWith('/api/')) {

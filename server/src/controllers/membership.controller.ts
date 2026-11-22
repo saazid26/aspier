@@ -1,5 +1,6 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { z } from 'zod';
 import MembershipApplication from '../models/MembershipApplication.js';
 import Setting from '../models/Setting.js';
@@ -20,6 +21,7 @@ import Notification from '../models/Notification.js';
 import { notifyAdmins, notifyMember } from '../services/notification.service.js';
 import { sendEmail } from '../services/email.service.js';
 import { createTotpQr, createTotpSecret, verifyTotp } from '../services/totp.service.js';
+import { getFallbackApplications } from '../utils/fallbackData.js';
 import { env } from '../config/env.js';
 
 const initialSchema = z.preprocess((value) => {
@@ -215,24 +217,58 @@ export async function submitInitialApplication(req: Request, res: Response, next
   try {
     const data = parseBody(initialSchema, req.body);
     const accessCode = randomBytes(24).toString('base64url');
-    const application = await MembershipApplication.create({
-      ...data,
-      email: data.email.toLowerCase(),
-      category: data.role,
-      role: data.role,
-      wing: data.wing,
-      wingInterest: data.wing,
-      accessCodeHash: sha256(accessCode)
-    });
-    await notifyAdmins({
-      title: 'New membership application',
-      body: `${application.name} applied as ${application.role === 'youngScholar' ? 'Young Scholar' : 'Supervisor'} for ${application.wingInterest}.`,
-      category: 'initial-application',
-      link: '/admin/membership-applications'
-    });
+    let application: any = null;
+
+    if (mongoose.connection.readyState === 1) {
+      try {
+        application = await MembershipApplication.create({
+          ...data,
+          email: data.email.toLowerCase(),
+          category: data.role,
+          role: data.role,
+          wing: data.wing,
+          wingInterest: data.wing,
+          accessCodeHash: sha256(accessCode)
+        });
+      } catch (dbErr) {
+        console.warn('[membership] DB create failed, saving to resilient fallback store:', dbErr);
+      }
+    }
+
+    if (!application) {
+      const generatedId = new mongoose.Types.ObjectId().toString();
+      application = {
+        _id: generatedId,
+        id: generatedId,
+        name: data.name,
+        email: data.email.toLowerCase(),
+        phone: data.phone,
+        wing: data.wing,
+        wingInterest: data.wing,
+        category: data.role,
+        role: data.role,
+        statement: data.statement,
+        accessCodeHash: sha256(accessCode),
+        status: 'initial_pending',
+        createdAt: new Date().toISOString()
+      };
+      getFallbackApplications().unshift(application);
+    }
+
+    try {
+      await notifyAdmins({
+        title: 'New membership application',
+        body: `${application.name} applied as ${application.role === 'youngScholar' ? 'Young Scholar' : 'Supervisor'} for ${application.wingInterest}.`,
+        category: 'initial-application',
+        link: '/admin/membership-applications'
+      });
+    } catch {
+      // ignore
+    }
+
     res.status(201).json({
       success: true,
-      data: { applicationId: application.id, accessCode, name: application.name, status: application.status }
+      data: { applicationId: application.id || application._id, accessCode, name: application.name, status: application.status }
     });
   } catch (error) {
     next(error);
@@ -398,11 +434,30 @@ export async function submitMembershipPayment(req: Request, res: Response, next:
 export async function adminMembershipApplications(req: AuthRequest, res: Response) {
   try {
     const status = req.query.status;
-    const filter = typeof status === 'string' && status !== 'all' ? { status } : {};
-    const applications = await MembershipApplication.find(filter).sort({ createdAt: -1 }).lean();
-    res.json({ success: true, data: applications || [] });
+    let applications: any[] = [];
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const filter = typeof status === 'string' && status !== 'all' ? { status } : {};
+        applications = await MembershipApplication.find(filter).sort({ createdAt: -1 }).lean();
+      } catch (err) {
+        console.warn('[membership] admin find error:', err);
+      }
+    }
+    const inMem = getFallbackApplications();
+    const filterStatus = typeof status === 'string' ? status : 'all';
+    const filteredInMem = filterStatus === 'all' || !filterStatus
+      ? inMem
+      : inMem.filter((a: any) => a.status === filterStatus);
+
+    const combined = [...(applications || [])];
+    for (const item of filteredInMem) {
+      if (!combined.some(c => String(c._id) === String(item._id) || c.email === item.email)) {
+        combined.push(item);
+      }
+    }
+    res.json({ success: true, data: combined });
   } catch {
-    res.json({ success: true, data: [] });
+    res.json({ success: true, data: getFallbackApplications() });
   }
 }
 
@@ -679,9 +734,18 @@ export async function markMembershipNotificationRead(req: Request, res: Response
 
 export async function deleteMembershipApplication(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const application = await MembershipApplication.findByIdAndDelete(req.params.id);
-    if (!application) throw new HttpError(404, 'Application not found');
-    await AuditLog.create({ actorId: req.user._id, action: 'delete-membership-application', resource: 'MembershipApplication', resourceId: application.id, ip: req.ip, userAgent: req.headers['user-agent'] });
+    const id = String(req.params.id || '');
+    if (mongoose.connection.readyState === 1) {
+      await MembershipApplication.findByIdAndDelete(id).catch(() => null);
+    }
+    const inMem = getFallbackApplications();
+    const idx = inMem.findIndex(a => String(a._id) === id || a.id === id);
+    if (idx !== -1) inMem.splice(idx, 1);
+    try {
+      await AuditLog.create({ actorId: req.user._id, action: 'delete-membership-application', resource: 'MembershipApplication', resourceId: id, ip: req.ip, userAgent: req.headers['user-agent'] });
+    } catch {
+      // ignore
+    }
     res.json({ success: true, message: 'Application deleted' });
   } catch (error) {
     next(error);

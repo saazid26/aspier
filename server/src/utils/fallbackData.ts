@@ -297,4 +297,49 @@ export const fallbackNews = [
   }
 ];
 
-export { demoResearch, demoSupervisors, demoScholars, demoFoundingMembers };
+export { demoResearch, demoSupervisors, demoScholars, demoFoundingMembers, makeDemoAvatar };
+
+declare global {
+  var _fallbackApplications: any[] | undefined;
+}
+
+export function getFallbackApplications(): any[] {
+  if (!global._fallbackApplications) {
+    global._fallbackApplications = [
+      {
+        _id: "60d0fe4f5311236168a109a1",
+        id: "60d0fe4f5311236168a109a1",
+        name: "Amina Rahman",
+        email: "amina.scholar.test@gmail.com",
+        phone: "+880 1712-345678",
+        wing: "Wings of Aeronautical Engineering & UAV Systems",
+        wingInterest: "Wings of Aeronautical Engineering & UAV Systems",
+        category: "youngScholar",
+        role: "youngScholar",
+        institution: "University of Dhaka",
+        academicStatus: "Undergraduate (Final Year)",
+        statement: "Passionate about small satellite propulsion systems, autonomous aerial navigation, and sustainable aerospace materials. Looking forward to conducting high-impact research under ASPIER guidance.",
+        status: "initial_pending",
+        createdAt: new Date().toISOString()
+      },
+      {
+        _id: "60d0fe4f5311236168a109a2",
+        id: "60d0fe4f5311236168a109a2",
+        name: "Dr. Farhan Tanvir",
+        email: "farhan.supervisor.test@gmail.com",
+        phone: "+880 1819-876543",
+        wing: "Wings of Planetary Science & Astrobiology",
+        wingInterest: "Wings of Planetary Science & Astrobiology",
+        category: "supervisor",
+        role: "supervisor",
+        institution: "Rajshahi University of Engineering & Technology (RUET)",
+        designation: "Associate Professor, Department of Physics",
+        statement: "Interested in supervising young scholars in planetary spectroscopy, Mars surface geology, and atmospheric modeling.",
+        status: "initial_pending",
+        createdAt: new Date().toISOString()
+      }
+    ];
+  }
+  return global._fallbackApplications;
+}
+
