@@ -124,8 +124,12 @@ export function ResearchDetail() {
       )}
       {data.category !== 'past' && (
         <div className="research-apply-cta" style={{ marginTop: 24 }}>
-          <Link className="button button-primary" to="/join">
-            Apply to Join This Research
+          <Link
+            className="button button-primary"
+            to={`/wings/apply-research?wing=${wingSlug || ''}&project=${data.slug}`}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}
+          >
+            Apply to Join This Research (Research Mate)
           </Link>
         </div>
       )}

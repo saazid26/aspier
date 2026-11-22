@@ -15,7 +15,7 @@ import { getSettings } from '../controllers/settings.controller.js';
 import { activateMemberAccount, applicantLoginWithTwoFactor, markMembershipNotificationRead, membershipPortal, requestMembershipAccessCode, submitApplicantSignup, submitInitialApplication, submitMembershipPayment, submitMembershipProfile, uploadMembershipPhoto } from '../controllers/membership.controller.js';
 import { notifyAdmins } from '../services/notification.service.js';
 import { authLimiter, slowAuth } from '../middleware/rateLimit.js';
-import { submitResearchApplication } from '../controllers/researchApplication.controller.js';
+import { submitResearchApplication, lookupResearchApplication, submitResearchPayment, downloadResearchApplicationCv } from '../controllers/researchApplication.controller.js';
 import { validateOnboardingToken, uploadOnboardingPhoto, completeOnboarding } from '../controllers/onboarding.controller.js';
 import { fallbackWings, fallbackSettings, fallbackNews, demoResearch, demoSupervisors, demoScholars, demoFoundingMembers } from '../utils/fallbackData.js';
 
@@ -116,12 +116,16 @@ router.get('/research', async (req, res) => {
   return res.json({ success: true, data: results });
 });
 
-const cvUpload = multer({
+const pdfCvUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 4 * 1024 * 1024 },
-  fileFilter: (_req, file, callback) => callback(null, ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.mimetype))
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => callback(null, file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf'))
 });
-router.post('/research/:id/applications', authLimiter, cvUpload.single('cv'), submitResearchApplication);
+router.post('/research-applications', pdfCvUpload.single('cv'), submitResearchApplication);
+router.post('/research-applications/lookup', lookupResearchApplication);
+router.post('/research-applications/payment', submitResearchPayment);
+router.get('/research-applications/:id/cv', downloadResearchApplicationCv);
+router.post('/research/:id/applications', pdfCvUpload.single('cv'), submitResearchApplication);
 
 router.get('/research/:slug', async (req, res) => {
   try {

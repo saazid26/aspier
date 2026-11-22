@@ -30,7 +30,14 @@ import { paymentQueue } from '../controllers/payment.controller.js';
 import { adminMembershipApplications, approveApplicantSignup, approveInitialApplication, deleteMembershipApplication, publishMembershipApplication } from '../controllers/membership.controller.js';
 import { approveAndSendOnboarding } from '../controllers/onboarding.controller.js';
 import { listAdminNotifications, markAdminNotificationRead, markAllAdminNotificationsRead } from '../controllers/notification.controller.js';
-import { deleteResearchApplication, downloadResearchApplicationCv, listResearchApplications, updateResearchApplicationStatus } from '../controllers/researchApplication.controller.js';
+import {
+  deleteResearchApplication,
+  downloadResearchApplicationCv,
+  listResearchApplications,
+  approveStage1ResearchApplication,
+  confirmResearchPayment,
+  updateWhatsAppLink
+} from '../controllers/researchApplication.controller.js';
 import { demoFoundingMembers, demoSupervisors, demoScholars } from '../utils/fallbackData.js';
 
 const router = Router();
@@ -49,8 +56,10 @@ router.get('/notifications', listAdminNotifications);
 router.patch('/notifications/read-all', markAllAdminNotificationsRead);
 router.patch('/notifications/:id/read', markAdminNotificationRead);
 router.get('/research-applications', listResearchApplications);
+router.post('/research-applications/:id/approve-stage1', approveStage1ResearchApplication);
+router.post('/research-applications/:id/confirm-payment', confirmResearchPayment);
+router.put('/research-applications/:id/whatsapp-link', updateWhatsAppLink);
 router.get('/research-applications/:id/cv', downloadResearchApplicationCv);
-router.patch('/research-applications/:id/status', updateResearchApplicationStatus);
 router.delete('/research-applications/:id', deleteResearchApplication);
 
 router.get('/founding-members', audit('list', 'FoundingMember'), async (_req, res) => {

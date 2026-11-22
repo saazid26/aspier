@@ -178,6 +178,15 @@ export function WingPage() {
                         <ExternalLink size={13} style={{ opacity: 0.8 }} />
                       </a>
                     )}
+                    {activeResearchTab !== 'past' && (
+                      <Link
+                        className="button button-primary"
+                        to={`/wings/apply-research?wing=${slug}&project=${item.slug}`}
+                        style={{ width: '100%', textAlign: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 600 }}
+                      >
+                        Apply to Join Research
+                      </Link>
+                    )}
                     <Link className="button button-secondary" to={`/wings/${slug}/research/${item.slug}`} style={{ width: '100%', textAlign: 'center', display: 'block' }}>
                       View Research Details →
                     </Link>

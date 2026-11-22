@@ -301,6 +301,69 @@ export { demoResearch, demoSupervisors, demoScholars, demoFoundingMembers, makeD
 
 declare global {
   var _fallbackApplications: any[] | undefined;
+  var _fallbackResearchApplications: any[] | undefined;
+}
+
+export function getFallbackResearchApplications(): any[] {
+  if (!global._fallbackResearchApplications) {
+    global._fallbackResearchApplications = [
+      {
+        _id: "60d0fe4f5311236168a109b1",
+        id: "60d0fe4f5311236168a109b1",
+        applicationId: "ASPIER-RM-2026-A101",
+        accessCode: "RM-SEC-9482-KLA8",
+        role: "Research Mate",
+        name: "Tariqul Islam",
+        email: "tariqul.researchmate@gmail.com",
+        phone: "+880 1711-223344",
+        university: "Bangladesh University of Engineering and Technology (BUET)",
+        department: "Department of Mechanical Engineering",
+        occupation: "Final Year Undergraduate Student & Robotics Researcher",
+        wingId: "60d0fe4f5311236168a109ca",
+        wingName: "Wings of Aeronautical Engineering & UAV Systems",
+        wingSlug: "aeronautical-engineering-uav-systems",
+        researchId: "60d0fe4f5311236168a109d1",
+        researchTitle: "Autonomous UAV Swarm Dynamics for Agricultural Remote Sensing",
+        researchSlug: "autonomous-uav-swarm-dynamics-agricultural-remote-sensing",
+        skills: "Python, ROS2, Computer Vision (YOLOv8), MATLAB Simulink, Drone Flight Controllers",
+        statement: "I am extremely eager to join the Autonomous UAV Swarm project as a Research Mate. I have built two hexacopter prototypes and want to publish collaborative research on multi-agent trajectory optimization.",
+        cvFilename: "Tariqul_Islam_CV.pdf",
+        cvMimeType: "application/pdf",
+        status: "pending",
+        paymentAmount: 1000,
+        whatsAppGroupLink: "",
+        createdAt: new Date().toISOString()
+      },
+      {
+        _id: "60d0fe4f5311236168a109b2",
+        id: "60d0fe4f5311236168a109b2",
+        applicationId: "ASPIER-RM-2026-B202",
+        accessCode: "RM-SEC-5831-XP49",
+        role: "Research Mate",
+        name: "Nusrat Jahan",
+        email: "nusrat.researchmate@gmail.com",
+        phone: "+880 1812-334455",
+        university: "University of Dhaka",
+        department: "Department of Geology",
+        occupation: "Graduate Teaching Assistant & Research Fellow",
+        wingId: "60d0fe4f5311236168a109cb",
+        wingName: "Wings of Planetary Science & Astrobiology",
+        wingSlug: "planetary-science-astrobiology",
+        researchId: "60d0fe4f5311236168a109d2",
+        researchTitle: "Subsurface Ice Detection on Mars Using High-Resolution Radar Reflectometry",
+        researchSlug: "subsurface-ice-detection-mars-radar-reflectometry",
+        skills: "Geographic Information Systems (QGIS), Python (GeoPandas, NumPy), Remote Sensing, Spectral Analysis",
+        statement: "Seeking to contribute to the Mars subsurface ice mapping project. Experienced with radar satellite imagery from SHARAD and orbital spectrometers.",
+        cvFilename: "Nusrat_Jahan_Academic_CV.pdf",
+        cvMimeType: "application/pdf",
+        status: "stage1_approved",
+        paymentAmount: 1000,
+        whatsAppGroupLink: "https://chat.whatsapp.com/invite/AspierMarsPlanetaryResearch2026",
+        createdAt: new Date(Date.now() - 86400000).toISOString()
+      }
+    ];
+  }
+  return global._fallbackResearchApplications;
 }
 
 export function getFallbackApplications(): any[] {

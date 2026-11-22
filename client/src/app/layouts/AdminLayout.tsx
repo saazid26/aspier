@@ -9,6 +9,7 @@ const adminLinks = [
   ['/admin/wings-research', 'Wings & Research'],
   ['/admin/team-manager', 'Team Manager'],
   ['/admin/membership-applications', 'Applications / Inquiries'],
+  ['/admin/research-applications', 'Research Mate Apps'],
   ['/admin/announcements-cms', 'Announcements & News'],
   ['/admin/academy-cms', 'ASPIER Academy CMS'],
   ['/admin/inbox', 'Messages & Inbox'],
