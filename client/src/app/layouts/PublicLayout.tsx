@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../lib/api';
 import { useCsrf } from '../../hooks/useCsrf';
 import { PublicApplicantBell } from '../../components/common/PublicApplicantBell';
 const links = [
@@ -14,6 +16,10 @@ const links = [
 ];
 export function PublicLayout() {
   useCsrf();
+  const { data: settings } = useQuery({
+    queryKey: ['public-settings'],
+    queryFn: async () => (await api.get('/public/settings')).data.data
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const navControlsRef = useRef<HTMLDivElement>(null);
@@ -45,7 +51,7 @@ export function PublicLayout() {
     <nav className="nav">
       <div className="container nav-inner">
         <Link className="brand" to="/" aria-label="ASPIER home" onClick={() => setMenuOpen(false)}>
-          <img className="brand-logo" src="/aspier-logo.png" alt="ASPIER"/>
+          <img className="brand-logo" src={settings?.aspierLogoUrl || '/aspier-logo.png'} alt="ASPIER"/>
         </Link>
         <div className="header-right-controls" ref={navControlsRef}>
           <PublicApplicantBell onOpenChange={(open) => { if (open) setMenuOpen(false); }}/>
@@ -64,6 +70,6 @@ export function PublicLayout() {
       </div>
     </nav>
     <main key={location.pathname}><Outlet/></main>
-    <footer className="footer"><div className="container"><strong>ASPIER</strong> — Aeronautical, Spatial, Planetary Institute for Environmental Research · © {new Date().getFullYear()}</div></footer>
+    <footer className="footer"><div className="container">{settings?.footerCopyright || <><strong>ASPIER</strong> — Aeronautical, Spatial, Planetary Institute for Environmental Research · © {new Date().getFullYear()}</>}</div></footer>
   </div>;
 }

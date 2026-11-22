@@ -2,7 +2,19 @@ import { Link, Outlet } from 'react-router-dom';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { NotificationBell } from '../../components/common/NotificationBell';
-const adminLinks=[['/admin','Dashboard'],['/admin/resources/wings','Wings'],['/admin/resources/research','Research'],['/admin/research-applications','Research Applications'],['/admin/resources/supervisors','Supervisors'],['/admin/resources/scholars','Scholars'],['/admin/resources/instructors','Instructors'],['/admin/resources/news','News'],['/admin/resources/courses','ASPIER Academy / Courses'],['/admin/membership-applications','Membership applications'],['/admin/resources/users','Users'],['/admin/resources/messages','Messages'],['/admin/payments','Payments'],['/admin/classes','Classes'],['/admin/courses/curriculum','Curriculum'],['/admin/media','Media library'],['/admin/settings','Site & payment settings'],['/admin/security','Security'],['/admin/audit','Audit log']];
+const adminLinks = [
+  ['/admin', 'Dashboard'],
+  ['/admin/branding', 'General & Branding'],
+  ['/admin/home-cms', 'Home Page CMS'],
+  ['/admin/wings-research', 'Wings & Research'],
+  ['/admin/team-manager', 'Team Manager'],
+  ['/admin/announcements-cms', 'Announcements & News'],
+  ['/admin/academy-cms', 'ASPIER Academy CMS'],
+  ['/admin/inbox', 'Messages & Inbox'],
+  ['/admin/media', 'Media Library'],
+  ['/admin/security', 'Security & Authentication'],
+  ['/admin/audit', 'Audit Log']
+];
 export function AdminLayout(){
   const [menuOpen,setMenuOpen]=useState(false);
   return <div className="admin-shell">

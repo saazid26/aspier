@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { register, login, logout, refresh, forgotPassword, resetPassword, changePassword, setup2FA, verify2FA, disable2FA, activeSessions, revokeSession, me, admin2FASetup, completeAdmin2FALogin, admin2FAStatus, setupAdminPanel2FA, verifyAdminPanel2FA, disableAdminPanel2FA } from '../controllers/auth.controller.js';
+import { register, login, logout, refresh, forgotPassword, resetPassword, changePassword, setup2FA, verify2FA, disable2FA, activeSessions, revokeSession, revokeAllOtherSessions, updateAdminCredentials, me, admin2FASetup, completeAdmin2FALogin, admin2FAStatus, setupAdminPanel2FA, verifyAdminPanel2FA, disableAdminPanel2FA } from '../controllers/auth.controller.js';
 import { listMemberNotifications, markMemberNotificationRead } from '../controllers/notification.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { authLimiter, forgotLimiter, slowAuth } from '../middleware/rateLimit.js';
 import { csrfToken } from '../middleware/csrf.js';
 import { noStore } from '../middleware/noStore.js';
-import { verifyWebAuthnLogin, verifyWebAuthnRegistration, webAuthnRegistrationOptions } from '../controllers/webauthn.controller.js';
+import { verifyWebAuthnLogin, verifyWebAuthnRegistration, webAuthnRegistrationOptions, listWebAuthnCredentials, revokeWebAuthnCredential } from '../controllers/webauthn.controller.js';
 const router = Router();
 const strongPassword = z.string().min(8).max(128)
   .regex(/[a-z]/, 'Use at least one lowercase letter')
@@ -32,7 +32,10 @@ router.post('/admin-2fa/settings/verify', authenticate, noStore, authLimiter, va
 router.post('/admin-2fa/settings/disable', authenticate, noStore, authLimiter, validate(z.object({ code: z.string().length(6), strongKey: z.string().min(1).max(128) })), disableAdminPanel2FA);
 router.post('/webauthn/login/verify', authLimiter, noStore, validate(z.object({ challengeToken: z.string().min(32).max(100), response: z.record(z.string(), z.unknown()) })), verifyWebAuthnLogin);
 router.post('/webauthn/register/options', authenticate, noStore, webAuthnRegistrationOptions);
-router.post('/webauthn/register/verify', authenticate, noStore, validate(z.object({ response: z.record(z.string(), z.unknown()) })), verifyWebAuthnRegistration);
+router.post('/webauthn/register/verify', authenticate, noStore, validate(z.object({ response: z.record(z.string(), z.unknown()), deviceName: z.string().optional() })), verifyWebAuthnRegistration);
+router.get('/webauthn/credentials', authenticate, noStore, listWebAuthnCredentials);
+router.delete('/webauthn/credentials/:id', authenticate, noStore, revokeWebAuthnCredential);
+router.post('/admin/update-credentials', authenticate, authorize('admin', 'superadmin'), noStore, updateAdminCredentials);
 router.get('/notifications', authenticate, noStore, listMemberNotifications);
 router.patch('/notifications/:id/read', authenticate, noStore, markMemberNotificationRead);
 router.post('/logout', authenticate, noStore, logout);
@@ -44,6 +47,7 @@ router.post('/2fa/setup', authenticate, authorize('admin', 'superadmin', 'superv
 router.post('/2fa/verify', authenticate, authorize('admin', 'superadmin', 'supervisor', 'youngScholar'), noStore, validate(z.object({ code: z.string().length(6) })), verify2FA);
 router.post('/2fa/disable', authenticate, authorize('admin', 'superadmin'), noStore, validate(z.object({ password: z.string().min(1) })), disable2FA);
 router.get('/sessions', authenticate, noStore, activeSessions);
+router.post('/sessions/revoke-all', authenticate, noStore, revokeAllOtherSessions);
 router.delete('/sessions/:hash', authenticate, noStore, revokeSession);
 router.get('/me', authenticate, noStore, me);
 export default router;

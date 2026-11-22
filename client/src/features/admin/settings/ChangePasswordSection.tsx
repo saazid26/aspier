@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, ShieldCheck, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, KeyRound, Mail } from 'lucide-react';
 import { api, getApiErrorMessage } from '../../../lib/api';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 
 export function ChangePasswordSection() {
   const [currentPassword, setCurrentPassword] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrent, setShowCurrent] = useState(false);
@@ -25,48 +26,53 @@ export function ChangePasswordSection() {
     matches: Boolean(newPassword && confirmPassword && newPassword === confirmPassword)
   };
 
-  const allValid =
-    rules.length &&
-    rules.uppercase &&
-    rules.lowercase &&
-    rules.number &&
-    rules.symbol &&
-    rules.matches &&
-    Boolean(currentPassword);
+  const isChangingPassword = Boolean(newPassword || confirmPassword);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    if (newPassword !== confirmPassword) {
-      setError('New passwords do not match');
-      toast.error('New passwords do not match');
+    if (!currentPassword) {
+      setError('Current password is required to verify administrator authorization.');
       return;
     }
 
-    if (!rules.length || !rules.uppercase || !rules.lowercase || !rules.number || !rules.symbol) {
-      setError('Please fulfill all password security requirements before saving.');
-      toast.error('Password does not fulfill security requirements');
+    if (isChangingPassword) {
+      if (newPassword !== confirmPassword) {
+        setError('New passwords do not match');
+        toast.error('New passwords do not match');
+        return;
+      }
+
+      if (!rules.length || !rules.uppercase || !rules.lowercase || !rules.number || !rules.symbol) {
+        setError('Please fulfill all password security requirements before saving.');
+        toast.error('Password does not fulfill security requirements');
+        return;
+      }
+    } else if (!newEmail) {
+      setError('Please provide a new email address or a new password to update.');
       return;
     }
 
     setBusy(true);
     try {
-      const response = await api.post('/auth/change-password', {
+      const response = await api.post('/auth/admin/update-credentials', {
         currentPassword,
-        password: newPassword,
-        confirmPassword
+        newEmail: newEmail.trim() || undefined,
+        newPassword: newPassword || undefined,
+        confirmPassword: confirmPassword || undefined
       });
 
-      const message = response.data?.message || 'Administrator password updated successfully.';
+      const message = response.data?.message || 'Administrator credentials updated successfully.';
       toast.success(message);
-      setSuccess('Your password has been securely updated in the database. Future logins will require this new password.');
+      setSuccess('Your administrator credentials have been securely updated in the database (hashed with bcrypt). Future logins will require these credentials.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setNewEmail('');
     } catch (err: any) {
-      const msg = getApiErrorMessage(err, 'Could not update password');
+      const msg = getApiErrorMessage(err, 'Could not update administrator credentials');
       setError(msg);
       toast.error(msg);
     } finally {
@@ -79,11 +85,11 @@ export function ChangePasswordSection() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <KeyRound size={22} color="#148f83" />
         <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#1b5660' }}>
-          Change Administrator Password
+          Administrator Password & Email Management
         </h3>
       </div>
       <p className="muted" style={{ fontSize: '0.92rem', marginBottom: 20 }}>
-        Update the primary credentials for the administrator account (<code>admin@gmail.com</code>). The updated password is cryptographically hashed with bcrypt and stored strictly in the database.
+        Update the primary credentials for the administrator account. All passwords are cryptographically hashed using bcrypt before persistence in the database and are never stored in plain text.
       </p>
 
       {error && (
@@ -101,7 +107,7 @@ export function ChangePasswordSection() {
 
       <form className="form" onSubmit={handleSubmit} style={{ maxWidth: 580 }}>
         <label>
-          Current Password
+          Current Password (Required for verification)
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <Input
               required
@@ -123,11 +129,22 @@ export function ChangePasswordSection() {
           </div>
         </label>
 
-        <label>
-          New Password
+        <label style={{ marginTop: 12 }}>
+          New Admin Email Address (Optional — leave blank to keep current)
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <Input
-              required
+              type="email"
+              placeholder="admin@gmail.com"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+            />
+          </div>
+        </label>
+
+        <label style={{ marginTop: 12 }}>
+          New Password (Optional — leave blank to keep current)
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Input
               type={showNew ? 'text' : 'password'}
               autoComplete="new-password"
               placeholder="Enter strong new password (min. 10 chars)"
@@ -146,61 +163,51 @@ export function ChangePasswordSection() {
           </div>
         </label>
 
-        <label>
-          Confirm New Password
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Input
-              required
-              type={showConfirm ? 'text' : 'password'}
-              autoComplete="new-password"
-              placeholder="Re-enter new password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              style={{ paddingRight: 42 }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirm(!showConfirm)}
-              style={{ position: 'absolute', right: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#557178', padding: 4 }}
-              aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
-            >
-              {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-        </label>
+        {isChangingPassword && (
+          <>
+            <label>
+              Confirm New Password
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Input
+                  required
+                  type={showConfirm ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Re-enter new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  style={{ paddingRight: 42 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  style={{ position: 'absolute', right: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#557178', padding: 4 }}
+                  aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+                >
+                  {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </label>
 
-        {/* Live Security Checklist */}
-        <div style={{ background: 'rgba(20,143,131,0.05)', border: '1px solid rgba(20,143,131,0.15)', borderRadius: 10, padding: '12px 16px', margin: '6px 0 12px' }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1b5660', display: 'block', marginBottom: 6 }}>
-            Security Requirements:
-          </span>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '4px 12px', fontSize: '0.8rem' }}>
-            <span style={{ color: rules.length ? '#059669' : '#6b7280' }}>
-              {rules.length ? '✓' : '○'} At least 10 characters
-            </span>
-            <span style={{ color: rules.uppercase ? '#059669' : '#6b7280' }}>
-              {rules.uppercase ? '✓' : '○'} Uppercase letter (A-Z)
-            </span>
-            <span style={{ color: rules.lowercase ? '#059669' : '#6b7280' }}>
-              {rules.lowercase ? '✓' : '○'} Lowercase letter (a-z)
-            </span>
-            <span style={{ color: rules.number ? '#059669' : '#6b7280' }}>
-              {rules.number ? '✓' : '○'} Number (0-9)
-            </span>
-            <span style={{ color: rules.symbol ? '#059669' : '#6b7280' }}>
-              {rules.symbol ? '✓' : '○'} Symbol / Special character
-            </span>
-            <span style={{ color: rules.matches ? '#059669' : '#6b7280' }}>
-              {rules.matches ? '✓' : '○'} Passwords match
-            </span>
-          </div>
-        </div>
+            {/* Password Requirements Checklist */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '12px 16px', margin: '14px 0', fontSize: '0.85rem' }}>
+              <div style={{ fontWeight: 600, marginBottom: 8, color: '#334155' }}>Password Strength Requirements:</div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <li style={{ color: rules.length ? '#16a34a' : '#64748b' }}>{rules.length ? '✓' : '○'} At least 10 characters long</li>
+                <li style={{ color: rules.uppercase ? '#16a34a' : '#64748b' }}>{rules.uppercase ? '✓' : '○'} At least one uppercase letter (A-Z)</li>
+                <li style={{ color: rules.lowercase ? '#16a34a' : '#64748b' }}>{rules.lowercase ? '✓' : '○'} At least one lowercase letter (a-z)</li>
+                <li style={{ color: rules.number ? '#16a34a' : '#64748b' }}>{rules.number ? '✓' : '○'} At least one numeric digit (0-9)</li>
+                <li style={{ color: rules.symbol ? '#16a34a' : '#64748b' }}>{rules.symbol ? '✓' : '○'} At least one special symbol or punctuation</li>
+                {confirmPassword && (
+                  <li style={{ color: rules.matches ? '#16a34a' : '#dc2626' }}>{rules.matches ? '✓ Passwords match' : '✕ Passwords do not match'}</li>
+                )}
+              </ul>
+            </div>
+          </>
+        )}
 
-        <div style={{ marginTop: 8 }}>
-          <Button disabled={busy || !allValid}>
-            {busy ? 'Updating Password…' : 'Update Administrator Password'}
-          </Button>
-        </div>
+        <Button disabled={busy} style={{ marginTop: 12 }}>
+          {busy ? 'Verifying & Updating…' : 'Update Administrator Credentials'}
+        </Button>
       </form>
     </section>
   );

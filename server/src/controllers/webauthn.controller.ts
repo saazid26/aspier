@@ -18,15 +18,29 @@ import { issueRefreshSession, signAccessToken } from '../services/token.service.
 import { setAuthCookies } from '../utils/cookies.js';
 import type { Types } from 'mongoose';
 
-const rpID = new URL(env.CLIENT_URL).hostname;
+function getRpID(req?: Request) {
+  if (req) {
+    const hostHeader = req.headers['x-forwarded-host'] || req.headers.host || '';
+    const hostStr = Array.isArray(hostHeader) ? (hostHeader[0] || '') : hostHeader;
+    const hostname = hostStr.split(':')[0] || '';
+    if (hostname && !hostname.includes(':')) return hostname;
+  }
+  try {
+    return new URL(env.CLIENT_URL).hostname;
+  } catch {
+    return 'localhost';
+  }
+}
+
 const allowedRoles = ['admin', 'superadmin', 'supervisor', 'youngScholar'];
 
-export async function beginWebAuthnLogin(user: { _id: Types.ObjectId; webAuthnEnabled?: boolean } | null) {
+export async function beginWebAuthnLogin(user: { _id: Types.ObjectId; webAuthnEnabled?: boolean } | null, req?: Request) {
   if (!user) return undefined;
   if (!user.webAuthnEnabled) return undefined;
   const withCredentials = await User.findById(user._id).select('+webAuthnCredentials');
   if (!withCredentials?.webAuthnCredentials.length) return undefined;
   const token = randomBytes(32).toString('base64url');
+  const rpID = getRpID(req);
   const options = await generateAuthenticationOptions({
     rpID,
     allowCredentials: withCredentials.webAuthnCredentials.map((credential) => ({ id: credential.id, transports: credential.transports as AuthenticatorTransportFuture[] })),
@@ -44,11 +58,12 @@ export async function beginWebAuthnLogin(user: { _id: Types.ObjectId; webAuthnEn
 
 export async function webAuthnRegistrationOptions(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    if (!allowedRoles.includes(req.user.role) || !req.user.twoFactorEnabled) throw new HttpError(403, 'Set up TOTP before enabling biometric authentication');
+    if (!allowedRoles.includes(req.user.role)) throw new HttpError(403, 'Biometric authentication is reserved for administrator and researcher roles');
     const user = await User.findById(req.user._id).select('+webAuthnCredentials');
     if (!user) throw new HttpError(404, 'User not found');
+    const rpID = getRpID(req);
     const options = await generateRegistrationOptions({
-      rpName: 'ASPIER',
+      rpName: 'ASPIER Platform',
       rpID,
       userID: Buffer.from(String(user._id), 'hex'),
       userName: user.email,
@@ -79,15 +94,18 @@ export async function verifyWebAuthnRegistration(req: AuthRequest, res: Response
     if (!user || !user.webAuthnRegisterChallenge || !user.webAuthnRegisterExpiresAt || user.webAuthnRegisterExpiresAt <= new Date()) {
       throw new HttpError(400, 'Biometric enrollment expired. Start setup again.');
     }
+    const rpID = getRpID(req);
+    const expectedOrigin = req.headers.origin || env.CLIENT_URL;
     const verification = await verifyRegistrationResponse({
       response: req.body.response as RegistrationResponseJSON,
       expectedChallenge: user.webAuthnRegisterChallenge,
-      expectedOrigin: env.CLIENT_URL,
+      expectedOrigin,
       expectedRPID: rpID,
       requireUserVerification: true
     });
     if (!verification.verified || !verification.registrationInfo) throw new HttpError(400, 'Could not verify platform authenticator');
     const credential = verification.registrationInfo.credential;
+    const deviceName = String(req.body.deviceName || 'Device Biometrics (Face ID / Windows Hello)');
     const saved = await User.updateOne({
       _id: user._id,
       webAuthnRegisterChallenge: user.webAuthnRegisterChallenge,
@@ -99,7 +117,9 @@ export async function verifyWebAuthnRegistration(req: AuthRequest, res: Response
           id: credential.id,
           publicKey: Buffer.from(credential.publicKey),
           counter: credential.counter,
-          transports: credential.transports || []
+          transports: credential.transports || [],
+          name: deviceName,
+          createdAt: new Date()
         }
       },
       $set: { webAuthnEnabled: true },
@@ -112,6 +132,38 @@ export async function verifyWebAuthnRegistration(req: AuthRequest, res: Response
   }
 }
 
+export async function listWebAuthnCredentials(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const user = await User.findById(req.user._id).select('+webAuthnCredentials');
+    if (!user) throw new HttpError(404, 'User not found');
+    const credentials = (user.webAuthnCredentials || []).map((cred) => ({
+      id: cred.id,
+      name: (cred as any).name || 'Device Biometrics (Face ID / Hello)',
+      createdAt: (cred as any).createdAt || new Date(),
+      transports: cred.transports
+    }));
+    res.json({ success: true, data: credentials, webAuthnEnabled: user.webAuthnEnabled });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function revokeWebAuthnCredential(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    await User.updateOne({ _id: req.user._id }, {
+      $pull: { webAuthnCredentials: { id } }
+    });
+    const updated = await User.findById(req.user._id).select('+webAuthnCredentials');
+    if (!updated?.webAuthnCredentials?.length) {
+      await User.updateOne({ _id: req.user._id }, { $set: { webAuthnEnabled: false } });
+    }
+    res.json({ success: true, message: 'Biometric credential revoked successfully' });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function verifyWebAuthnLogin(req: Request, res: Response, next: NextFunction) {
   try {
     const token = String(req.body.challengeToken || '');
@@ -119,7 +171,6 @@ export async function verifyWebAuthnLogin(req: Request, res: Response, next: Nex
       webAuthnLoginTokenHash: sha256(token),
       webAuthnLoginExpiresAt: { $gt: new Date() },
       isActive: true,
-      twoFactorEnabled: true,
       webAuthnEnabled: true,
       role: { $in: allowedRoles }
     }).select('+webAuthnLoginChallenge +webAuthnLoginTokenHash +webAuthnLoginExpiresAt +webAuthnCredentials');
@@ -127,10 +178,12 @@ export async function verifyWebAuthnLogin(req: Request, res: Response, next: Nex
     const response = req.body.response as AuthenticationResponseJSON;
     const credential = user.webAuthnCredentials.find((item) => item.id === response.id);
     if (!credential) throw new HttpError(401, 'Authenticator is not registered for this account');
+    const rpID = getRpID(req);
+    const expectedOrigin = req.headers.origin || env.CLIENT_URL;
     const verification = await verifyAuthenticationResponse({
       response,
       expectedChallenge: user.webAuthnLoginChallenge,
-      expectedOrigin: env.CLIENT_URL,
+      expectedOrigin,
       expectedRPID: rpID,
       requireUserVerification: true,
       credential: {

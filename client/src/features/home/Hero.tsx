@@ -20,8 +20,8 @@ export function Hero() {
       <h1 className="gradient-text">{settings?.heroTitle || 'Research for our planet and beyond'}</h1>
       <RichTextContent className="hero-subtitle" content={settings?.heroSubtitle || 'The Aeronautical, Spatial, Planetary Institute for Environmental Research advances discovery across Earth and space.'}/>
       <div style={{display:'flex',gap:'10px',marginTop:'24px'}}>
-        <Link className="button button-primary" to="/wings">Explore wings</Link>
-        <Link className="button button-secondary" to="/academy">Visit academy</Link>
+        <Link className="button button-primary" to={settings?.heroCtaLink || '/wings'}>{settings?.heroCtaText || 'Explore wings'}</Link>
+        <Link className="button button-secondary" to={settings?.heroSecondaryCtaLink || '/academy'}>{settings?.heroSecondaryCtaText || 'Visit academy'}</Link>
       </div>
     </div>
     <div className={`hero-art ${showImage ? 'has-image' : ''}`} aria-label={showImage ? 'ASPIER featured image' : 'Abstract ASPIER research artwork'}>

@@ -18,6 +18,9 @@ import AuditLog from '../models/AuditLog.js';
 import Enrollment from '../models/Enrollment.js';
 import Payment from '../models/Payment.js';
 import Setting from '../models/Setting.js';
+import Notification from '../models/Notification.js';
+import ResearchApplicationModel from '../models/ResearchApplication.js';
+import MembershipApplicationModel from '../models/MembershipApplication.js';
 import { upload, mediaLibrary, deleteMedia } from '../controllers/upload.controller.js';
 import { getSettings, updateSettings } from '../controllers/settings.controller.js';
 import { upsertClass, deleteClass } from '../controllers/class.controller.js';
@@ -83,4 +86,25 @@ router.get('/settings', getSettings);
 router.put('/settings', updateSettings);
 router.get('/audit', async (req, res) => res.json({ success: true, data: await AuditLog.find().populate('actorId', 'name email').sort({ createdAt: -1 }).limit(200) }));
 router.get('/students', async (_req, res) => res.json({ success: true, data: await User.find({ role: 'student' }).sort({ createdAt: -1 }) }));
+router.get('/inbox/all', async (_req, res) => {
+  try {
+    const [messages, notifications, researchApps, membershipApps] = await Promise.all([
+      Message.find().sort({ createdAt: -1 }).limit(200).lean(),
+      Notification.find({ audience: 'admin' }).sort({ createdAt: -1 }).limit(100).lean(),
+      ResearchApplicationModel.find().sort({ createdAt: -1 }).limit(100).lean(),
+      MembershipApplicationModel.find().sort({ createdAt: -1 }).limit(100).lean()
+    ]);
+    res.json({
+      success: true,
+      data: {
+        messages: messages || [],
+        notifications: notifications || [],
+        researchApps: researchApps || [],
+        membershipApps: membershipApps || []
+      }
+    });
+  } catch (err: any) {
+    res.json({ success: true, data: { messages: [], notifications: [], researchApps: [], membershipApps: [] } });
+  }
+});
 export default router;

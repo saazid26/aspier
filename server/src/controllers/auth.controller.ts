@@ -443,4 +443,37 @@ export async function revokeSession(req: AuthRequest, res: Response) {
   await User.updateOne({ _id: req.user._id, 'refreshTokens.refreshTokenHash': req.params.hash }, { $set: { 'refreshTokens.$.revokedAt': new Date() } });
   res.json({ success: true, message: 'Session revoked' });
 }
+export async function revokeAllOtherSessions(req: AuthRequest, res: Response) {
+  const currentToken = req.cookies?.refreshToken ? sha256(req.cookies.refreshToken) : '';
+  await User.updateOne({ _id: req.user._id }, {
+    $pull: {
+      refreshTokens: currentToken ? { refreshTokenHash: { $ne: currentToken } } : {}
+    }
+  });
+  res.json({ success: true, message: 'All other sessions have been logged out' });
+}
+export async function updateAdminCredentials(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { currentPassword, newEmail, newPassword, confirmPassword } = req.body;
+    const user = await User.findById(req.user._id).select('+passwordHash');
+    if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) {
+      throw new HttpError(401, 'Current password is incorrect');
+    }
+    if (newPassword) {
+      if (newPassword !== confirmPassword) throw new HttpError(400, 'New passwords do not match');
+      if (newPassword.length < 8) throw new HttpError(400, 'Password must be at least 8 characters');
+      user.passwordHash = await hashPassword(newPassword);
+    }
+    if (newEmail && newEmail !== user.email) {
+      const emailTrimmed = newEmail.trim().toLowerCase();
+      const existing = await User.findOne({ email: emailTrimmed, _id: { $ne: user._id } });
+      if (existing) throw new HttpError(409, 'Email is already in use by another account');
+      process.env.ADMIN_EMAIL = emailTrimmed;
+      user.email = emailTrimmed;
+    }
+    await user.save();
+    const accessToken = signAccessToken(user);
+    res.json({ success: true, message: 'Administrator credentials updated successfully', data: { email: user.email, name: user.name } });
+  } catch (error) { next(error); }
+}
 export async function me(req: AuthRequest, res: Response): Promise<void> { res.json({ success: true, data: req.user }); }

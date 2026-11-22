@@ -5,7 +5,9 @@ const webAuthnCredentialSchema = new Schema({
   id: { type: String, required: true },
   publicKey: { type: Buffer, required: true },
   counter: { type: Number, required: true, default: 0 },
-  transports: { type: [String], default: [] }
+  transports: { type: [String], default: [] },
+  name: { type: String, default: 'Platform Biometric Key' },
+  createdAt: { type: Date, default: Date.now }
 }, { _id: false });
 const userSchema = new Schema({
   name: { type: String, required: true, trim: true, index: true },
@@ -39,7 +41,8 @@ const userSchema = new Schema({
   resetExpires: { type: Date, select: false }
 }, { timestamps: true });
 userSchema.pre('validate', function (next) {
-  if (['admin', 'superadmin'].includes(this.role) && this.email !== FIXED_ADMIN_EMAIL) {
+  const currentFixedEmail = process.env.ADMIN_EMAIL || FIXED_ADMIN_EMAIL;
+  if (['admin', 'superadmin'].includes(this.role) && this.email !== currentFixedEmail) {
     this.invalidate('email', 'Only the fixed ASPIER administrator email may have an administrator role');
   }
   next();

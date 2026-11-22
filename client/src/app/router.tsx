@@ -58,6 +58,13 @@ const ActiveSessions = lazy(() => import('../features/admin/security/ActiveSessi
 const AuditLog = lazy(() => import('../features/admin/auditlog/AuditLog').then(module => ({ default: module.AuditLog })));
 const MembershipApplications = lazy(() => import('../features/admin/membership/MembershipApplications').then(module => ({ default: module.MembershipApplications })));
 const ResearchApplications = lazy(() => import('../features/admin/research/ResearchApplications').then(module => ({ default: module.ResearchApplications })));
+const BrandingSettings = lazy(() => import('../features/admin/branding/BrandingSettings').then(m => ({ default: m.BrandingSettings })));
+const HomeCms = lazy(() => import('../features/admin/home/HomeCms').then(m => ({ default: m.HomeCms })));
+const WingsResearchManager = lazy(() => import('../features/admin/wings-research/WingsResearchManager').then(m => ({ default: m.WingsResearchManager })));
+const TeamManager = lazy(() => import('../features/admin/team/TeamManager').then(m => ({ default: m.TeamManager })));
+const AnnouncementsCms = lazy(() => import('../features/admin/announcements/AnnouncementsCms').then(m => ({ default: m.AnnouncementsCms })));
+const AcademyCms = lazy(() => import('../features/admin/academy/AcademyCms').then(m => ({ default: m.AcademyCms })));
+const SecurityHub = lazy(() => import('../features/admin/security/SecurityHub').then(m => ({ default: m.SecurityHub })));
 
 function Guard({children,roles}:{children:ReactNode;roles: string[]}){
   const [state,setState]=useState<{loading:boolean;role?:string}>({loading:true});
@@ -71,7 +78,13 @@ function Guard({children,roles}:{children:ReactNode;roles: string[]}){
   if(!roles.includes(state.role))return <Navigate to="/" replace/>;
   return <>{children}</>;
 }
-function Home(){return <><SEO title="ASPIER" exact description="Aeronautical, Spatial, Planetary Institute for Environmental Research"/><Hero/><MissionSection/><WingsGrid/><FeaturedResearch/><TeamPreview/><Announcements/><section className="section"><div className="container"><div className="stats-grid"><div className="card stat-card"><strong>10</strong><p className="muted">Academic wings</p></div><div className="card stat-card"><strong>25+</strong><p className="muted">Research domains</p></div><div className="card stat-card"><strong>3</strong><p className="muted">Academy tracks</p></div><div className="card stat-card"><strong>24/7</strong><p className="muted">Digital access</p></div></div></div></section><section className="section"><div className="container"><div className="cta-band"><div><span className="eyebrow">Explore ASPIER</span><h2>Discover research that moves forward</h2></div><Link className="button button-primary" to="/research">Explore research</Link></div></div></section></>}
+function Home(){
+  const { data: settings } = useQuery({
+    queryKey: ['public-settings'],
+    queryFn: async () => (await api.get('/public/settings')).data.data
+  });
+  return <><SEO title={settings?.siteTitle || "ASPIER"} exact description={settings?.seoDescription || "Aeronautical, Spatial, Planetary Institute for Environmental Research"}/><Hero/><MissionSection/><WingsGrid/><FeaturedResearch/><TeamPreview/><Announcements/><section className="section"><div className="container"><div className="stats-grid"><div className="card stat-card"><strong>{settings?.statWings || '10'}</strong><p className="muted">{settings?.statWingsLabel || 'Academic wings'}</p></div><div className="card stat-card"><strong>{settings?.statDomains || '25+'}</strong><p className="muted">{settings?.statDomainsLabel || 'Research domains'}</p></div><div className="card stat-card"><strong>{settings?.statTracks || '3'}</strong><p className="muted">{settings?.statTracksLabel || 'Academy tracks'}</p></div><div className="card stat-card"><strong>{settings?.statAccess || '24/7'}</strong><p className="muted">{settings?.statAccessLabel || 'Digital access'}</p></div></div></div></section><section className="section"><div className="container"><div className="cta-band"><div><span className="eyebrow">{settings?.bottomCtaEyebrow || 'Explore ASPIER'}</span><h2>{settings?.bottomCtaHeadline || 'Discover research that moves forward'}</h2></div><Link className="button button-primary" to={settings?.bottomCtaLink || '/research'}>{settings?.bottomCtaText || 'Explore research'}</Link></div></div></section></>;
+}
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
   useEffect(() => {
@@ -114,6 +127,27 @@ export function AppRouter(){return <BrowserRouter><ScrollToTop/><Suspense fallba
   <Route path="academy/instructors/:id" element={<InstructorProfile/>}/>
 </Route>
 <Route element={<Guard roles={['student','instructor','supervisor','youngScholar','admin','superadmin']}><StudentLayout/></Guard>}><Route path="student/dashboard" element={<StudentDashboard/>}/><Route path="student/courses" element={<MyCourses/>}/><Route path="student/payments" element={<PaymentHistory/>}/><Route path="student/profile" element={<Profile/>}/><Route path="student/security" element={<WebAuthnSettings/>}/></Route>
-<Route element={<Guard roles={['admin','superadmin']}><AdminLayout/></Guard>}><Route path="admin" element={<AdminDashboard/>}/><Route path="admin/resources/:resource" element={<ResourcePage/>}/><Route path="admin/membership-applications" element={<MembershipApplications/>}/><Route path="admin/research-applications" element={<ResearchApplications/>}/><Route path="admin/payments" element={<PaymentQueue/>}/><Route path="admin/classes" element={<><LiveClassManager/><RecordingManager/></>}/><Route path="admin/courses/curriculum" element={<CurriculumBuilder/>}/><Route path="admin/students" element={<StudentList/>}/><Route path="admin/messages" element={<MessageInbox/>}/><Route path="admin/media" element={<MediaLibrary/>}/><Route path="admin/settings" element={<><SiteSettings/><PaymentSettings/></>}/><Route path="admin/security" element={<><Setup2FA/><WebAuthnSettings/><ActiveSessions/></>}/><Route path="admin/audit" element={<AuditLog/>}/></Route>
+<Route element={<Guard roles={['admin','superadmin']}><AdminLayout/></Guard>}>
+  <Route path="admin" element={<AdminDashboard/>}/>
+  <Route path="admin/branding" element={<BrandingSettings/>}/>
+  <Route path="admin/home-cms" element={<HomeCms/>}/>
+  <Route path="admin/wings-research" element={<WingsResearchManager/>}/>
+  <Route path="admin/team-manager" element={<TeamManager/>}/>
+  <Route path="admin/announcements-cms" element={<AnnouncementsCms/>}/>
+  <Route path="admin/academy-cms" element={<AcademyCms/>}/>
+  <Route path="admin/inbox" element={<MessageInbox/>}/>
+  <Route path="admin/security" element={<SecurityHub/>}/>
+  <Route path="admin/resources/:resource" element={<ResourcePage/>}/>
+  <Route path="admin/membership-applications" element={<MembershipApplications/>}/>
+  <Route path="admin/research-applications" element={<ResearchApplications/>}/>
+  <Route path="admin/payments" element={<PaymentQueue/>}/>
+  <Route path="admin/classes" element={<><LiveClassManager/><RecordingManager/></>}/>
+  <Route path="admin/courses/curriculum" element={<CurriculumBuilder/>}/>
+  <Route path="admin/students" element={<StudentList/>}/>
+  <Route path="admin/messages" element={<MessageInbox/>}/>
+  <Route path="admin/media" element={<MediaLibrary/>}/>
+  <Route path="admin/settings" element={<BrandingSettings/>}/>
+  <Route path="admin/audit" element={<AuditLog/>}/>
+</Route>
 <Route path="*" element={<Navigate to="/" replace/>}/>
 </Routes></Suspense></BrowserRouter>}
