@@ -83,6 +83,73 @@ export const demoSupervisors = [
   { name: 'Prof. Rafiq Hasan', slug: 'sample-rafiq-hasan', wingSlug: 'environmental-policy-governance', designation: 'Sample Research Supervisor · Environmental Governance', affiliation: 'ASPIER Illustrative Research Network', bio: '<p>Illustrative demo profile exploring environmental policy, resource governance, and community-centered research. Replace this sample biography and affiliation with verified details before publication.</p>', photo: makeDemoAvatar('RH'), educationalBackground: 'Sample profile: graduate training in public policy; replace with verified qualifications.', researchInterests: ['Environmental Policy', 'Resource Management', 'Public Engagement'], googleScholar: scholarSearch('Rafiq Hasan sample environmental governance'), researchGate: researchGateSearch('Rafiq Hasan sample environmental governance'), sampleData: true }
 ];
 
+export const demoFoundingMembers = [
+  {
+    name: 'Engr. Fahim Shahriar',
+    slug: 'sample-fahim-shahriar',
+    role: 'Co-Founder & Lead Systems Engineer',
+    designation: 'Co-Founder & Lead Systems Engineer',
+    affiliation: 'ASPIER · Aeronautical & UAV Systems',
+    bio: '<p>Co-founding engineer at ASPIER directing autonomous platform development, telemetry instrumentation, and open-hardware aeronautical research workflows.</p>',
+    photo: makeDemoAvatar('FS'),
+    order: 1,
+    researchInterests: ['UAV Architecture', 'Aerodynamics', 'Embedded Avionics', 'Autonomous Flight'],
+    googleScholar: scholarSearch('Fahim Shahriar sample aeronautical engineering'),
+    researchGate: researchGateSearch('Fahim Shahriar sample uav systems'),
+    linkedin: 'https://www.linkedin.com/',
+    github: 'https://github.com/',
+    sampleData: true
+  },
+  {
+    name: 'Dr. Samiha Anjum',
+    slug: 'sample-samiha-anjum',
+    role: 'Co-Founder & Head of Earth Observation',
+    designation: 'Co-Founder & Head of Earth Observation',
+    affiliation: 'ASPIER · Geospatial Intelligence Wing',
+    bio: '<p>Founding researcher leading Earth observation initiatives, multispectral flood mapping, and reproducible satellite data pipelines across Bangladesh’s delta ecosystems.</p>',
+    photo: makeDemoAvatar('SA'),
+    order: 2,
+    researchInterests: ['Satellite Remote Sensing', 'Geospatial AI', 'Climate Resilience', 'Spatial Hydrology'],
+    googleScholar: scholarSearch('Samiha Anjum sample earth observation remote sensing'),
+    researchGate: researchGateSearch('Samiha Anjum sample geospatial'),
+    linkedin: 'https://www.linkedin.com/',
+    orcid: 'https://orcid.org/',
+    sampleData: true
+  },
+  {
+    name: 'Tanvir Hossain',
+    slug: 'sample-tanvir-hossain',
+    role: 'Founding Member & Planetary Research Lead',
+    designation: 'Founding Member & Planetary Research Lead',
+    affiliation: 'ASPIER · Planetary Science & Astrobiology',
+    bio: '<p>Founding member investigating planetary analog soils, spectral imaging methodologies, and international collaborative astrobiological inquiry frameworks.</p>',
+    photo: makeDemoAvatar('TH'),
+    order: 3,
+    researchInterests: ['Planetary Geology', 'Astrobiology', 'Spectroscopy', 'Analog Environments'],
+    googleScholar: scholarSearch('Tanvir Hossain sample planetary science'),
+    researchGate: researchGateSearch('Tanvir Hossain sample astrobiology'),
+    linkedin: 'https://www.linkedin.com/',
+    twitter: 'https://x.com/',
+    sampleData: true
+  },
+  {
+    name: 'Zarin Subah',
+    slug: 'sample-zarin-subah',
+    role: 'Founding Member & Academic Programs Director',
+    designation: 'Founding Member & Academic Programs Director',
+    affiliation: 'ASPIER Academy & Environmental Chemistry',
+    bio: '<p>Founding member overseeing ASPIER Academy curriculum frameworks, student research cohorts, and field laboratory sampling protocols.</p>',
+    photo: makeDemoAvatar('ZS'),
+    order: 4,
+    researchInterests: ['Environmental Toxicology', 'Curriculum Design', 'Water Quality', 'Science Communication'],
+    googleScholar: scholarSearch('Zarin Subah sample environmental chemistry'),
+    researchGate: researchGateSearch('Zarin Subah sample water quality'),
+    linkedin: 'https://www.linkedin.com/',
+    facebook: 'https://facebook.com/',
+    sampleData: true
+  }
+];
+
 export const demoScholars = [
   { name: 'Nadia Tasnim', slug: 'sample-nadia-tasnim', cohort: 'Sample 2026', designation: 'Sample Young Scholar · Undergraduate', affiliation: 'ASPIER Illustrative Research Network', wingSlug: 'geospatial-intelligence-remote-sensing', bio: '<p>Illustrative student profile exploring satellite-derived land-cover change and responsible geospatial analysis. Replace the sample biography and academic details before publication.</p>', photo: makeDemoAvatar('NT'), educationalBackground: 'Sample profile: undergraduate study in geography and data science.', researchTopics: ['GIS', 'Satellite Imagery', 'Python'], sampleData: true },
   { name: 'Arman Kabir', slug: 'sample-arman-kabir', cohort: 'Sample 2026', designation: 'Sample Young Scholar · Undergraduate', affiliation: 'ASPIER Illustrative Research Network', wingSlug: 'aeronautical-engineering-uav-systems', bio: '<p>Illustrative student profile focused on safe UAV survey planning and environmental monitoring. Replace the sample biography and academic details before publication.</p>', photo: makeDemoAvatar('AK'), educationalBackground: 'Sample profile: undergraduate study in electrical and aerospace systems.', researchTopics: ['UAV Systems', 'Embedded Sensors', 'Field Safety'], sampleData: true },

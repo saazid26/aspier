@@ -343,6 +343,77 @@ export const staticResearch = [
   }
 ];
 
+export const staticFoundingMembers = [
+  {
+    _id: "founding-member-1",
+    name: "Engr. Fahim Shahriar",
+    slug: "sample-fahim-shahriar",
+    role: "Co-Founder & Lead Systems Engineer",
+    designation: "Co-Founder & Lead Systems Engineer",
+    affiliation: "ASPIER · Aeronautical & UAV Systems",
+    bio: "<p>Co-founding engineer at ASPIER directing autonomous platform development, telemetry instrumentation, and open-hardware aeronautical research workflows.</p>",
+    photo: "",
+    order: 1,
+    researchInterests: ["UAV Architecture", "Aerodynamics", "Embedded Avionics", "Autonomous Flight"],
+    googleScholar: "https://scholar.google.com/",
+    researchGate: "https://www.researchgate.net/",
+    linkedin: "https://www.linkedin.com/",
+    github: "https://github.com/",
+    sampleData: true
+  },
+  {
+    _id: "founding-member-2",
+    name: "Dr. Samiha Anjum",
+    slug: "sample-samiha-anjum",
+    role: "Co-Founder & Head of Earth Observation",
+    designation: "Co-Founder & Head of Earth Observation",
+    affiliation: "ASPIER · Geospatial Intelligence Wing",
+    bio: "<p>Founding researcher leading Earth observation initiatives, multispectral flood mapping, and reproducible satellite data pipelines across Bangladesh’s delta ecosystems.</p>",
+    photo: "",
+    order: 2,
+    researchInterests: ["Satellite Remote Sensing", "Geospatial AI", "Climate Resilience", "Spatial Hydrology"],
+    googleScholar: "https://scholar.google.com/",
+    researchGate: "https://www.researchgate.net/",
+    linkedin: "https://www.linkedin.com/",
+    orcid: "https://orcid.org/",
+    sampleData: true
+  },
+  {
+    _id: "founding-member-3",
+    name: "Tanvir Hossain",
+    slug: "sample-tanvir-hossain",
+    role: "Founding Member & Planetary Research Lead",
+    designation: "Founding Member & Planetary Research Lead",
+    affiliation: "ASPIER · Planetary Science & Astrobiology",
+    bio: "<p>Founding member investigating planetary analog soils, spectral imaging methodologies, and international collaborative astrobiological inquiry frameworks.</p>",
+    photo: "",
+    order: 3,
+    researchInterests: ["Planetary Geology", "Astrobiology", "Spectroscopy", "Analog Environments"],
+    googleScholar: "https://scholar.google.com/",
+    researchGate: "https://www.researchgate.net/",
+    linkedin: "https://www.linkedin.com/",
+    twitter: "https://x.com/",
+    sampleData: true
+  },
+  {
+    _id: "founding-member-4",
+    name: "Zarin Subah",
+    slug: "sample-zarin-subah",
+    role: "Founding Member & Academic Programs Director",
+    designation: "Founding Member & Academic Programs Director",
+    affiliation: "ASPIER Academy & Environmental Chemistry",
+    bio: "<p>Founding member overseeing ASPIER Academy curriculum frameworks, student research cohorts, and field laboratory sampling protocols.</p>",
+    photo: "",
+    order: 4,
+    researchInterests: ["Environmental Toxicology", "Curriculum Design", "Water Quality", "Science Communication"],
+    googleScholar: "https://scholar.google.com/",
+    researchGate: "https://www.researchgate.net/",
+    linkedin: "https://www.linkedin.com/",
+    facebook: "https://facebook.com/",
+    sampleData: true
+  }
+];
+
 export const staticNews = [
   {
     _id: "60d0fe4f5311236168a10a21",

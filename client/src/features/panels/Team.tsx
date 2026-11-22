@@ -6,7 +6,22 @@ import { SEO } from '../../components/common/SEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { ProfileAvatar } from '../../components/common/ProfileAvatar';
 import { AcademicSocialLinks, type ProfileSocialMedia } from '../../components/common/AcademicSocialLinks';
-import { staticSupervisors, staticScholars } from '../../lib/staticData';
+import { staticSupervisors, staticScholars, staticFoundingMembers } from '../../lib/staticData';
+
+type FoundingMember = ProfileSocialMedia & {
+  _id: string;
+  name: string;
+  slug: string;
+  role?: string;
+  designation?: string;
+  affiliation?: string;
+  bio?: string;
+  photo?: string;
+  researchInterests?: string[];
+  educationalBackground?: string;
+  order?: number;
+  sampleData?: boolean;
+};
 
 type Supervisor = ProfileSocialMedia & {
   _id: string;
@@ -79,6 +94,10 @@ export function Team() {
     queryKey: ['team-founder'],
     queryFn: async () => (await api.get('/public/settings')).data.data as Founder
   });
+  const foundingMembersQuery = useQuery({
+    queryKey: ['team-founding-members'],
+    queryFn: async () => (await api.get('/public/founding-members')).data.data as FoundingMember[]
+  });
   const supervisorsQuery = useQuery({
     queryKey: ['team-supervisors'],
     queryFn: async () => (await api.get('/public/supervisors')).data.data as Supervisor[]
@@ -103,6 +122,10 @@ export function Team() {
     founderLinkedin: 'https://www.linkedin.com/',
     founderTwitter: 'https://x.com/'
   };
+
+  const foundingMembers: FoundingMember[] = (foundingMembersQuery.data && foundingMembersQuery.data.length > 0)
+    ? foundingMembersQuery.data
+    : (staticFoundingMembers as unknown as FoundingMember[]);
 
   const supervisors: Supervisor[] = (supervisorsQuery.data && supervisorsQuery.data.length > 0)
     ? supervisorsQuery.data
@@ -174,6 +197,51 @@ export function Team() {
               <AcademicSocialLinks member={founderLinks} className="founder-social-links" />
             </div>
           </article>
+        </div>
+      </section>
+
+      {/* MEET OUR FOUNDING MEMBERS SECTION */}
+      <section className="section founding-members-section" id="founding-members">
+        <div className="container">
+          <div className="section-head">
+            <div>
+              <span className="eyebrow">Foundation & Co-Creators</span>
+              <h2>Meet our Founding Members</h2>
+            </div>
+          </div>
+          <div className="grid founding-members-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 440px), 1fr))', gap: '24px' }}>
+            {foundingMembers.map((member) => (
+              <article className="card profile-card" key={member._id} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div className="founder-avatar-wrap mx-auto flex justify-center mb-3">
+                  <ProfileAvatar name={member.name} photo={member.photo} className="mx-auto" />
+                </div>
+                <h3 style={{ fontSize: '1.28rem', marginBottom: '4px' }}>{member.name}</h3>
+                {member.sampleData && <span className="badge-sample">Illustrative sample profile</span>}
+                <p className="muted" style={{ minHeight: 24, marginBottom: '12px' }}>
+                  <span style={{ color: '#0d736e', fontWeight: 600 }}>{member.role || member.designation || 'Founding Member'}</span>
+                  {member.affiliation ? ` • ${member.affiliation}` : ''}
+                </p>
+                <div className="domain-list" style={{ justifyContent: 'center', marginBottom: '12px' }}>
+                  {(member.researchInterests || []).map((domain) => (
+                    <span className="domain-chip" key={domain}>{domain}</span>
+                  ))}
+                </div>
+                <div style={{ flexGrow: 1 }}>
+                  <RichTextContent
+                    content={member.bio || 'ASPIER founding member advancing collaborative inquiry and research education.'}
+                    className="muted"
+                  />
+                  {member.educationalBackground && (
+                    <p className="muted" style={{ marginTop: '8px', fontSize: '0.88rem' }}><strong>Education:</strong> {member.educationalBackground}</p>
+                  )}
+                </div>
+                {/* Conditional academic and social media profile icons */}
+                <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <AcademicSocialLinks member={member} className="justify-center" />
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 

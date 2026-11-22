@@ -12,10 +12,11 @@ import ClassModel from '../models/Class.js';
 import Research from '../models/Research.js';
 import Supervisor from '../models/Supervisor.js';
 import Scholar from '../models/Scholar.js';
+import FoundingMember from '../models/FoundingMember.js';
 import News from '../models/News.js';
 import mongoose from 'mongoose';
 import { env, FIXED_ADMIN_EMAIL } from '../config/env.js';
-import { demoResearch, demoScholars, demoSupervisors, makeDemoAvatar, makeDemoCover } from './seedData/demoContent.js';
+import { demoResearch, demoScholars, demoSupervisors, demoFoundingMembers, makeDemoAvatar, makeDemoCover } from './seedData/demoContent.js';
 
 export async function seedDatabase(): Promise<void> {
   const admin = await User.findOne({ email: FIXED_ADMIN_EMAIL });
@@ -156,6 +157,7 @@ export async function seedDatabase(): Promise<void> {
       wingId: wingIdsBySlug.get(wingSlug)
     })));
   }
+  if (await FoundingMember.countDocuments() === 0) await FoundingMember.create(demoFoundingMembers);
   if (await Supervisor.countDocuments() === 0) await Supervisor.create(demoSupervisors.map(({ wingSlug, ...supervisor }) => ({
     ...supervisor,
     wingIds: wingIdsBySlug.has(wingSlug) ? [wingIdsBySlug.get(wingSlug)] : []

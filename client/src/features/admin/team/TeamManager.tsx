@@ -20,6 +20,12 @@ export function TeamManager() {
     queryFn: async () => (await api.get('/admin/settings')).data.data as Record<string, any>
   });
 
+  // Founding Members Query
+  const { data: foundingMembers = [], refetch: refetchFoundingMembers } = useQuery({
+    queryKey: ['admin-founding-members'],
+    queryFn: async () => (await api.get('/admin/founding-members')).data.data as any[]
+  });
+
   // Supervisors Query
   const { data: supervisors = [], refetch: refetchSupervisors } = useQuery({
     queryKey: ['admin-supervisors'],
@@ -58,6 +64,47 @@ export function TeamManager() {
       toast.error(err.response?.data?.message || 'Could not save founder profile');
     } finally {
       setSavingFounder(false);
+    }
+  };
+
+  // Founding Member Modal & State
+  const [editingFoundingMember, setEditingFoundingMember] = useState<any | null>(null);
+  const [foundingMemberModalOpen, setFoundingMemberModalOpen] = useState(false);
+  const [savingFoundingMember, setSavingFoundingMember] = useState(false);
+
+  const handleSaveFoundingMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingFoundingMember(true);
+    try {
+      if (editingFoundingMember._id) {
+        await api.put(`/admin/founding-members/${editingFoundingMember._id}`, editingFoundingMember);
+        toast.success('Founding member updated successfully.');
+      } else {
+        await api.post('/admin/founding-members', editingFoundingMember);
+        toast.success('Founding member created successfully.');
+      }
+      setFoundingMemberModalOpen(false);
+      setEditingFoundingMember(null);
+      await refetchFoundingMembers();
+      await queryClient.invalidateQueries({ queryKey: ['public-founding-members'] });
+      await queryClient.invalidateQueries({ queryKey: ['team-founding-members'] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Could not save founding member');
+    } finally {
+      setSavingFoundingMember(false);
+    }
+  };
+
+  const handleDeleteFoundingMember = async (id: string, name: string) => {
+    if (!window.confirm(`Delete founding member "${name}"?`)) return;
+    try {
+      await api.delete(`/admin/founding-members/${id}`);
+      toast.success('Founding member deleted');
+      await refetchFoundingMembers();
+      await queryClient.invalidateQueries({ queryKey: ['public-founding-members'] });
+      await queryClient.invalidateQueries({ queryKey: ['team-founding-members'] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Could not delete founding member');
     }
   };
 
@@ -152,7 +199,7 @@ export function TeamManager() {
       </div>
 
       <Tabs
-        tabs={['Founder Profile', 'Research Supervisors', 'Young Scholars']}
+        tabs={['Founder Profile', 'Founding Members', 'Research Supervisors', 'Young Scholars']}
         active={activeTab}
         onChange={setActiveTab}
       />
@@ -321,7 +368,85 @@ export function TeamManager() {
         </form>
       )}
 
-      {/* Tab 2: Research Supervisors */}
+      {/* Tab 2: Founding Members */}
+      {activeTab === 'Founding Members' && (
+        <div style={{ marginTop: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <p className="muted">Total Founding Members: <strong>{foundingMembers.length}</strong></p>
+            <Button
+              onClick={() => {
+                setEditingFoundingMember({
+                  name: '',
+                  slug: '',
+                  role: 'Co-Founder & Lead Researcher',
+                  designation: '',
+                  affiliation: 'ASPIER',
+                  bio: '',
+                  photo: '',
+                  researchInterests: [],
+                  educationalBackground: '',
+                  researchGate: '',
+                  googleScholar: '',
+                  linkedin: '',
+                  orcid: '',
+                  twitter: '',
+                  github: '',
+                  facebook: '',
+                  website: ''
+                });
+                setFoundingMemberModalOpen(true);
+              }}
+            >
+              + Add Founding Member
+            </Button>
+          </div>
+
+          <Table headers={['Photo', 'Name', 'Role / Title', 'Affiliation', 'Focus Domains', 'Actions']}>
+            {foundingMembers.map((fm) => (
+              <tr key={fm._id}>
+                <td style={{ width: 60 }}>
+                  {fm.photo ? (
+                    <img src={fm.photo} alt={fm.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#0d736e', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
+                      {fm.name?.charAt(0) || 'F'}
+                    </div>
+                  )}
+                </td>
+                <td><strong>{fm.name}</strong></td>
+                <td><span style={{ color: '#0d736e', fontWeight: 600 }}>{fm.role || fm.designation || 'Founding Member'}</span></td>
+                <td>{fm.affiliation || 'ASPIER'}</td>
+                <td>
+                  <span style={{ fontSize: '0.85rem', color: '#475569' }}>
+                    {Array.isArray(fm.researchInterests) ? fm.researchInterests.slice(0, 3).join(', ') : ''}
+                  </span>
+                </td>
+                <td>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setEditingFoundingMember({ ...fm });
+                        setFoundingMemberModalOpen(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="danger"
+                      onClick={() => handleDeleteFoundingMember(fm._id, fm.name)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        </div>
+      )}
+
+      {/* Tab 3: Research Supervisors */}
       {activeTab === 'Research Supervisors' && (
         <div style={{ marginTop: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -648,6 +773,109 @@ export function TeamManager() {
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               <Button disabled={savingScholar}>{savingScholar ? 'Saving…' : 'Save Scholar'}</Button>
               <Button type="button" variant="secondary" onClick={() => setScholarModalOpen(false)}>Cancel</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Founding Member Edit/Create Modal */}
+      {foundingMemberModalOpen && editingFoundingMember && (
+        <Modal open={foundingMemberModalOpen} title={editingFoundingMember._id ? `Edit: ${editingFoundingMember.name}` : 'New Founding Member'} onClose={() => setFoundingMemberModalOpen(false)}>
+          <form className="form" onSubmit={handleSaveFoundingMember} style={{ marginTop: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <label>
+                Full Name
+                <Input
+                  required
+                  value={editingFoundingMember.name || ''}
+                  onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, name: e.target.value })}
+                />
+              </label>
+              <label>
+                Slug / Username
+                <Input
+                  required
+                  value={editingFoundingMember.slug || ''}
+                  onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, slug: e.target.value })}
+                />
+              </label>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <label>
+                Role / Title
+                <Input
+                  value={editingFoundingMember.role || ''}
+                  onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, role: e.target.value })}
+                  placeholder="e.g. Co-Founder & Lead Researcher / Founding Member"
+                />
+              </label>
+              <label>
+                Affiliation / Department
+                <Input
+                  value={editingFoundingMember.affiliation || ''}
+                  onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, affiliation: e.target.value })}
+                  placeholder="e.g. ASPIER · Aeronautical & UAV Systems"
+                />
+              </label>
+            </div>
+
+            <label>
+              Full Biography & Statement
+              <RichTextEditor
+                value={editingFoundingMember.bio || ''}
+                onChange={(val) => setEditingFoundingMember({ ...editingFoundingMember, bio: val })}
+              />
+            </label>
+
+            <label>
+              Academic Focus / Research Domains (comma-separated tags)
+              <Input
+                value={Array.isArray(editingFoundingMember.researchInterests) ? editingFoundingMember.researchInterests.join(', ') : ''}
+                onChange={(e) => setEditingFoundingMember({
+                  ...editingFoundingMember,
+                  researchInterests: e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
+                })}
+                placeholder="UAV Architecture, Aerodynamics, Embedded Avionics"
+              />
+            </label>
+
+            <label>
+              Educational Background (Optional)
+              <Input
+                value={editingFoundingMember.educationalBackground || ''}
+                onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, educationalBackground: e.target.value })}
+                placeholder="e.g. B.Sc in Aeronautical Engineering"
+              />
+            </label>
+
+            <div className="settings-image-field" style={{ marginTop: 16 }}>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Founding Member Photo (1:1 Circle)</label>
+              <ImageUploader
+                value={editingFoundingMember.photo || ''}
+                onUploaded={(url) => setEditingFoundingMember({ ...editingFoundingMember, photo: url })}
+                shape="circle"
+                helperText="Square 1:1 image • Max 2MB"
+                maxSizeMB={2}
+              />
+            </div>
+
+            <h3 style={{ fontSize: '1.05rem', margin: '20px 0 10px' }}>Academic & Social Profiles (Optional)</h3>
+            <p className="muted" style={{ fontSize: '0.86rem', marginBottom: 12 }}>Only profiles with a URL are rendered on the public Team page. Empty fields are automatically hidden with zero broken icons.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <label>ResearchGate URL<Input type="url" value={editingFoundingMember.researchGate || ''} onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, researchGate: e.target.value })} placeholder="https://www.researchgate.net/profile/..." /></label>
+              <label>Google Scholar URL<Input type="url" value={editingFoundingMember.googleScholar || ''} onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, googleScholar: e.target.value })} placeholder="https://scholar.google.com/citations?user=..." /></label>
+              <label>LinkedIn URL<Input type="url" value={editingFoundingMember.linkedin || ''} onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, linkedin: e.target.value })} placeholder="https://www.linkedin.com/in/..." /></label>
+              <label>ORCID URL<Input type="url" value={editingFoundingMember.orcid || ''} onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, orcid: e.target.value })} placeholder="https://orcid.org/0000-..." /></label>
+              <label>X (Twitter) URL<Input type="url" value={editingFoundingMember.twitter || ''} onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, twitter: e.target.value })} placeholder="https://x.com/..." /></label>
+              <label>GitHub URL<Input type="url" value={editingFoundingMember.github || ''} onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, github: e.target.value })} placeholder="https://github.com/..." /></label>
+              <label>Facebook URL<Input type="url" value={editingFoundingMember.facebook || ''} onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, facebook: e.target.value })} placeholder="https://facebook.com/..." /></label>
+              <label>Personal / Institutional Website<Input type="url" value={editingFoundingMember.website || ''} onChange={(e) => setEditingFoundingMember({ ...editingFoundingMember, website: e.target.value })} placeholder="https://..." /></label>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <Button disabled={savingFoundingMember}>{savingFoundingMember ? 'Saving…' : 'Save Founding Member'}</Button>
+              <Button type="button" variant="secondary" onClick={() => setFoundingMemberModalOpen(false)}>Cancel</Button>
             </div>
           </form>
         </Modal>

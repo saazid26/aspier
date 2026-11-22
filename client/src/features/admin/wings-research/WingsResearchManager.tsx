@@ -34,6 +34,10 @@ export function WingsResearchManager() {
   });
 
   // Team queries for linking members to research
+  const { data: teamFoundingMembers = [] } = useQuery({
+    queryKey: ['team-founding-members'],
+    queryFn: async () => (await api.get('/public/founding-members')).data.data as any[]
+  });
   const { data: teamSupervisors = [] } = useQuery({
     queryKey: ['team-supervisors'],
     queryFn: async () => (await api.get('/public/supervisors')).data.data as any[]
@@ -66,6 +70,7 @@ export function WingsResearchManager() {
   };
   const allTeamMembers = [
     founderMember,
+    ...teamFoundingMembers.map((fm: any) => ({ ...fm, role: 'foundingMember', roleTitle: fm.role || fm.designation || 'Founding Member' })),
     ...teamSupervisors.map((s: any) => ({ ...s, role: 'supervisor', roleTitle: s.designation || 'Research Supervisor' })),
     ...teamScholars.map((sc: any) => ({ ...sc, role: 'scholar', roleTitle: sc.designation || 'Young Scholar' }))
   ];

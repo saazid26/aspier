@@ -1,4 +1,4 @@
-import { demoResearch, demoScholars, demoSupervisors, makeDemoCover, makeDemoAvatar } from './seedData/demoContent.js';
+import { demoResearch, demoScholars, demoSupervisors, demoFoundingMembers, makeDemoCover, makeDemoAvatar } from './seedData/demoContent.js';
 
 export const fallbackWings = [
   {
@@ -297,4 +297,4 @@ export const fallbackNews = [
   }
 ];
 
-export { demoResearch, demoSupervisors, demoScholars };
+export { demoResearch, demoSupervisors, demoScholars, demoFoundingMembers };

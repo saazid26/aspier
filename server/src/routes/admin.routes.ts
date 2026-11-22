@@ -9,6 +9,7 @@ import Wing from '../models/Wing.js';
 import Research from '../models/Research.js';
 import Supervisor from '../models/Supervisor.js';
 import Scholar from '../models/Scholar.js';
+import FoundingMember from '../models/FoundingMember.js';
 import News from '../models/News.js';
 import Course from '../models/Course.js';
 import User from '../models/User.js';
@@ -57,7 +58,7 @@ const mountCrud = (path: string, model: any) => {
   router.put(`/${path}/:id`, audit('update', model.modelName), crud.update);
   router.delete(`/${path}/:id`, audit('delete', model.modelName), crud.delete);
 };
-mountCrud('wings', Wing); mountCrud('research', Research); mountCrud('supervisors', Supervisor); mountCrud('scholars', Scholar); mountCrud('news', News); mountCrud('courses', Course); mountCrud('users', User); mountCrud('messages', Message); mountCrud('instructors', Instructor);
+mountCrud('wings', Wing); mountCrud('research', Research); mountCrud('founding-members', FoundingMember); mountCrud('supervisors', Supervisor); mountCrud('scholars', Scholar); mountCrud('news', News); mountCrud('courses', Course); mountCrud('users', User); mountCrud('messages', Message); mountCrud('instructors', Instructor);
 
 router.get('/payments', paymentQueue);
 router.get('/membership-applications', adminMembershipApplications);

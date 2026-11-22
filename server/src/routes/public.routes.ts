@@ -5,6 +5,7 @@ import Wing from '../models/Wing.js';
 import Research from '../models/Research.js';
 import Supervisor from '../models/Supervisor.js';
 import Scholar from '../models/Scholar.js';
+import FoundingMember from '../models/FoundingMember.js';
 import News from '../models/News.js';
 import Message from '../models/Message.js';
 import Course from '../models/Course.js';
@@ -15,7 +16,7 @@ import { activateMemberAccount, applicantLoginWithTwoFactor, markMembershipNotif
 import { notifyAdmins } from '../services/notification.service.js';
 import { authLimiter, slowAuth } from '../middleware/rateLimit.js';
 import { submitResearchApplication } from '../controllers/researchApplication.controller.js';
-import { fallbackWings, fallbackSettings, fallbackNews, demoResearch, demoSupervisors, demoScholars } from '../utils/fallbackData.js';
+import { fallbackWings, fallbackSettings, fallbackNews, demoResearch, demoSupervisors, demoScholars, demoFoundingMembers } from '../utils/fallbackData.js';
 
 const router = Router();
 
@@ -130,6 +131,28 @@ router.get('/research/:slug', async (req, res) => {
   }
   const fallback = demoResearch.find((r) => r.slug === req.params.slug);
   if (!fallback) return res.status(404).json({ success: false, message: 'Research not found' });
+  return res.json({ success: true, data: fallback });
+});
+
+router.get('/founding-members', async (_req, res) => {
+  try {
+    const list = await FoundingMember.find().sort({ order: 1, createdAt: 1 });
+    if (list && list.length > 0) return res.json({ success: true, data: list });
+  } catch (err) {
+    console.warn('[founding-members] fallback:', err instanceof Error ? err.message : err);
+  }
+  return res.json({ success: true, data: demoFoundingMembers });
+});
+
+router.get('/founding-members/:slug', async (req, res) => {
+  try {
+    const item = await FoundingMember.findOne({ slug: req.params.slug });
+    if (item) return res.json({ success: true, data: item });
+  } catch (err) {
+    console.warn('[founding-members/:slug] fallback:', err instanceof Error ? err.message : err);
+  }
+  const fallback = demoFoundingMembers.find((f) => f.slug === req.params.slug);
+  if (!fallback) return res.status(404).json({ success: false, message: 'Founding member not found' });
   return res.json({ success: true, data: fallback });
 });
 
