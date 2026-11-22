@@ -16,6 +16,7 @@ import { activateMemberAccount, applicantLoginWithTwoFactor, markMembershipNotif
 import { notifyAdmins } from '../services/notification.service.js';
 import { authLimiter, slowAuth } from '../middleware/rateLimit.js';
 import { submitResearchApplication } from '../controllers/researchApplication.controller.js';
+import { validateOnboardingToken, uploadOnboardingPhoto, completeOnboarding } from '../controllers/onboarding.controller.js';
 import { fallbackWings, fallbackSettings, fallbackNews, demoResearch, demoSupervisors, demoScholars, demoFoundingMembers } from '../utils/fallbackData.js';
 
 const router = Router();
@@ -273,5 +274,9 @@ const applicationPhotoUpload = multer({
   fileFilter: (_req, file, callback) => callback(null, ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype))
 });
 router.post('/membership/:id/photo', applicationPhotoUpload.single('file'), uploadMembershipPhoto);
+
+router.get('/onboarding/validate', validateOnboardingToken);
+router.post('/onboarding/photo', applicationPhotoUpload.single('file'), uploadOnboardingPhoto);
+router.post('/onboarding/complete', completeOnboarding);
 
 export default router;

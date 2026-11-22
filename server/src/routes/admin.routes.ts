@@ -28,6 +28,7 @@ import { upsertClass, deleteClass } from '../controllers/class.controller.js';
 import ClassModel from '../models/Class.js';
 import { paymentQueue } from '../controllers/payment.controller.js';
 import { adminMembershipApplications, approveApplicantSignup, approveInitialApplication, deleteMembershipApplication, publishMembershipApplication } from '../controllers/membership.controller.js';
+import { approveAndSendOnboarding } from '../controllers/onboarding.controller.js';
 import { listAdminNotifications, markAdminNotificationRead, markAllAdminNotificationsRead } from '../controllers/notification.controller.js';
 import { deleteResearchApplication, downloadResearchApplicationCv, listResearchApplications, updateResearchApplicationStatus } from '../controllers/researchApplication.controller.js';
 import { demoFoundingMembers, demoSupervisors, demoScholars } from '../utils/fallbackData.js';
@@ -94,6 +95,7 @@ mountCrud('wings', Wing); mountCrud('research', Research); mountCrud('founding-m
 
 router.get('/payments', paymentQueue);
 router.get('/membership-applications', adminMembershipApplications);
+router.post('/membership-applications/:id/approve-onboarding', approveAndSendOnboarding);
 router.post('/membership-applications/:id/approve-signup', approveApplicantSignup);
 router.post('/membership-applications/:id/approve', approveInitialApplication);
 router.post('/membership-applications/:id/publish', publishMembershipApplication);
