@@ -571,3 +571,17 @@ img,video,iframe,canvas,svg{max-width:100%}
 .announcement-detail-meta{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:12px 0 20px;color:#58757a;font-size:.92rem}
 .announcement-lead{font-size:1.15rem;line-height:1.7;color:#355d64;font-weight:500;margin-bottom:24px}
 
+/* Founding Members Section & Compact Cards */
+.founding-members-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;max-width:980px;margin:0 auto}
+@media(max-width:768px){.founding-members-grid{grid-template-columns:1fr;gap:16px;max-width:100%}}
+.founding-card{display:flex!important;flex-direction:column!important;text-align:center;padding:22px;height:100%}
+.founding-card .profile-photo{width:88px!important;height:88px!important;margin:0 auto 12px!important;border-radius:50%!important;border:2px solid rgba(20,143,131,.35)!important;flex-shrink:0}
+.founding-card .profile-photo-fallback{font-size:1.65rem!important}
+.founding-card h3{font-size:1.18rem;margin:8px 0 4px;color:#1b5660}
+.founding-card .founding-role{font-size:.88rem;min-height:22px;margin:2px 0 10px}
+.founding-card .domain-list{justify-content:center;margin-bottom:10px}
+.founding-card .founding-bio-wrap{flex-grow:1}
+.founding-bio-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:.9rem;line-height:1.55;color:#58757a}
+.founding-card .academic-social-links{justify-content:center;margin-top:auto;padding-top:12px;border-top:1px solid rgba(20,143,131,.1)}
+
+

@@ -209,36 +209,32 @@ export function Team() {
               <h2>Meet our Founding Members</h2>
             </div>
           </div>
-          <div className="grid founding-members-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 440px), 1fr))', gap: '24px' }}>
+          <div className="founding-members-grid">
             {foundingMembers.map((member) => (
-              <article className="card profile-card" key={member._id} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div className="founder-avatar-wrap mx-auto flex justify-center mb-3">
-                  <ProfileAvatar name={member.name} photo={member.photo} className="mx-auto" />
-                </div>
-                <h3 style={{ fontSize: '1.28rem', marginBottom: '4px' }}>{member.name}</h3>
+              <article className="card profile-card founding-card" key={member._id}>
+                <ProfileAvatar name={member.name} photo={member.photo} />
+                <h3>{member.name}</h3>
                 {member.sampleData && <span className="badge-sample">Illustrative sample profile</span>}
-                <p className="muted" style={{ minHeight: 24, marginBottom: '12px' }}>
+                <p className="muted founding-role" style={{ minHeight: 24 }}>
                   <span style={{ color: '#0d736e', fontWeight: 600 }}>{member.role || member.designation || 'Founding Member'}</span>
                   {member.affiliation ? ` • ${member.affiliation}` : ''}
                 </p>
-                <div className="domain-list" style={{ justifyContent: 'center', marginBottom: '12px' }}>
+                <div className="domain-list">
                   {(member.researchInterests || []).map((domain) => (
                     <span className="domain-chip" key={domain}>{domain}</span>
                   ))}
                 </div>
-                <div style={{ flexGrow: 1 }}>
+                <div className="founding-bio-wrap">
                   <RichTextContent
                     content={member.bio || 'ASPIER founding member advancing collaborative inquiry and research education.'}
-                    className="muted"
+                    className="muted founding-bio-clamp"
                   />
                   {member.educationalBackground && (
-                    <p className="muted" style={{ marginTop: '8px', fontSize: '0.88rem' }}><strong>Education:</strong> {member.educationalBackground}</p>
+                    <p className="muted" style={{ marginTop: '6px', fontSize: '0.86rem' }}><strong>Education:</strong> {member.educationalBackground}</p>
                   )}
                 </div>
                 {/* Conditional academic and social media profile icons */}
-                <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                  <AcademicSocialLinks member={member} className="justify-center" />
-                </div>
+                <AcademicSocialLinks member={member} className="academic-social-links-center" />
               </article>
             ))}
           </div>
