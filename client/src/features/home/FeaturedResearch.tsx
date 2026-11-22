@@ -36,9 +36,11 @@ export function FeaturedResearch() {
           className="research-card-image"
           fallbackClassName="research-cover-placeholder research-cover-ongoing"
         />
-        {item.sampleData ? <span className="badge-sample">Sample research</span> : <span className="eyebrow">Current inquiry</span>}
-        <h3>{item.title}</h3>
-        <RichTextContent className="muted" content={item.abstract}/>
+        <div className="research-card-body">
+          {item.sampleData ? <span className="badge-sample">Sample research</span> : <span className="eyebrow">Current inquiry</span>}
+          <h3>{item.title}</h3>
+          <RichTextContent className="muted" content={item.abstract}/>
+        </div>
       </Link>)}</div>
     </div>
   </section>;

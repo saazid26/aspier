@@ -29,7 +29,7 @@ export function DynamicForm({ fields, value, onChange, onSubmit, submitting = fa
     if (field.type === 'image') {
       const imageValue = typeof current === 'string' ? current : '';
       const isBanner = field.shape === 'banner' || field.imageVariant === 'cover';
-      return <div className="dynamic-image-field" key={field.name}>
+      return <div className="dynamic-image-field w-full max-w-full box-border" key={field.name}>
         <span className="dynamic-image-label">{field.label}</span>
         <ImageUploader
           value={imageValue}

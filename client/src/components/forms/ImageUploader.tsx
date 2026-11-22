@@ -56,8 +56,8 @@ export function ImageUploader({
     if (inputRef.current) inputRef.current.value = '';
   };
 
-  return <div className={`image-uploader ${isBanner ? 'image-uploader-cover' : 'image-uploader-circle'}`}>
-    <div className={`image-upload-frame ${isBanner ? 'image-upload-frame-cover aspect-[16/9] w-full rounded-xl object-cover' : 'image-upload-frame-circle'} ${busy ? 'is-uploading' : ''}`}>
+  return <div className={`image-uploader ${isBanner ? 'image-uploader-cover' : 'image-uploader-circle'} w-full max-w-full box-border mx-auto`}>
+    <div className={`image-upload-frame ${isBanner ? 'image-upload-frame-cover aspect-[16/9] w-full max-w-full rounded-xl object-cover mx-auto box-border' : 'image-upload-frame-circle'} ${busy ? 'is-uploading' : ''}`}>
       {preview && !previewFailed
         ? <img
           src={preview}
