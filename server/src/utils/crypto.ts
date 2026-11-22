@@ -12,10 +12,14 @@ export function encrypt(value: string): string {
   return `${iv.toString('hex')}:${cipher.getAuthTag().toString('hex')}:${encrypted.toString('hex')}`;
 }
 export function decrypt(payload: string): string {
-  const [ivHex, tagHex, encryptedHex] = payload.split(':');
-  if (!ivHex || !tagHex || !encryptedHex) throw new Error('Invalid encrypted value');
-  const decipher = createDecipheriv('aes-256-gcm', key(), Buffer.from(ivHex, 'hex'));
-  decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
-  return Buffer.concat([decipher.update(Buffer.from(encryptedHex, 'hex')), decipher.final()]).toString('utf8');
+  try {
+    const [ivHex, tagHex, encryptedHex] = payload.split(':');
+    if (!ivHex || !tagHex || !encryptedHex) return '';
+    const decipher = createDecipheriv('aes-256-gcm', key(), Buffer.from(ivHex, 'hex'));
+    decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+    return Buffer.concat([decipher.update(Buffer.from(encryptedHex, 'hex')), decipher.final()]).toString('utf8');
+  } catch {
+    return '';
+  }
 }
 

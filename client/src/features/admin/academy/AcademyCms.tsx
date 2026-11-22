@@ -119,14 +119,70 @@ export function AcademyCms() {
   const addModule = () => {
     if (!selectedCurriculumCourse) return;
     const currentModules = selectedCurriculumCourse.modules || [];
+    const newNum = currentModules.length + 1;
     const newModule = {
-      title: `Module ${currentModules.length + 1}: New Topic`,
-      lessons: [{ title: 'Lesson 1: Introduction', videoId: '', duration: '45 mins', isFreePreview: false }]
+      moduleNumber: newNum,
+      title: `Module ${newNum}: New Research Module`,
+      description: 'Module objectives and topics covered',
+      week: `Week ${newNum}`,
+      lessons: [{ title: `Session 1: Introduction to Module ${newNum}`, videoId: '', duration: '45 mins', isFreePreview: false }]
     };
     setSelectedCurriculumCourse({
       ...selectedCurriculumCourse,
       modules: [...currentModules, newModule]
     });
+  };
+
+  const prepopulateStandardModules = () => {
+    if (!selectedCurriculumCourse) return;
+    const standard = [
+      {
+        moduleNumber: 1,
+        title: "Module 1: Foundations & Research Framing",
+        description: "Formulating high-impact research questions, hypothesis framing, and academic standards.",
+        week: "Weeks 1–2",
+        lessons: [
+          { title: "Session 1: Identifying Research Gaps & Problem Formulation", duration: "60 mins", videoId: "", isFreePreview: false },
+          { title: "Session 2: Formulating Hypotheses and Research Objectives", duration: "60 mins", videoId: "", isFreePreview: false },
+          { title: "Session 3: Ethical Considerations in Scientific Inquiry", duration: "45 mins", videoId: "", isFreePreview: false }
+        ]
+      },
+      {
+        moduleNumber: 2,
+        title: "Module 2: Literature Review & Methodology",
+        description: "Systematic literature search, synthesis matrices, and robust experimental/analytical design.",
+        week: "Weeks 3–4",
+        lessons: [
+          { title: "Session 4: Advanced Scopus & Web of Science Literature Search", duration: "60 mins", videoId: "", isFreePreview: false },
+          { title: "Session 5: Building a Critical Literature Synthesis Matrix", duration: "60 mins", videoId: "", isFreePreview: false },
+          { title: "Session 6: Quantitative & Qualitative Methodology Design", duration: "60 mins", videoId: "", isFreePreview: false }
+        ]
+      },
+      {
+        moduleNumber: 3,
+        title: "Module 3: Data Analysis & Tools",
+        description: "Statistical modeling, reproducible analysis workflows, and effective visualization.",
+        week: "Weeks 5–6",
+        lessons: [
+          { title: "Session 7: Data Preparation, Cleaning & Exploratory Analysis", duration: "60 mins", videoId: "", isFreePreview: false },
+          { title: "Session 8: Statistical Hypothesis Testing & Interpretation", duration: "60 mins", videoId: "", isFreePreview: false },
+          { title: "Session 9: Creating Publication-Quality Plots and Tables", duration: "60 mins", videoId: "", isFreePreview: false }
+        ]
+      },
+      {
+        moduleNumber: 4,
+        title: "Module 4: Academic Writing & Publication",
+        description: "Manuscript drafting (IMRaD), target journal selection, peer review response, and publication ethics.",
+        week: "Weeks 7–8",
+        lessons: [
+          { title: "Session 10: Drafting Title, Abstract, and High-Impact Introduction", duration: "60 mins", videoId: "", isFreePreview: false },
+          { title: "Session 11: Results, Discussion, and Conclusion Mastery", duration: "60 mins", videoId: "", isFreePreview: false },
+          { title: "Session 12: Journal Selection, Cover Letters, and Peer Review Rebuttal", duration: "60 mins", videoId: "", isFreePreview: false }
+        ]
+      }
+    ];
+    setSelectedCurriculumCourse({ ...selectedCurriculumCourse, modules: standard });
+    toast.success('Loaded 4 standard course modules. Click Save to persist.');
   };
 
   // Save Class
@@ -257,11 +313,11 @@ export function AcademyCms() {
         </div>
       )}
 
-      {/* Tab 2: Curriculum & Syllabus */}
+      {/* Tab 2: Curriculum & Course Modules */}
       {activeTab === 'Curriculum & Modules' && (
         <div style={{ marginTop: 20 }}>
           <div className="card" style={{ marginBottom: 20 }}>
-            <label style={{ fontWeight: 600, display: 'block', marginBottom: 8 }}>Select Course to Edit Curriculum</label>
+            <label style={{ fontWeight: 600, display: 'block', marginBottom: 8 }}>Select Course to Edit Course Modules</label>
             <select
               className="select"
               value={selectedCurriculumCourse?._id || ''}
@@ -279,32 +335,76 @@ export function AcademyCms() {
 
           {selectedCurriculumCourse && (
             <div className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <h3 style={{ margin: 0 }}>Syllabus: {selectedCurriculumCourse.title}</h3>
+                  <h3 style={{ margin: 0 }}>Course Modules: {selectedCurriculumCourse.title}</h3>
                   <span className="muted" style={{ fontSize: '0.85rem' }}>Modules: {(selectedCurriculumCourse.modules || []).length}</span>
                 </div>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <Button type="button" variant="secondary" onClick={prepopulateStandardModules}>
+                    Pre-populate Standard 4 Modules
+                  </Button>
                   <Button type="button" variant="secondary" onClick={addModule}>+ Add Module</Button>
                   <Button disabled={savingCurriculum} onClick={handleSaveCurriculum}>
-                    {savingCurriculum ? 'Saving…' : 'Save Curriculum'}
+                    {savingCurriculum ? 'Saving…' : 'Save Course Modules'}
                   </Button>
                 </div>
               </div>
 
               {(selectedCurriculumCourse.modules || []).map((mod: any, mIdx: number) => (
                 <div key={mIdx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
                     <strong>Module {mIdx + 1}</strong>
-                    <Input
-                      value={mod.title || ''}
-                      onChange={(e) => {
-                        const copy = [...selectedCurriculumCourse.modules];
-                        copy[mIdx].title = e.target.value;
-                        setSelectedCurriculumCourse({ ...selectedCurriculumCourse, modules: copy });
-                      }}
-                      placeholder="Module title"
-                    />
+                    <div style={{ flex: '2 1 200px' }}>
+                      <Input
+                        value={mod.title || ''}
+                        onChange={(e) => {
+                          const copy = [...selectedCurriculumCourse.modules];
+                          copy[mIdx].title = e.target.value;
+                          setSelectedCurriculumCourse({ ...selectedCurriculumCourse, modules: copy });
+                        }}
+                        placeholder="Module title (e.g. Module 1: Foundations & Research Framing)"
+                      />
+                    </div>
+                    <div style={{ flex: '1 1 120px' }}>
+                      <Input
+                        value={mod.week || ''}
+                        onChange={(e) => {
+                          const copy = [...selectedCurriculumCourse.modules];
+                          copy[mIdx].week = e.target.value;
+                          setSelectedCurriculumCourse({ ...selectedCurriculumCourse, modules: copy });
+                        }}
+                        placeholder="Timeline (e.g. Weeks 1–2)"
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={mIdx === 0}
+                        onClick={() => {
+                          const copy = [...selectedCurriculumCourse.modules];
+                          const [item] = copy.splice(mIdx, 1);
+                          copy.splice(mIdx - 1, 0, item);
+                          setSelectedCurriculumCourse({ ...selectedCurriculumCourse, modules: copy });
+                        }}
+                      >
+                        ↑
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={mIdx === selectedCurriculumCourse.modules.length - 1}
+                        onClick={() => {
+                          const copy = [...selectedCurriculumCourse.modules];
+                          const [item] = copy.splice(mIdx, 1);
+                          copy.splice(mIdx + 1, 0, item);
+                          setSelectedCurriculumCourse({ ...selectedCurriculumCourse, modules: copy });
+                        }}
+                      >
+                        ↓
+                      </Button>
+                    </div>
                     <Button
                       type="button"
                       variant="danger"
@@ -315,6 +415,18 @@ export function AcademyCms() {
                     >
                       Remove
                     </Button>
+                  </div>
+
+                  <div style={{ marginBottom: 12 }}>
+                    <Input
+                      value={mod.description || ''}
+                      onChange={(e) => {
+                        const copy = [...selectedCurriculumCourse.modules];
+                        copy[mIdx].description = e.target.value;
+                        setSelectedCurriculumCourse({ ...selectedCurriculumCourse, modules: copy });
+                      }}
+                      placeholder="Module brief description / learning objectives"
+                    />
                   </div>
 
                   <div style={{ paddingLeft: 16, borderLeft: '3px solid #148f83' }}>

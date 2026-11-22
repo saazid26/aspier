@@ -42,19 +42,36 @@ export default async function handler(req: Request, res: Response): Promise<void
     const app = await getApp();
 
     const requestUrl = new URL(req.url || '/', 'http://localhost');
-    const apiPath = requestUrl.searchParams.get('path');
+    let apiPath = requestUrl.searchParams.get('path');
+    if (!apiPath && req.url?.startsWith('/api/')) {
+      apiPath = req.url.slice('/api/'.length).split('?')[0];
+    }
     if (!apiPath || !apiPath.startsWith('v1/')) {
       res.status(404).json({ success: false, message: 'API route not found' });
       return;
     }
     requestUrl.searchParams.delete('path');
     req.url = `/api/${apiPath}${requestUrl.search}`;
-    app(req, res);
+    
+    return new Promise<void>((resolve, reject) => {
+      res.on('finish', () => resolve());
+      res.on('close', () => resolve());
+      try {
+        app(req, res, (err: unknown) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      } catch (err) {
+        reject(err);
+      }
+    });
   } catch (error: any) {
     console.error('[api] Serverless handler error:', error);
-    res.status(500).json({
-      success: false,
-      message: error?.message || 'Serverless function execution error'
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: error?.message || 'Serverless function execution error'
+      });
+    }
   }
 }

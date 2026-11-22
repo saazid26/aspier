@@ -8,7 +8,6 @@ import { PublicApplicantBell } from '../../components/common/PublicApplicantBell
 const links = [
   { to: '/', label: 'Home', end: true },
   { to: '/wings', label: 'Wings' },
-  { to: '/research', label: 'Research' },
   { to: '/team', label: 'Team' },
   { to: '/academy', label: 'Academy' },
   { to: '/news', label: 'News' },

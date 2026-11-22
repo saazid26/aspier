@@ -33,6 +33,43 @@ export function WingsResearchManager() {
     queryFn: async () => (await api.get('/admin/research-applications')).data.data as any[]
   });
 
+  // Team queries for linking members to research
+  const { data: teamSupervisors = [] } = useQuery({
+    queryKey: ['team-supervisors'],
+    queryFn: async () => (await api.get('/public/supervisors')).data.data as any[]
+  });
+  const { data: teamScholars = [] } = useQuery({
+    queryKey: ['team-scholars'],
+    queryFn: async () => (await api.get('/public/scholars')).data.data as any[]
+  });
+  const { data: settings } = useQuery({
+    queryKey: ['public-settings'],
+    queryFn: async () => (await api.get('/public/settings')).data.data as any
+  });
+
+  const founderMember = {
+    _id: 'founder-saazid',
+    name: settings?.founderName || 'Md Saazid Bin Saif',
+    role: 'founder',
+    roleTitle: settings?.founderTitle || 'Founder, ASPIER',
+    designation: settings?.founderTitle || 'Founder & Executive Director, ASPIER',
+    photo: settings?.founderPhoto,
+    bio: settings?.founderBio,
+    researchInterests: settings?.founderResearchDomains || [],
+    researchGate: settings?.founderResearchGate,
+    googleScholar: settings?.founderGoogleScholar,
+    linkedin: settings?.founderLinkedin,
+    orcid: settings?.founderOrcid,
+    twitter: settings?.founderTwitter,
+    github: settings?.founderGithub,
+    facebook: settings?.founderFacebook
+  };
+  const allTeamMembers = [
+    founderMember,
+    ...teamSupervisors.map((s: any) => ({ ...s, role: 'supervisor', roleTitle: s.designation || 'Research Supervisor' })),
+    ...teamScholars.map((sc: any) => ({ ...sc, role: 'scholar', roleTitle: sc.designation || 'Young Scholar' }))
+  ];
+
   // Wing Modal State
   const [editingWing, setEditingWing] = useState<any | null>(null);
   const [wingModalOpen, setWingModalOpen] = useState(false);
@@ -449,6 +486,49 @@ export function WingsResearchManager() {
                 onChange={(val) => setEditingResearch({ ...editingResearch, content: val })}
               />
             </label>
+
+            <label>
+              Research Category / Timeline
+              <select
+                className="select"
+                value={editingResearch.category || 'ongoing'}
+                onChange={(e) => setEditingResearch({ ...editingResearch, category: e.target.value })}
+              >
+                <option value="ongoing">Present Research (Ongoing)</option>
+                <option value="past">Past Research (Completed / Published)</option>
+                <option value="future">Future Research (Proposed / Planned)</option>
+              </select>
+            </label>
+
+            <div style={{ marginTop: 12 }}>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                Link Team Members / Contributors (Founder, Supervisors, Scholars)
+              </label>
+              <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {allTeamMembers.map((member: any) => {
+                  const isChecked = Array.isArray(editingResearch.linkedTeamMembers) && editingResearch.linkedTeamMembers.some((m: any) => (m._id || m.name) === (member._id || member.name));
+                  return (
+                    <label key={member._id || member.name} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const list = Array.isArray(editingResearch.linkedTeamMembers) ? [...editingResearch.linkedTeamMembers] : [];
+                          if (e.target.checked) {
+                            list.push(member);
+                          } else {
+                            const idx = list.findIndex((m: any) => (m._id || m.name) === (member._id || member.name));
+                            if (idx >= 0) list.splice(idx, 1);
+                          }
+                          setEditingResearch({ ...editingResearch, linkedTeamMembers: list });
+                        }}
+                      />
+                      <span><strong>{member.name}</strong> ({member.roleTitle || member.role})</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
 
             <label>
               Authors (comma-separated)

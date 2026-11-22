@@ -19,6 +19,14 @@ import { fallbackWings, fallbackSettings, fallbackNews, demoResearch, demoSuperv
 
 const router = Router();
 
+// Edge & browser caching for high-speed delivery
+router.use((req, res, next) => {
+  if (req.method === 'GET' && !req.path.includes('applications')) {
+    res.set('Cache-Control', 'public, max-age=120, s-maxage=300, stale-while-revalidate=600');
+  }
+  next();
+});
+
 router.get('/sitemap.xml', async (_req, res) => {
   try {
     const baseUrl = (env.CLIENT_URL || 'https://aspierglobal.vercel.app').replace(/\/$/, '');

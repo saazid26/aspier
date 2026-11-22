@@ -24,9 +24,9 @@ export function AcademyLayout(){
       <button className="menu-toggle" type="button" aria-label={menuOpen?'Close menu':'Open menu'} aria-expanded={menuOpen} onClick={()=>setMenuOpen(!menuOpen)}>{menuOpen?<X size={23}/>:<Menu size={23}/>}</button>
     </div>
     <div className={`nav-links ${menuOpen?'nav-links-open':''}`}>
+      <Link className="nav-link" to="/" onClick={()=>setMenuOpen(false)}>ASPIER</Link>
       <Link className="nav-link" to="/academy" onClick={()=>setMenuOpen(false)}>Home</Link>
       <Link className="nav-link" to="/academy/register" onClick={()=>setMenuOpen(false)}>Register</Link>
-      <Link className="nav-link" to="/academy/login" onClick={()=>setMenuOpen(false)}>Student Login</Link>
       <Link className="nav-link" to="/academy/portal" onClick={()=>setMenuOpen(false)}>Student Portal</Link>
     </div>
   </div></nav><Outlet/></div>;

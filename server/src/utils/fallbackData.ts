@@ -173,6 +173,57 @@ export const fallbackSettings = {
   membershipFee: 1000
 };
 
+const defaultDummyModules = [
+  {
+    _id: "mod-1",
+    moduleNumber: 1,
+    title: "Module 1: Foundations & Research Framing",
+    description: "Formulating high-impact research questions, hypothesis framing, and academic standards.",
+    week: "Weeks 1–2",
+    lessons: [
+      { _id: "les-1-1", title: "Session 1: Identifying Research Gaps & Problem Formulation" },
+      { _id: "les-1-2", title: "Session 2: Formulating Hypotheses and Research Objectives" },
+      { _id: "les-1-3", title: "Session 3: Ethical Considerations in Scientific Inquiry" }
+    ]
+  },
+  {
+    _id: "mod-2",
+    moduleNumber: 2,
+    title: "Module 2: Literature Review & Methodology",
+    description: "Systematic literature search, synthesis matrices, and robust experimental/analytical design.",
+    week: "Weeks 3–4",
+    lessons: [
+      { _id: "les-2-1", title: "Session 4: Advanced Scopus & Web of Science Literature Search" },
+      { _id: "les-2-2", title: "Session 5: Building a Critical Literature Synthesis Matrix" },
+      { _id: "les-2-3", title: "Session 6: Quantitative & Qualitative Methodology Design" }
+    ]
+  },
+  {
+    _id: "mod-3",
+    moduleNumber: 3,
+    title: "Module 3: Data Analysis & Tools",
+    description: "Statistical modeling, reproducible analysis workflows, and effective visualization.",
+    week: "Weeks 5–6",
+    lessons: [
+      { _id: "les-3-1", title: "Session 7: Data Preparation, Cleaning & Exploratory Analysis" },
+      { _id: "les-3-2", title: "Session 8: Statistical Hypothesis Testing & Interpretation" },
+      { _id: "les-3-3", title: "Session 9: Creating Publication-Quality Plots and Tables" }
+    ]
+  },
+  {
+    _id: "mod-4",
+    moduleNumber: 4,
+    title: "Module 4: Academic Writing & Publication",
+    description: "Manuscript drafting (IMRaD), target journal selection, peer review response, and publication ethics.",
+    week: "Weeks 7–8",
+    lessons: [
+      { _id: "les-4-1", title: "Session 10: Drafting Title, Abstract, and High-Impact Introduction" },
+      { _id: "les-4-2", title: "Session 11: Results, Discussion, and Conclusion Mastery" },
+      { _id: "les-4-3", title: "Session 12: Journal Selection, Cover Letters, and Peer Review Rebuttal" }
+    ]
+  }
+];
+
 export const fallbackCourses = [
   {
     _id: "60d0fe4f5311236168a109e1",
@@ -186,7 +237,8 @@ export const fallbackCourses = [
     price: 2500,
     level: "beginner",
     status: "published",
-    thumbnail: makeDemoCover("Research Paper Writing")
+    thumbnail: makeDemoCover("Research Paper Writing"),
+    modules: defaultDummyModules
   },
   {
     _id: "60d0fe4f5311236168a109e2",
@@ -200,7 +252,8 @@ export const fallbackCourses = [
     price: 2500,
     level: "beginner",
     status: "published",
-    thumbnail: makeDemoCover("Responsible AI Foundations")
+    thumbnail: makeDemoCover("Responsible AI Foundations"),
+    modules: defaultDummyModules
   },
   {
     _id: "60d0fe4f5311236168a109e3",
@@ -214,7 +267,8 @@ export const fallbackCourses = [
     price: 3000,
     level: "intermediate",
     status: "published",
-    thumbnail: makeDemoCover("Climate Data Modeling")
+    thumbnail: makeDemoCover("Climate Data Modeling"),
+    modules: defaultDummyModules
   }
 ];
 

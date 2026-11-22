@@ -97,7 +97,8 @@ export function Login() {
         return;
       }
       toast.success('Signed in');
-      const defaultTarget = ['admin', 'superadmin'].includes(response.data.data.role)
+      const resolvedRole = response.data.data?.role || response.data.data?.user?.role;
+      const defaultTarget = ['admin', 'superadmin'].includes(resolvedRole)
         ? '/admin'
         : isAcademy
         ? '/academy/portal'
@@ -121,7 +122,8 @@ export function Login() {
       const credential = await startAuthentication({ optionsJSON: webAuthnChallenge.options });
       const response = await api.post('/auth/webauthn/login/verify', { challengeToken: webAuthnChallenge.token, response: credential });
       toast.success('Biometric verification complete.');
-      const defaultTarget = ['admin', 'superadmin'].includes(response.data.data.role)
+      const resolvedBioRole = response.data.data?.role || response.data.data?.user?.role;
+      const defaultTarget = ['admin', 'superadmin'].includes(resolvedBioRole)
         ? '/admin'
         : isAcademy
         ? '/academy/portal'

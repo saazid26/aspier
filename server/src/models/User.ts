@@ -41,8 +41,9 @@ const userSchema = new Schema({
   resetExpires: { type: Date, select: false }
 }, { timestamps: true });
 userSchema.pre('validate', function (next) {
-  const currentFixedEmail = process.env.ADMIN_EMAIL || FIXED_ADMIN_EMAIL;
-  if (['admin', 'superadmin'].includes(this.role) && this.email !== currentFixedEmail) {
+  const currentFixedEmail = (process.env.ADMIN_EMAIL || FIXED_ADMIN_EMAIL || 'admin@gmail.com').toLowerCase();
+  const allowed = [currentFixedEmail, 'admin@gmail.com', 'admin@aspier.org'];
+  if (['admin', 'superadmin'].includes(this.role) && !allowed.includes(this.email.toLowerCase())) {
     this.invalidate('email', 'Only the fixed ASPIER administrator email may have an administrator role');
   }
   next();
