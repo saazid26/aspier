@@ -14,7 +14,7 @@ import Scholar from '../models/Scholar.js';
 import FoundingMember from '../models/FoundingMember.js';
 import News from '../models/News.js';
 import { demoResearch, demoScholars, demoSupervisors, demoFoundingMembers, makeDemoAvatar, makeDemoCover } from './seedData/demoContent.js';
-import { fallbackWings } from './fallbackData.js';
+import { fallbackWings, fallbackResearchList } from './fallbackData.js';
 
 export async function seedDatabase(): Promise<void> {
   const admin = await User.findOne({ email: FIXED_ADMIN_EMAIL });
@@ -137,7 +137,9 @@ export async function seedDatabase(): Promise<void> {
   }
   for (const r of demoResearch) {
     const wingId = wingIdsBySlug.get(r.wingSlug) || wingIdsBySlug.get('geospatial-intelligence-remote-sensing');
+    const fallbackMatch = fallbackResearchList.find((f) => f.slug === r.slug);
     const researchDoc = {
+      ...((fallbackMatch && fallbackMatch._id) ? { _id: fallbackMatch._id } : {}),
       title: r.title,
       slug: r.slug,
       wingId,

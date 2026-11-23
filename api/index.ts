@@ -48,6 +48,13 @@ export default async function handler(req: Request, res: Response): Promise<void
       ]);
     }
 
+    if (seedPromise) {
+      await Promise.race([
+        seedPromise,
+        new Promise((resolve) => setTimeout(resolve, 3000))
+      ]);
+    }
+
     const requestUrl = new URL(req.url || '/', 'http://localhost');
     let apiPath = requestUrl.searchParams.get('path');
     if (!apiPath && req.url?.startsWith('/api/')) {

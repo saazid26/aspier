@@ -33,8 +33,10 @@ const router = Router();
 
 // Edge & browser caching for high-speed delivery
 router.use((req, res, next) => {
-  if (req.method === 'GET' && !req.path.includes('applications')) {
-    res.set('Cache-Control', 'public, max-age=120, s-maxage=300, stale-while-revalidate=600');
+  if (req.method === 'GET' && !req.path.includes('applications') && !req.path.includes('wings') && !req.path.includes('research')) {
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=120');
+  } else if (req.method === 'GET') {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
   }
   next();
 });

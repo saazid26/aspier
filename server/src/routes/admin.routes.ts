@@ -179,21 +179,32 @@ router.post('/research', audit('create', 'Research'), async (req, res) => {
 router.put('/research/:id', audit('update', 'Research'), async (req, res) => {
   try {
     let item: any = null;
+    const researchId = String(req.params.id);
     if (mongoose.connection.readyState === 1) {
-      item = await Research.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (mongoose.Types.ObjectId.isValid(researchId)) {
+        item = await Research.findByIdAndUpdate(researchId, req.body, { new: true });
+      }
+      if (!item && req.body.slug) {
+        item = await Research.findOneAndUpdate({ slug: req.body.slug }, req.body, { new: true });
+      }
     }
-    const saved = addOrUpdateFallbackResearch({ ...req.body, _id: req.params.id });
+    const saved = addOrUpdateFallbackResearch({ ...req.body, _id: item?._id ? String(item._id) : researchId });
     return res.json({ success: true, data: item || saved });
   } catch (err: any) {
-    const saved = addOrUpdateFallbackResearch({ ...req.body, _id: req.params.id });
+    const saved = addOrUpdateFallbackResearch({ ...req.body, _id: String(req.params.id) });
     return res.json({ success: true, data: saved });
   }
 });
 
 router.delete('/research/:id', audit('delete', 'Research'), async (req, res) => {
   try {
+    const researchId = String(req.params.id);
     if (mongoose.connection.readyState === 1) {
-      await Research.findByIdAndDelete(req.params.id);
+      if (mongoose.Types.ObjectId.isValid(researchId)) {
+        await Research.findByIdAndDelete(researchId);
+      } else {
+        await Research.findOneAndDelete({ slug: researchId });
+      }
     }
   } catch {}
   deleteFallbackResearch(String(req.params.id));
