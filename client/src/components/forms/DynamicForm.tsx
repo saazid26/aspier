@@ -1,5 +1,6 @@
 import { ImageUploader } from './ImageUploader';
 import { RichTextEditor } from './RichTextEditor';
+import { TagInputField } from './TagInputField';
 import { Button } from '../ui/Button';
 
 function escapeHtml(value: string) {
@@ -42,7 +43,18 @@ export function DynamicForm({ fields, value, onChange, onSubmit, submitting = fa
       </div>;
     }
     if (field.type === 'textarea') return <label key={field.name}>{field.label}<textarea className="textarea" rows={4} value={String(current ?? '')} onChange={(event) => onChange(field.name, event.target.value)}/></label>;
-    if (field.type === 'array') return <label key={field.name}>{field.label}<textarea className="textarea" rows={3} placeholder="Separate entries with commas" value={Array.isArray(current) ? current.join(', ') : String(current ?? '')} onChange={(event) => onChange(field.name, event.target.value.split(',').map((item) => item.trim()).filter(Boolean))}/></label>;
+    if (field.type === 'array') {
+      return (
+        <div key={field.name} className="dynamic-array-field">
+          <label className="block mb-1 font-semibold">{field.label}</label>
+          <TagInputField
+            value={Array.isArray(current) ? (current as string[]) : []}
+            onChange={(tags) => onChange(field.name, tags)}
+            placeholder="Separate entries with commas (e.g. Water Resource, Groundwater, Climate Change)"
+          />
+        </div>
+      );
+    }
     if (field.type === 'richtext') {
       const richTextValue = Array.isArray(current) ? current.map((item) => `<p>${escapeHtml(String(item))}</p>`).join('') : String(current ?? '');
       return <label key={field.name}>{field.label}<RichTextEditor value={richTextValue} onChange={(value) => onChange(field.name, value)}/></label>;

@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { randomBytes } from 'node:crypto';
 import mongoose from 'mongoose';
+import { connectDatabase } from '../config/db.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { HttpError } from '../middleware/error.js';
 import MembershipApplication from '../models/MembershipApplication.js';
@@ -21,6 +22,9 @@ export async function approveAndSendOnboarding(req: AuthRequest, res: Response, 
     const applicationId = String(req.params.id || '');
     let application: any = null;
 
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       application = await MembershipApplication.findById(applicationId).catch(() => null);
     }
@@ -140,6 +144,9 @@ export async function validateOnboardingToken(req: Request, res: Response, next:
     if (!token) throw new HttpError(400, 'Onboarding token is required');
 
     let application: any = null;
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       application = await MembershipApplication.findOne({ onboardingToken: token }).catch(() => null);
     }
@@ -207,6 +214,9 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
     if (!profile || !profile.name) throw new HttpError(400, 'Profile details and full name are required');
 
     let application: any = null;
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       application = await MembershipApplication.findOne({ onboardingToken: token }).catch(() => null);
     }

@@ -89,6 +89,7 @@ export function ImageUploader({
           <button
             className="image-upload-trigger"
             type="button"
+            style={{ width: '100%', backgroundColor: '#0d363c', borderTop: '1px solid rgba(255,255,255,0.25)', zIndex: 10 }}
             disabled={busy}
             onClick={() => inputRef.current?.click()}
           >{busy ? 'Uploading…' : preview ? 'Change image' : 'Upload image'}</button>

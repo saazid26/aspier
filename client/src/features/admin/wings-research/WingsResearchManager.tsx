@@ -10,6 +10,7 @@ import { Modal } from '../../../components/ui/Modal';
 import { Badge } from '../../../components/ui/Badge';
 import { ImageUploader } from '../../../components/forms/ImageUploader';
 import { RichTextEditor } from '../../../components/forms/RichTextEditor';
+import { TagInputField } from '../../../components/forms/TagInputField';
 
 export function WingsResearchManager() {
   const queryClient = useQueryClient();
@@ -85,16 +86,26 @@ export function WingsResearchManager() {
   const [researchModalOpen, setResearchModalOpen] = useState(false);
   const [savingResearch, setSavingResearch] = useState(false);
 
+  const cleanTags = (val: any): string[] => {
+    if (Array.isArray(val)) return val.map((s) => String(s).trim()).filter(Boolean);
+    if (typeof val === 'string') return val.split(',').map((s) => s.trim()).filter(Boolean);
+    return [];
+  };
+
   // Handle Wing Save
   const saveWing = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingWing(true);
     try {
+      const payload = {
+        ...editingWing,
+        disciplines: cleanTags(editingWing.disciplines)
+      };
       if (editingWing._id) {
-        await api.put(`/admin/wings/${editingWing._id}`, editingWing);
+        await api.put(`/admin/wings/${editingWing._id}`, payload);
         toast.success('Wing updated successfully.');
       } else {
-        await api.post('/admin/wings', editingWing);
+        await api.post('/admin/wings', payload);
         toast.success('Wing created successfully.');
       }
       setWingModalOpen(false);
@@ -128,6 +139,7 @@ export function WingsResearchManager() {
     try {
       const payload = {
         ...editingResearch,
+        authors: cleanTags(editingResearch.authors),
         showReadPaperButton: editingResearch.showReadPaperButton !== false
       };
       if (editingResearch._id) {
@@ -416,17 +428,19 @@ export function WingsResearchManager() {
               />
             </label>
 
-            <label>
-              Associated Disciplines (comma-separated)
-              <Input
-                value={Array.isArray(editingWing.disciplines) ? editingWing.disciplines.join(', ') : ''}
-                onChange={(e) => setEditingWing({
+            <div style={{ marginTop: 12, marginBottom: 12 }}>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                Associated Disciplines (comma-separated)
+              </label>
+              <TagInputField
+                value={Array.isArray(editingWing.disciplines) ? editingWing.disciplines : []}
+                onChange={(tags) => setEditingWing({
                   ...editingWing,
-                  disciplines: e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
+                  disciplines: tags
                 })}
                 placeholder="Aerospace Engineering, Mechanical Engineering, Robotics"
               />
-            </label>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <label>
@@ -609,17 +623,19 @@ export function WingsResearchManager() {
               </div>
             </div>
 
-            <label>
-              Authors (comma-separated)
-              <Input
-                value={Array.isArray(editingResearch.authors) ? editingResearch.authors.join(', ') : ''}
-                onChange={(e) => setEditingResearch({
+            <div style={{ marginTop: 12, marginBottom: 12 }}>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                Authors (comma-separated)
+              </label>
+              <TagInputField
+                value={Array.isArray(editingResearch.authors) ? editingResearch.authors : []}
+                onChange={(tags) => setEditingResearch({
                   ...editingResearch,
-                  authors: e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
+                  authors: tags
                 })}
                 placeholder="Dr. Researcher, Scholar Name"
               />
-            </label>
+            </div>
 
             <label>
               Status

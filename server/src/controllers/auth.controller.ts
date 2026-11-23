@@ -2,6 +2,7 @@ import type { Response, NextFunction } from 'express';
 import { randomBytes } from 'node:crypto';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
+import { connectDatabase } from '../config/db.js';
 import { hashPassword, verifyPassword, passwordStrength } from '../services/password.service.js';
 import { signAccessToken, issueRefreshSession, rotateRefreshToken } from '../services/token.service.js';
 import { setAuthCookies, clearAuthCookies } from '../utils/cookies.js';
@@ -44,6 +45,9 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
       throw new HttpError(401, 'Invalid email or password');
     }
 
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     const isDbConnected = mongoose.connection.readyState === 1;
 
     let dbAdmin: any = null;

@@ -6,6 +6,7 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { ImageUploader } from '../../../components/forms/ImageUploader';
 import { RichTextEditor } from '../../../components/forms/RichTextEditor';
+import { TagInputField } from '../../../components/forms/TagInputField';
 import { ChangePasswordSection } from './ChangePasswordSection';
 
 type Settings = Record<string, unknown> & {
@@ -105,7 +106,16 @@ export function SiteSettings() {
       <label>Google Scholar ID<Input value={String(fields.founderGoogleScholarId || '')} onChange={(event) => update('founderGoogleScholarId', event.target.value)}/></label>
       <label>Founder description / subtitle<Input value={String(fields.founderDescription || '')} onChange={(event) => update('founderDescription', event.target.value)}/></label>
       <label>Founder biography / statement<RichTextEditor value={String(fields.founderBio || '')} onChange={(value) => update('founderBio', value)}/></label>
-      <label>Research domains<textarea className="textarea" rows={3} placeholder="Separate domains with commas" value={Array.isArray(fields.founderResearchDomains) ? fields.founderResearchDomains.join(', ') : ''} onChange={(event) => update('founderResearchDomains', event.target.value.split(',').map((item) => item.trim()).filter(Boolean))}/></label>
+      <div style={{ marginTop: 12, marginBottom: 12 }}>
+        <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
+          Founder Research Domains (comma-separated tags)
+        </label>
+        <TagInputField
+          value={Array.isArray(fields.founderResearchDomains) ? (fields.founderResearchDomains as string[]) : []}
+          onChange={(tags) => update('founderResearchDomains', tags)}
+          placeholder="Aeronautical Systems, Environmental Research, Remote Sensing"
+        />
+      </div>
       <Button disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
     </form>}
     <ChangePasswordSection />

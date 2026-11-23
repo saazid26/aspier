@@ -1,8 +1,6 @@
 import type { Request, Response } from 'express';
 
 let appInstance: any = null;
-let dbPromise: Promise<void> | null = null;
-let seedPromise: Promise<void> | null = null;
 
 async function getApp(): Promise<any> {
   if (!appInstance) {
@@ -11,26 +9,11 @@ async function getApp(): Promise<any> {
       import('../server/dist/config/db.js'),
       import('../server/dist/utils/seed.js')
     ]);
-    appInstance = appMod.app;
-
-    if (!dbPromise) {
-      dbPromise = dbMod.connectDatabase().catch((err: unknown) => {
-        dbPromise = null;
-        console.warn('[api] connectDatabase error:', err instanceof Error ? err.message : err);
-      });
-    }
-
-    if (!seedPromise) {
-      seedPromise = (async () => {
-        try {
-          await dbPromise;
-          await seedMod.seedDatabase();
-        } catch (err: unknown) {
-          seedPromise = null;
-          console.warn('[api] seedDatabase error:', err instanceof Error ? err.message : err);
-        }
-      })();
-    }
+    appInstance = {
+      app: appMod.app,
+      connectDatabase: dbMod.connectDatabase,
+      ensureSeeded: seedMod.ensureSeeded || seedMod.seedDatabase
+    };
   }
   return appInstance;
 }
@@ -39,20 +22,20 @@ export const maxDuration = 30;
 
 export default async function handler(req: Request, res: Response): Promise<void> {
   try {
-    const app = await getApp();
+    const { app, connectDatabase, ensureSeeded } = await getApp();
 
-    if (dbPromise) {
-      await Promise.race([
-        dbPromise,
-        new Promise((resolve) => setTimeout(resolve, 3000))
-      ]);
+    // Await singleton database connection promise so readyState becomes 1
+    if (connectDatabase) {
+      await connectDatabase().catch((err: unknown) => {
+        console.warn('[api] connectDatabase error:', err instanceof Error ? err.message : err);
+      });
     }
 
-    if (seedPromise) {
-      await Promise.race([
-        seedPromise,
-        new Promise((resolve) => setTimeout(resolve, 3000))
-      ]);
+    // Run non-blocking idempotent seed check without blocking concurrent API CRUD requests
+    if (ensureSeeded) {
+      ensureSeeded().catch((err: unknown) => {
+        console.warn('[api] ensureSeeded error:', err instanceof Error ? err.message : err);
+      });
     }
 
     const requestUrl = new URL(req.url || '/', 'http://localhost');

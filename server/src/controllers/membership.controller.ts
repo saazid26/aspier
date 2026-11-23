@@ -1,6 +1,7 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import mongoose from 'mongoose';
+import { connectDatabase } from '../config/db.js';
 import { z } from 'zod';
 import MembershipApplication from '../models/MembershipApplication.js';
 import Setting from '../models/Setting.js';
@@ -219,6 +220,9 @@ export async function submitInitialApplication(req: Request, res: Response, next
     const accessCode = randomBytes(24).toString('base64url');
     let application: any = null;
 
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       try {
         application = await MembershipApplication.create({
@@ -419,6 +423,9 @@ export async function adminMembershipApplications(req: AuthRequest, res: Respons
   try {
     const status = req.query.status;
     let applications: any[] = [];
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       try {
         const filter = typeof status === 'string' && status !== 'all' ? { status } : {};
@@ -708,6 +715,9 @@ export async function markMembershipNotificationRead(req: Request, res: Response
 export async function deleteMembershipApplication(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const id = String(req.params.id || '');
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       await MembershipApplication.findByIdAndDelete(id).catch(() => null);
     }

@@ -177,6 +177,34 @@ export async function seedDatabase(): Promise<void> {
   console.log('[seed] ASPIER seed data is ready');
 }
 
+declare global {
+  var _seedPromise: Promise<void> | undefined;
+}
+
+export async function ensureSeeded(): Promise<void> {
+  if (global._seedPromise) {
+    return global._seedPromise;
+  }
+  global._seedPromise = (async () => {
+    try {
+      if (mongoose.connection.readyState !== 1) {
+        await connectDatabase();
+      }
+      if (mongoose.connection.readyState !== 1) {
+        return;
+      }
+      const adminExists = await User.exists({ email: FIXED_ADMIN_EMAIL });
+      if (adminExists) {
+        return;
+      }
+      await seedDatabase();
+    } catch (err) {
+      console.warn('[seed] ensureSeeded error:', err instanceof Error ? err.message : err);
+    }
+  })();
+  return global._seedPromise;
+}
+
 if (process.argv[1] && process.argv[1].endsWith('seed.ts')) {
   await connectDatabase();
   await seedDatabase();

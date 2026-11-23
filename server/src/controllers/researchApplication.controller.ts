@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { NextFunction, Request, Response } from 'express';
 import mongoose from 'mongoose';
+import { connectDatabase } from '../config/db.js';
 import { z } from 'zod';
 import Research from '../models/Research.js';
 import Wing from '../models/Wing.js';
@@ -108,6 +109,9 @@ export async function submitResearchApplication(req: Request, res: Response, nex
 
     let application: any = null;
 
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       try {
         application = await ResearchApplication.create({
@@ -208,6 +212,9 @@ export async function lookupResearchApplication(req: Request, res: Response, nex
 
     let application: any = null;
 
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       try {
         application = await ResearchApplication.findOne({
@@ -294,6 +301,9 @@ export async function submitResearchPayment(req: Request, res: Response, next: N
 
     let application: any = null;
 
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       try {
         application = await ResearchApplication.findOne({

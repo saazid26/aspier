@@ -1,9 +1,14 @@
 import type { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Setting from '../models/Setting.js';
 import { fallbackSettings } from '../utils/fallbackData.js';
+import { connectDatabase } from '../config/db.js';
 
 export async function getSettings(_req: Request, res: Response) {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     const setting = await Setting.findOne({ singleton: 'main' });
     if (setting) {
       const obj = setting.toObject();
@@ -17,6 +22,9 @@ export async function getSettings(_req: Request, res: Response) {
 
 export async function updateSettings(req: Request, res: Response) {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     const updated = await Setting.findOneAndUpdate({ singleton: 'main' }, req.body, { new: true, upsert: true, runValidators: true });
     res.json({ success: true, data: updated });
   } catch (err) {

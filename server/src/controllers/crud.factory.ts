@@ -4,12 +4,17 @@ import { slugify } from '../utils/slug.js';
 import AuditLog from '../models/AuditLog.js';
 import { hashPassword, passwordStrength } from '../services/password.service.js';
 import { FIXED_ADMIN_EMAIL } from '../config/env.js';
+import { connectDatabase } from '../config/db.js';
+
 export function crudFactory(model: Model<any>) {
   return {
     list: async (req: Request, res: Response, next: NextFunction) => {
       try {
         const page = Math.max(1, Number(req.query.page) || 1);
         const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+        if (mongoose.connection.readyState !== 1) {
+          await connectDatabase();
+        }
         if (mongoose.connection.readyState !== 1) {
           return res.json({ success: true, data: [], pagination: { page, limit, total: 0, pages: 0 } });
         }
@@ -25,6 +30,9 @@ export function crudFactory(model: Model<any>) {
     },
     getById: async (req: Request, res: Response, next: NextFunction) => {
       try {
+        if (mongoose.connection.readyState !== 1) {
+          await connectDatabase();
+        }
         if (mongoose.connection.readyState !== 1) return res.status(404).json({ success: false, message: 'Not found' });
         const item = await model.findById(req.params.id);
         if (!item) return res.status(404).json({ success: false, message: 'Not found' });
@@ -34,7 +42,7 @@ export function crudFactory(model: Model<any>) {
     create: async (req: Request & { user?: any }, res: Response, next: NextFunction) => {
       try {
         if (mongoose.connection.readyState !== 1) {
-          return res.status(503).json({ success: false, message: 'Database is synchronizing. Please retry shortly.' });
+          await connectDatabase();
         }
         const body = { ...req.body };
         if (model.modelName === 'User') {
@@ -67,7 +75,7 @@ export function crudFactory(model: Model<any>) {
     update: async (req: Request & { user?: any }, res: Response, next: NextFunction) => {
       try {
         if (mongoose.connection.readyState !== 1) {
-          return res.status(503).json({ success: false, message: 'Database is synchronizing. Please retry shortly.' });
+          await connectDatabase();
         }
         const body = { ...req.body };
         if (model.modelName === 'User') {
@@ -111,7 +119,7 @@ export function crudFactory(model: Model<any>) {
     delete: async (req: Request & { user?: any }, res: Response, next: NextFunction) => {
       try {
         if (mongoose.connection.readyState !== 1) {
-          return res.status(503).json({ success: false, message: 'Database is synchronizing. Please retry shortly.' });
+          await connectDatabase();
         }
         if (model.modelName === 'User') {
           const target = await model.findById(req.params.id);

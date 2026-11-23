@@ -9,6 +9,7 @@ import { Table } from '../../../components/ui/Table';
 import { Modal } from '../../../components/ui/Modal';
 import { ImageUploader } from '../../../components/forms/ImageUploader';
 import { RichTextEditor } from '../../../components/forms/RichTextEditor';
+import { TagInputField } from '../../../components/forms/TagInputField';
 import { staticFoundingMembers, staticSupervisors, staticScholars } from '../../../lib/staticData';
 
 export function TeamManager() {
@@ -55,11 +56,21 @@ export function TeamManager() {
     });
   };
 
+  const cleanTags = (val: any): string[] => {
+    if (Array.isArray(val)) return val.map((s) => String(s).trim()).filter(Boolean);
+    if (typeof val === 'string') return val.split(',').map((s) => s.trim()).filter(Boolean);
+    return [];
+  };
+
   const handleSaveFounder = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingFounder(true);
     try {
-      await api.put('/admin/settings', founder);
+      const payload = {
+        ...founder,
+        founderResearchDomains: cleanTags(founder.founderResearchDomains)
+      };
+      await api.put('/admin/settings', payload);
       await refetchSettings();
       await queryClient.invalidateQueries({ queryKey: ['team-founder'] });
       await queryClient.invalidateQueries({ queryKey: ['public-settings'] });
@@ -80,11 +91,15 @@ export function TeamManager() {
     e.preventDefault();
     setSavingFoundingMember(true);
     try {
+      const payload = {
+        ...editingFoundingMember,
+        researchInterests: cleanTags(editingFoundingMember.researchInterests)
+      };
       if (editingFoundingMember._id) {
-        await api.put(`/admin/founding-members/${editingFoundingMember._id}`, editingFoundingMember);
+        await api.put(`/admin/founding-members/${editingFoundingMember._id}`, payload);
         toast.success('Founding member updated successfully.');
       } else {
-        await api.post('/admin/founding-members', editingFoundingMember);
+        await api.post('/admin/founding-members', payload);
         toast.success('Founding member created successfully.');
       }
       setFoundingMemberModalOpen(false);
@@ -121,11 +136,15 @@ export function TeamManager() {
     e.preventDefault();
     setSavingSupervisor(true);
     try {
+      const payload = {
+        ...editingSupervisor,
+        researchInterests: cleanTags(editingSupervisor.researchInterests)
+      };
       if (editingSupervisor._id) {
-        await api.put(`/admin/supervisors/${editingSupervisor._id}`, editingSupervisor);
+        await api.put(`/admin/supervisors/${editingSupervisor._id}`, payload);
         toast.success('Supervisor updated successfully.');
       } else {
-        await api.post('/admin/supervisors', editingSupervisor);
+        await api.post('/admin/supervisors', payload);
         toast.success('Supervisor created successfully.');
       }
       setSupervisorModalOpen(false);
@@ -161,11 +180,15 @@ export function TeamManager() {
     e.preventDefault();
     setSavingScholar(true);
     try {
+      const payload = {
+        ...editingScholar,
+        researchTopics: cleanTags(editingScholar.researchTopics)
+      };
       if (editingScholar._id) {
-        await api.put(`/admin/scholars/${editingScholar._id}`, editingScholar);
+        await api.put(`/admin/scholars/${editingScholar._id}`, payload);
         toast.success('Young Scholar updated successfully.');
       } else {
-        await api.post('/admin/scholars', editingScholar);
+        await api.post('/admin/scholars', payload);
         toast.success('Young Scholar created successfully.');
       }
       setScholarModalOpen(false);
@@ -251,14 +274,16 @@ export function TeamManager() {
               />
             </label>
 
-            <label>
-              Research Domains (comma-separated tags)
-              <Input
-                value={Array.isArray(founder.founderResearchDomains) ? founder.founderResearchDomains.join(', ') : ''}
-                onChange={(e) => updateFounder('founderResearchDomains', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+            <div style={{ marginTop: 12, marginBottom: 12 }}>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                Research Domains (comma-separated tags)
+              </label>
+              <TagInputField
+                value={Array.isArray(founder.founderResearchDomains) ? founder.founderResearchDomains : []}
+                onChange={(tags) => updateFounder('founderResearchDomains', tags)}
                 placeholder="Aeronautical Systems, Environmental Research, Remote Sensing"
               />
-            </label>
+            </div>
 
             <div className="settings-image-field" style={{ marginTop: 20 }}>
               <label style={{ fontWeight: 600, display: 'block', marginBottom: 8 }}>Founder Portrait Photo (1:1 Square)</label>
@@ -654,16 +679,19 @@ export function TeamManager() {
               />
             </label>
 
-            <label>
-              Research Interests (comma-separated tags)
-              <Input
-                value={Array.isArray(editingSupervisor.researchInterests) ? editingSupervisor.researchInterests.join(', ') : ''}
-                onChange={(e) => setEditingSupervisor({
+            <div style={{ marginTop: 12, marginBottom: 12 }}>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                Research Interests (comma-separated tags)
+              </label>
+              <TagInputField
+                value={Array.isArray(editingSupervisor.researchInterests) ? editingSupervisor.researchInterests : []}
+                onChange={(tags) => setEditingSupervisor({
                   ...editingSupervisor,
-                  researchInterests: e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
+                  researchInterests: tags
                 })}
+                placeholder="Hydrology, Groundwater, Climate Change, Earth Systems"
               />
-            </label>
+            </div>
 
             <div className="settings-image-field" style={{ marginTop: 16 }}>
               <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Supervisor Photo (1:1 Circle)</label>
@@ -742,16 +770,19 @@ export function TeamManager() {
               />
             </label>
 
-            <label>
-              Research Topics (comma-separated tags)
-              <Input
-                value={Array.isArray(editingScholar.researchTopics) ? editingScholar.researchTopics.join(', ') : ''}
-                onChange={(e) => setEditingScholar({
+            <div style={{ marginTop: 12, marginBottom: 12 }}>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                Research Topics (comma-separated tags)
+              </label>
+              <TagInputField
+                value={Array.isArray(editingScholar.researchTopics) ? editingScholar.researchTopics : []}
+                onChange={(tags) => setEditingScholar({
                   ...editingScholar,
-                  researchTopics: e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
+                  researchTopics: tags
                 })}
+                placeholder="Machine Learning, Remote Sensing, Atmospheric Modeling"
               />
-            </label>
+            </div>
 
             <div className="settings-image-field" style={{ marginTop: 16 }}>
               <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Scholar Photo (1:1 Circle)</label>
@@ -832,17 +863,19 @@ export function TeamManager() {
               />
             </label>
 
-            <label>
-              Academic Focus / Research Domains (comma-separated tags)
-              <Input
-                value={Array.isArray(editingFoundingMember.researchInterests) ? editingFoundingMember.researchInterests.join(', ') : ''}
-                onChange={(e) => setEditingFoundingMember({
+            <div style={{ marginTop: 12, marginBottom: 12 }}>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                Academic Focus / Research Domains (comma-separated tags)
+              </label>
+              <TagInputField
+                value={Array.isArray(editingFoundingMember.researchInterests) ? editingFoundingMember.researchInterests : []}
+                onChange={(tags) => setEditingFoundingMember({
                   ...editingFoundingMember,
-                  researchInterests: e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
+                  researchInterests: tags
                 })}
                 placeholder="UAV Architecture, Aerodynamics, Embedded Avionics"
               />
-            </label>
+            </div>
 
             <label>
               Educational Background (Optional)

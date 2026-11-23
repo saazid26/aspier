@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import multer from 'multer';
+import { connectDatabase } from '../config/db.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { noStore } from '../middleware/noStore.js';
 import { audit } from '../middleware/audit.js';
@@ -55,6 +56,9 @@ router.use(authenticate, authorize('admin', 'superadmin'), noStore);
 router.get('/dashboard', async (_req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    if (mongoose.connection.readyState !== 1) {
       return res.json({ success: true, data: { students: 0, activeEnrollments: 0, pendingPayments: 0, wings: 10, research: 3 } });
     }
     res.json({ success: true, data: { students: await User.countDocuments({ role: 'student' }), activeEnrollments: await Enrollment.countDocuments({ status: 'active' }), pendingPayments: await Payment.countDocuments({ status: 'pending' }), wings: await Wing.countDocuments(), research: await Research.countDocuments() } });
@@ -74,6 +78,9 @@ router.delete('/research-applications/:id', deleteResearchApplication);
 
 router.get('/founding-members', audit('list', 'FoundingMember'), async (_req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       const list = await FoundingMember.find().sort({ order: 1, createdAt: 1 });
       if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
@@ -84,6 +91,9 @@ router.get('/founding-members', audit('list', 'FoundingMember'), async (_req, re
 
 router.get('/supervisors', audit('list', 'Supervisor'), async (_req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       const list = await Supervisor.find().sort({ order: 1, createdAt: 1 });
       if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
@@ -94,6 +104,9 @@ router.get('/supervisors', audit('list', 'Supervisor'), async (_req, res) => {
 
 router.get('/scholars', audit('list', 'Scholar'), async (_req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       const list = await Scholar.find().sort({ order: 1, createdAt: 1 });
       if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
@@ -104,6 +117,9 @@ router.get('/scholars', audit('list', 'Scholar'), async (_req, res) => {
 
 router.get('/wings', audit('list', 'Wing'), async (_req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       const list = await Wing.find().sort({ order: 1, createdAt: 1 });
       if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
@@ -115,6 +131,9 @@ router.get('/wings', audit('list', 'Wing'), async (_req, res) => {
 
 router.post('/wings', audit('create', 'Wing'), async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     let item: any = null;
     if (mongoose.connection.readyState === 1) {
       item = await Wing.create(req.body);
@@ -129,6 +148,9 @@ router.post('/wings', audit('create', 'Wing'), async (req, res) => {
 
 router.put('/wings/:id', audit('update', 'Wing'), async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     let item: any = null;
     if (mongoose.connection.readyState === 1) {
       item = await Wing.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -143,6 +165,9 @@ router.put('/wings/:id', audit('update', 'Wing'), async (req, res) => {
 
 router.delete('/wings/:id', audit('delete', 'Wing'), async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       await Wing.findByIdAndDelete(req.params.id);
     }
@@ -153,6 +178,9 @@ router.delete('/wings/:id', audit('delete', 'Wing'), async (req, res) => {
 
 router.get('/research', audit('list', 'Research'), async (_req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     if (mongoose.connection.readyState === 1) {
       const list = await Research.find().populate('wingId', 'name slug').sort({ createdAt: -1 });
       if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
@@ -164,6 +192,9 @@ router.get('/research', audit('list', 'Research'), async (_req, res) => {
 
 router.post('/research', audit('create', 'Research'), async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     let item: any = null;
     if (mongoose.connection.readyState === 1) {
       item = await Research.create(req.body);
@@ -178,6 +209,9 @@ router.post('/research', audit('create', 'Research'), async (req, res) => {
 
 router.put('/research/:id', audit('update', 'Research'), async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     let item: any = null;
     const researchId = String(req.params.id);
     if (mongoose.connection.readyState === 1) {
@@ -198,6 +232,9 @@ router.put('/research/:id', audit('update', 'Research'), async (req, res) => {
 
 router.delete('/research/:id', audit('delete', 'Research'), async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     const researchId = String(req.params.id);
     if (mongoose.connection.readyState === 1) {
       if (mongoose.Types.ObjectId.isValid(researchId)) {
