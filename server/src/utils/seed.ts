@@ -8,6 +8,8 @@ import Setting from '../models/Setting.js';
 import Instructor from '../models/Instructor.js';
 import Course from '../models/Course.js';
 import ClassModel from '../models/Class.js';
+import Enrollment from '../models/Enrollment.js';
+import Payment from '../models/Payment.js';
 import Research from '../models/Research.js';
 import Supervisor from '../models/Supervisor.js';
 import Scholar from '../models/Scholar.js';
@@ -15,6 +17,482 @@ import FoundingMember from '../models/FoundingMember.js';
 import News from '../models/News.js';
 import { demoResearch, demoScholars, demoSupervisors, demoFoundingMembers, makeDemoAvatar, makeDemoCover } from './seedData/demoContent.js';
 import { fallbackWings, fallbackResearchList } from './fallbackData.js';
+
+export async function seedAcademyData(force = false): Promise<{
+  courses: number;
+  instructors: number;
+  classes: number;
+  enrollments: number;
+  payments: number;
+}> {
+  if (force) {
+    await Promise.all([
+      Course.deleteMany({ $or: [{ sampleData: true }, { slug: { $in: ['higher-study-research-paper-writing', 'responsible-ai-foundations', 'climate-data-modeling', 'biomedical-data-essentials'] } }] }),
+      Instructor.deleteMany({ $or: [{ sampleData: true }, { slug: { $in: ['farzana-rahman', 'nabil-hasan', 'samira-khan', 'tariqul-islam'] } }] }),
+      ClassModel.deleteMany({}),
+      Enrollment.deleteMany({}),
+      Payment.deleteMany({})
+    ]);
+  }
+
+  // 1. Instructors
+  const existingInstructorsCount = await Instructor.countDocuments();
+  let instructorsList = await Instructor.find();
+  if (force || existingInstructorsCount === 0) {
+    const dummyInstructors = [
+      {
+        name: 'Dr. Farzana Rahman',
+        slug: 'farzana-rahman',
+        title: 'Lead AI Research Fellow & Instructor',
+        designation: 'Lead AI Research Fellow & Instructor',
+        affiliation: 'ASPIER Academy & University of Dhaka',
+        bio: 'Ph.D. in Computer Science with 8+ years specializing in trustworthy machine learning, natural language processing, and responsible AI deployment across multidisciplinary research teams.',
+        expertise: ['Machine Learning', 'Natural Language Processing', 'Research Methodology'],
+        photo: makeDemoAvatar('FR'),
+        avatar: makeDemoAvatar('FR'),
+        avatarUrl: makeDemoAvatar('FR'),
+        sampleData: true
+      },
+      {
+        name: 'Prof. Nabil Hasan',
+        slug: 'nabil-hasan',
+        title: 'Professor of Earth Systems & Geospatial Science',
+        designation: 'Professor of Earth Systems & Geospatial Science',
+        affiliation: 'ASPIER Research Wing Group & BUET',
+        bio: 'Senior researcher and educator with over 45 peer-reviewed publications in hydrology, Earth observation data pipelines, and regional climate vulnerability models.',
+        expertise: ['Climate Data', 'Remote Sensing', 'Hydrological Modeling'],
+        photo: makeDemoAvatar('NH'),
+        avatar: makeDemoAvatar('NH'),
+        avatarUrl: makeDemoAvatar('NH'),
+        sampleData: true
+      },
+      {
+        name: 'Dr. Samira Khan',
+        slug: 'samira-khan',
+        title: 'Biomedical Data Scientist & Senior Lecturer',
+        designation: 'Biomedical Data Scientist & Senior Lecturer',
+        affiliation: 'ASPIER Academy & Rajshahi Medical College',
+        bio: 'Specialist in clinical genomics, high-dimensional biological data architectures, reproducible biostatistics, and ethical research protocols.',
+        expertise: ['Genomics', 'Biostatistics', 'Research Ethics'],
+        photo: makeDemoAvatar('SK'),
+        avatar: makeDemoAvatar('SK'),
+        avatarUrl: makeDemoAvatar('SK'),
+        sampleData: true
+      },
+      {
+        name: 'Dr. Tariqul Islam',
+        slug: 'tariqul-islam',
+        title: 'Associate Professor of Academic Writing & Scientific Publication',
+        designation: 'Associate Professor of Academic Writing & Scientific Publication',
+        affiliation: 'ASPIER Global Academy',
+        bio: 'Experienced journal reviewer and author with 12+ years mentoring graduate scholars in manuscript structuring, Scopus indexing, and peer-review rebuttal strategies.',
+        expertise: ['Academic Writing', 'Scopus & Web of Science', 'Manuscript Publication'],
+        photo: makeDemoAvatar('TI'),
+        avatar: makeDemoAvatar('TI'),
+        avatarUrl: makeDemoAvatar('TI'),
+        sampleData: true
+      }
+    ];
+
+    for (const inst of dummyInstructors) {
+      await Instructor.findOneAndUpdate({ slug: inst.slug }, { $set: inst }, { upsert: true });
+    }
+    instructorsList = await Instructor.find();
+  }
+
+  const instBySlug = new Map(instructorsList.map((i) => [i.slug, i._id]));
+
+  // 2. Wings references
+  const [aiWing, climateWing, bioWing, policyWing] = await Promise.all([
+    Wing.findOne({ slug: 'geospatial-intelligence-remote-sensing' }),
+    Wing.findOne({ slug: 'hydrology-atmospheric-physics' }),
+    Wing.findOne({ slug: 'applied-biotechnology' }),
+    Wing.findOne({ slug: 'environmental-policy-governance' })
+  ]);
+
+  // 3. Courses
+  const existingCoursesCount = await Course.countDocuments();
+  if (force || existingCoursesCount === 0) {
+    const defaultPaperWritingModules = [
+      {
+        moduleNumber: 1,
+        title: 'Module 1: Foundations & Research Framing',
+        week: 'Weeks 1–2',
+        description: 'Formulating high-impact research questions, hypothesis framing, and academic standards.',
+        lessons: [
+          { title: 'Session 1: Identifying Research Gaps & Problem Formulation', duration: '45 mins', isFreePreview: true, videoId: 'dQw4w9WgXcQ', youtubeVideoId: 'dQw4w9WgXcQ' },
+          { title: 'Session 2: Formulating Hypotheses and Research Objectives', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ', youtubeVideoId: 'dQw4w9WgXcQ' },
+          { title: 'Session 3: Ethical Considerations & Academic Integrity in Scientific Inquiry', duration: '45 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ', youtubeVideoId: 'dQw4w9WgXcQ' }
+        ]
+      },
+      {
+        moduleNumber: 2,
+        title: 'Module 2: Literature Review & Methodology',
+        week: 'Weeks 3–4',
+        description: 'Systematic literature search, synthesis matrices, and robust experimental/analytical design.',
+        lessons: [
+          { title: 'Session 4: Advanced Scopus & Web of Science Literature Search Strategies', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ', youtubeVideoId: 'dQw4w9WgXcQ' },
+          { title: 'Session 5: Building a Critical Literature Synthesis Matrix', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ', youtubeVideoId: 'dQw4w9WgXcQ' },
+          { title: 'Session 6: Quantitative & Qualitative Methodology Design', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ', youtubeVideoId: 'dQw4w9WgXcQ' }
+        ]
+      },
+      {
+        moduleNumber: 3,
+        title: 'Module 3: Data Analysis & Tools',
+        week: 'Weeks 5–6',
+        description: 'Statistical modeling, reproducible analysis workflows, and effective visualization.',
+        lessons: [
+          { title: 'Session 7: Data Preparation, Cleaning & Exploratory Analysis', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ', youtubeVideoId: 'dQw4w9WgXcQ' },
+          { title: 'Session 8: Statistical Hypothesis Testing & Result Interpretation', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ', youtubeVideoId: 'dQw4w9WgXcQ' },
+          { title: 'Session 9: Creating Publication-Quality Plots, Figures, and Tables', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ', youtubeVideoId: 'dQw4w9WgXcQ' }
+        ]
+      },
+      {
+        moduleNumber: 4,
+        title: 'Module 4: Academic Writing & Publication',
+        week: 'Weeks 7–8',
+        description: 'Manuscript drafting (IMRaD), target journal selection, peer review response, and publication ethics.',
+        lessons: [
+          { title: 'Session 10: Drafting Title, Abstract, and High-Impact Introduction', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ', youtubeVideoId: 'dQw4w9WgXcQ' },
+          { title: 'Session 11: Results, Discussion, and Conclusion Mastery', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ', youtubeVideoId: 'dQw4w9WgXcQ' },
+          { title: 'Session 12: Journal Selection, Cover Letters, and Peer Review Rebuttal', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ', youtubeVideoId: 'dQw4w9WgXcQ' }
+        ]
+      }
+    ];
+
+    const dummyCourses = [
+      {
+        title: 'Higher Study Oriented Basic to Advance Research Paper Writing Course',
+        slug: 'higher-study-research-paper-writing',
+        description: '<p>Designed for students and aspiring researchers preparing for higher studies abroad, this course guides learners from foundational research concepts through the preparation and publication of manuscripts in peer-reviewed journals. Participants learn to identify defensible research gaps, select suitable methods, analyze and visualize evidence, write clearly, and respond constructively to peer review.</p><ul><li>Develop focused research questions and testable hypotheses.</li><li>Conduct systematic literature searches using Scopus and Web of Science.</li><li>Select appropriate study designs and analytical methods.</li><li>Communicate findings with clear, publication-quality tables and figures.</li><li>Draft structured manuscripts (IMRaD) and prepare point-by-point peer review rebuttals.</li></ul>',
+        summary: 'Comprehensive 8-week structured roadmap from topic ideation to indexed journal manuscript submission.',
+        duration: '8 weeks',
+        mode: 'Online and Live',
+        deliveryMode: 'Online and Live',
+        startDate: '2026-12-20',
+        targetAudience: 'Undergraduate and graduate students, early-career researchers, and applicants preparing for higher studies abroad.',
+        enrollmentContact: 'Enroll through ASPIER Academy and contact aspier.global@gmail.com for cohort information.',
+        wingId: policyWing?._id,
+        instructorId: instBySlug.get('tariqul-islam') || instructorsList[0]?._id,
+        price: 2500,
+        level: 'beginner',
+        status: 'published',
+        thumbnail: makeDemoCover('Research Paper Writing'),
+        bannerUrl: makeDemoCover('Research Paper Writing'),
+        sampleData: true,
+        modules: defaultPaperWritingModules
+      },
+      {
+        title: 'Responsible AI Foundations',
+        slug: 'responsible-ai-foundations',
+        description: '<p>Illustrative eight-week intensive course covering machine-learning foundations, fairness, transparency, model interpretability, and responsible deployment in real-world environments.</p><ul><li>Understand data preparation and model evaluation metrics.</li><li>Identify algorithmic bias, audit datasets, and document limitations.</li><li>Communicate trustworthy AI decisions across multidisciplinary teams.</li></ul>',
+        summary: 'Machine learning foundations, algorithmic fairness, model transparency, and responsible deployment.',
+        duration: '8 weeks',
+        mode: 'Online and Live',
+        deliveryMode: 'Online and Live',
+        startDate: '2026-12-15',
+        targetAudience: 'Students and early-career researchers beginning applied artificial intelligence study.',
+        enrollmentContact: 'Contact ASPIER Academy to confirm cohort enrollment.',
+        wingId: aiWing?._id,
+        instructorId: instBySlug.get('farzana-rahman') || instructorsList[0]?._id,
+        price: 2500,
+        level: 'beginner',
+        status: 'published',
+        thumbnail: makeDemoCover('Responsible AI Foundations'),
+        bannerUrl: makeDemoCover('Responsible AI Foundations'),
+        sampleData: true,
+        modules: [
+          {
+            moduleNumber: 1,
+            title: 'Module 1: AI Systems and Society',
+            week: 'Weeks 1–2',
+            description: 'Introduction to ethical algorithmic design and societal impact of automated systems.',
+            lessons: [
+              { title: 'Session 1: What is Responsible AI?', duration: '45 mins', isFreePreview: true, videoId: 'dQw4w9WgXcQ' },
+              { title: 'Session 2: Algorithmic Bias and Fairness Audits', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' }
+            ]
+          },
+          {
+            moduleNumber: 2,
+            title: 'Module 2: Interpretability & Transparency',
+            week: 'Weeks 3–4',
+            description: 'Feature attribution, SHAP/LIME explainability, and transparent model reporting.',
+            lessons: [
+              { title: 'Session 3: Explainable Machine Learning (XAI)', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' },
+              { title: 'Session 4: Model Cards and Data Sheets', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'Climate Data Modeling',
+        slug: 'climate-data-modeling',
+        description: '<p>Intermediate course in climate data workflows, analysis, visualization, and uncertainty across Earth observation datasets.</p><ul><li>Read and validate Earth-observation and atmospheric datasets.</li><li>Build reproducible regional summaries and statistical climate models.</li><li>Explain model uncertainty, climate risks, and policy implications.</li></ul>',
+        summary: 'Earth observation datasets, climate data workflows, and regional vulnerability modeling.',
+        duration: '10 weeks',
+        mode: 'Online and Recorded',
+        deliveryMode: 'Online and Recorded',
+        startDate: '2027-01-12',
+        targetAudience: 'Learners with introductory statistics or environmental-science experience.',
+        enrollmentContact: 'Contact ASPIER Academy to confirm cohort enrollment.',
+        wingId: climateWing?._id,
+        instructorId: instBySlug.get('nabil-hasan') || instructorsList[1]?._id,
+        price: 3000,
+        level: 'intermediate',
+        status: 'published',
+        thumbnail: makeDemoCover('Climate Data Modeling'),
+        bannerUrl: makeDemoCover('Climate Data Modeling'),
+        sampleData: true,
+        modules: [
+          {
+            moduleNumber: 1,
+            title: 'Module 1: Earth Observation Datasets',
+            week: 'Weeks 1–3',
+            description: 'NetCDF, HDF, and satellite raster handling in Python and GIS tools.',
+            lessons: [
+              { title: 'Session 1: Working with Satellite Climatology Rasters', duration: '60 mins', isFreePreview: true, videoId: 'dQw4w9WgXcQ' },
+              { title: 'Session 2: Atmospheric Data Cleaning and Quality Control', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' }
+            ]
+          },
+          {
+            moduleNumber: 2,
+            title: 'Module 2: Regional Risk Modeling',
+            week: 'Weeks 4–7',
+            description: 'Downscaling Global Climate Models (GCMs) and flood hazard mapping.',
+            lessons: [
+              { title: 'Session 3: Statistical Downscaling Workflows', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' },
+              { title: 'Session 4: Extreme Event Risk Synthesis', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'Biomedical Data Essentials',
+        slug: 'biomedical-data-essentials',
+        description: '<p>Hands-on course introducing clinical, epidemiological, and genomic data with an ethics-first approach to public health analytics.</p><ul><li>Describe common biomedical and epidemiological data architectures.</li><li>Practice rigorous data-quality checks, cleaning, and normalization.</li><li>Apply privacy, HIPAA/GDPR consent, and responsible data-sharing principles.</li></ul>',
+        summary: 'Clinical data lifecycles, genomic records, and patient-privacy compliant statistical practice.',
+        duration: '9 weeks',
+        mode: 'Offline',
+        deliveryMode: 'Offline',
+        startDate: '2027-02-08',
+        targetAudience: 'Students interested in biomedical, public health, or life-science research.',
+        enrollmentContact: 'Contact ASPIER Academy to confirm cohort enrollment.',
+        wingId: bioWing?._id,
+        instructorId: instBySlug.get('samira-khan') || instructorsList[2]?._id,
+        price: 2800,
+        level: 'intermediate',
+        status: 'published',
+        thumbnail: makeDemoCover('Biomedical Data Essentials'),
+        bannerUrl: makeDemoCover('Biomedical Data Essentials'),
+        sampleData: true,
+        modules: [
+          {
+            moduleNumber: 1,
+            title: 'Module 1: Data in Modern Medicine',
+            week: 'Weeks 1–3',
+            description: 'Biomedical data lifecycle, electronic health records, and privacy regulations.',
+            lessons: [
+              { title: 'Session 1: Biomedical Data Lifecycle & Architecture', duration: '45 mins', isFreePreview: true, videoId: 'dQw4w9WgXcQ' },
+              { title: 'Session 2: Health Privacy, HIPAA, and Informed Consent', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    for (const c of dummyCourses) {
+      await Course.findOneAndUpdate({ slug: c.slug }, { $set: c }, { upsert: true });
+    }
+  }
+
+  const allCourses = await Course.find();
+  const courseBySlug = new Map(allCourses.map((c) => [c.slug, c]));
+  const paperWritingCourse = courseBySlug.get('higher-study-research-paper-writing') || allCourses[0];
+  const aiCourse = courseBySlug.get('responsible-ai-foundations') || allCourses[1] || allCourses[0];
+  const climateCourse = courseBySlug.get('climate-data-modeling') || allCourses[2] || allCourses[0];
+
+  // 4. Live Class Schedule
+  const existingClassesCount = await ClassModel.countDocuments();
+  if (force || existingClassesCount === 0) {
+    if (paperWritingCourse) {
+      await ClassModel.create([
+        {
+          courseId: paperWritingCourse._id,
+          title: 'Session 1: Identifying Research Gaps & Problem Formulation',
+          topic: 'Session 1: Identifying Research Gaps & Problem Formulation',
+          description: 'Live interactive lecture and breakout workshop on systematic gap finding in peer-reviewed literature.',
+          scheduledAt: new Date(Date.now() + 3 * 86400000),
+          durationMinutes: 60,
+          meetingUrl: 'https://meet.google.com/asp-ierr-es1',
+          meetLink: 'https://meet.google.com/asp-ierr-es1',
+          liveJoinUrl: 'https://meet.google.com/asp-ierr-es1',
+          mode: 'Online and Live',
+          status: 'scheduled'
+        },
+        {
+          courseId: paperWritingCourse._id,
+          title: 'Session 2: Scopus & Web of Science Literature Search Lab',
+          topic: 'Session 2: Scopus & Web of Science Literature Search Lab',
+          description: 'Hands-on boolean search strategies, synthesis matrices, and screening protocols.',
+          scheduledAt: new Date(Date.now() + 10 * 86400000),
+          durationMinutes: 60,
+          meetingUrl: 'https://meet.google.com/asp-ierr-es2',
+          meetLink: 'https://meet.google.com/asp-ierr-es2',
+          liveJoinUrl: 'https://meet.google.com/asp-ierr-es2',
+          mode: 'Online and Live',
+          status: 'scheduled'
+        },
+        {
+          courseId: aiCourse?._id || paperWritingCourse._id,
+          title: 'Session 1: Ethics, Bias Detection & Trustworthy AI Principles',
+          topic: 'Session 1: Ethics, Bias Detection & Trustworthy AI Principles',
+          description: 'Evaluating algorithmic fairness and model cards using open-source auditing toolkits.',
+          scheduledAt: new Date(Date.now() + 5 * 86400000),
+          durationMinutes: 60,
+          meetingUrl: 'https://meet.google.com/asp-ierr-ai1',
+          meetLink: 'https://meet.google.com/asp-ierr-ai1',
+          liveJoinUrl: 'https://meet.google.com/asp-ierr-ai1',
+          mode: 'Online and Live',
+          status: 'scheduled'
+        },
+        {
+          courseId: paperWritingCourse._id,
+          title: 'Orientation & Academic Career Roadmap Kickoff',
+          topic: 'Orientation & Academic Career Roadmap Kickoff',
+          description: 'Welcome session, program syllabus walkthrough, and research toolkit setup.',
+          scheduledAt: new Date(Date.now() - 5 * 86400000),
+          durationMinutes: 90,
+          meetingUrl: 'https://meet.google.com/asp-ierr-ori',
+          meetLink: 'https://meet.google.com/asp-ierr-ori',
+          liveJoinUrl: 'https://meet.google.com/asp-ierr-ori',
+          recordingUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          recordingYoutubeId: 'dQw4w9WgXcQ',
+          mode: 'Online and Live',
+          status: 'completed'
+        }
+      ]);
+    }
+  }
+
+  // 5. Students & Enrollments
+  const existingEnrollmentsCount = await Enrollment.countDocuments();
+  if (force || existingEnrollmentsCount === 0) {
+    const studentUsersData = [
+      { name: 'Nusrat Jahan', email: 'nusrat.jahan@gmail.com', phone: '01712345678', university: 'University of Dhaka', department: 'Computer Science & Engineering', role: 'student' },
+      { name: 'Tanvir Ahmed', email: 'tanvir.ahmed@gmail.com', phone: '01898765432', university: 'BUET', department: 'Water Resources Engineering', role: 'student' },
+      { name: 'Sumaiya Akter', email: 'sumaiya.akter@gmail.com', phone: '01611223344', university: 'Jahangirnagar University', department: 'Environmental Science', role: 'student' },
+      { name: 'Rakibul Hassan', email: 'rakib.hassan@gmail.com', phone: '01955667788', university: 'University of Chittagong', department: 'Marine Science', role: 'student' },
+      { name: 'Demo Student', email: 'student@aspier.org', phone: '01603012448', university: 'University of Rajshahi', department: 'Applied Physics', role: 'student' }
+    ];
+
+    const studentUsers = [];
+    for (const u of studentUsersData) {
+      let user = await User.findOne({ email: u.email });
+      if (!user) {
+        user = await User.create({
+          ...u,
+          passwordHash: await hashPassword('Student@1234'),
+          isActive: true
+        });
+      }
+      studentUsers.push(user);
+    }
+
+    if (paperWritingCourse && studentUsers.length >= 5) {
+      const pwLessonIds: any[] = [];
+      (paperWritingCourse.modules || []).forEach((m: any) => {
+        (m.lessons || []).forEach((l: any) => {
+          if (l._id) pwLessonIds.push(l._id);
+        });
+      });
+
+      const enrollmentsData = [
+        {
+          user: studentUsers[0],
+          course: paperWritingCourse,
+          status: 'active',
+          completedLessonIds: pwLessonIds.slice(0, 6),
+          progressPercent: 50,
+          payment: { method: 'bKash', senderNumber: '01712345678', trxId: 'BK78912301', amount: paperWritingCourse.price, status: 'approved' }
+        },
+        {
+          user: studentUsers[1],
+          course: paperWritingCourse,
+          status: 'active',
+          completedLessonIds: pwLessonIds.slice(0, 3),
+          progressPercent: 25,
+          payment: { method: 'Nagad', senderNumber: '01898765432', trxId: 'NG54321098', amount: paperWritingCourse.price, status: 'approved' }
+        },
+        {
+          user: studentUsers[2],
+          course: aiCourse || paperWritingCourse,
+          status: 'pending',
+          completedLessonIds: [],
+          progressPercent: 0,
+          payment: { method: 'bKash', senderNumber: '01611223344', trxId: 'BK11223344', amount: (aiCourse || paperWritingCourse).price, status: 'pending' }
+        },
+        {
+          user: studentUsers[3],
+          course: climateCourse || paperWritingCourse,
+          status: 'active',
+          completedLessonIds: pwLessonIds.slice(0, 4),
+          progressPercent: 75,
+          payment: { method: 'Nagad', senderNumber: '01955667788', trxId: 'NG99887766', amount: (climateCourse || paperWritingCourse).price, status: 'approved' }
+        },
+        {
+          user: studentUsers[4],
+          course: paperWritingCourse,
+          status: 'active',
+          completedLessonIds: pwLessonIds,
+          progressPercent: 100,
+          payment: { method: 'bKash', senderNumber: '01603012448', trxId: 'BK10020030', amount: paperWritingCourse.price, status: 'approved' }
+        }
+      ];
+
+      for (const item of enrollmentsData) {
+        if (!item.user || !item.course) continue;
+        const enrollment = await Enrollment.findOneAndUpdate(
+          { userId: item.user._id, courseId: item.course._id },
+          {
+            $set: {
+              status: item.status,
+              completedLessonIds: item.completedLessonIds,
+              progressPercent: item.progressPercent,
+              enrolledAt: new Date(Date.now() - Math.floor(Math.random() * 15 * 86400000))
+            }
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+
+        await Payment.findOneAndUpdate(
+          { trxId: item.payment.trxId },
+          {
+            $set: {
+              userId: item.user._id,
+              courseId: item.course._id,
+              enrollmentId: enrollment._id,
+              method: item.payment.method,
+              senderNumber: item.payment.senderNumber,
+              amount: item.payment.amount,
+              status: item.payment.status,
+              submittedAt: enrollment.enrolledAt,
+              reviewedAt: item.payment.status === 'approved' ? enrollment.enrolledAt : undefined
+            }
+          },
+          { upsert: true }
+        );
+      }
+    }
+  }
+
+  return {
+    courses: await Course.countDocuments(),
+    instructors: await Instructor.countDocuments(),
+    classes: await ClassModel.countDocuments(),
+    enrollments: await Enrollment.countDocuments(),
+    payments: await Payment.countDocuments()
+  };
+}
 
 export async function seedDatabase(): Promise<void> {
   const admin = await User.findOne({ email: FIXED_ADMIN_EMAIL });
@@ -84,57 +562,10 @@ export async function seedDatabase(): Promise<void> {
   await Setting.updateOne({ singleton: 'main', bkashNumber: '01700000000' }, { $set: { bkashNumber: '01603012448' } });
   await Setting.updateOne({ singleton: 'main', nagadNumber: '01800000000' }, { $set: { nagadNumber: '01603012448' } });
   await Setting.updateOne({ singleton: 'main', membershipFee: { $exists: false } }, { $set: { membershipFee: 0 } });
-  if (await Instructor.countDocuments() === 0) await Instructor.create([
-    { name: 'Dr. Farzana Rahman', slug: 'farzana-rahman', title: 'Sample AI Research Lead', bio: 'Illustrative instructor profile covering trustworthy machine learning and applied language technologies. Replace with verified details before publication.', expertise: ['Machine Learning', 'Natural Language Processing'], photo: makeDemoAvatar('FR'), sampleData: true },
-    { name: 'Prof. Nabil Hasan', slug: 'nabil-hasan', title: 'Sample Earth Systems Instructor', bio: 'Illustrative instructor profile focused on climate observations, geospatial evidence, and regional adaptation. Replace with verified details before publication.', expertise: ['Climate Data', 'Remote Sensing'], photo: makeDemoAvatar('NH'), sampleData: true },
-    { name: 'Dr. Samira Khan', slug: 'samira-khan', title: 'Sample Biomedical Data Scientist', bio: 'Illustrative instructor profile exploring genomics, diagnostics, and responsible health-data practice. Replace with verified details before publication.', expertise: ['Genomics', 'Health Data'], photo: makeDemoAvatar('SK'), sampleData: true }
-  ]);
-  if (await Course.countDocuments() === 0) {
-    const [ai, climate, health] = await Promise.all([Wing.findOne({ slug: 'geospatial-intelligence-remote-sensing' }), Wing.findOne({ slug: 'hydrology-atmospheric-physics' }), Wing.findOne({ slug: 'applied-biotechnology' })]);
-    const instructors = await Instructor.find().sort({ name: 1 }).limit(3);
-    await Course.create([
-      { title: 'Responsible AI Foundations', slug: 'responsible-ai-foundations', description: '<p>Illustrative eight-week course covering machine-learning foundations, fairness, transparency, and responsible deployment.</p><ul><li>Understand data preparation and model evaluation.</li><li>Identify bias and document limitations.</li><li>Communicate trustworthy AI decisions.</li></ul><p>Sample syllabus: AI and society; data quality; model evaluation; fairness; interpretability; privacy; governance; capstone review.</p>', duration: '8 weeks', mode: 'Online and Live', startDate: '2026-12-15', targetAudience: 'Sample course for students and early-career researchers beginning applied AI study.', enrollmentContact: 'Contact ASPIER Academy to confirm the next cohort.', wingId: ai?._id, instructorId: instructors[0]?._id, price: 2500, level: 'beginner', status: 'published', thumbnail: makeDemoCover('Responsible AI Foundations'), sampleData: true, modules: [{ title: 'AI Systems and Society', order: 1, lessons: [{ title: 'What is Responsible AI?', order: 1, isFreePreview: true, resources: ['Sample course overview'], duration: 18 }, { title: 'Bias and Fairness', order: 2, isFreePreview: false, duration: 24 }] }] },
-      { title: 'Climate Data Modeling', slug: 'climate-data-modeling', description: '<p>Illustrative intermediate course in climate data workflows, analysis, visualization, and uncertainty.</p><ul><li>Read and validate Earth-observation datasets.</li><li>Build reproducible regional summaries.</li><li>Explain model uncertainty and limitations.</li></ul><p>Sample syllabus: climate data sources; quality control; time series; spatial analysis; model evaluation; visualization; uncertainty; applied project.</p>', duration: '10 weeks', mode: 'Online and Recorded', startDate: '2027-01-12', targetAudience: 'Sample course for learners with introductory statistics or environmental-science experience.', enrollmentContact: 'Contact ASPIER Academy to confirm the next cohort.', wingId: climate?._id, instructorId: instructors[1]?._id, price: 3000, level: 'intermediate', status: 'published', thumbnail: makeDemoCover('Climate Data Modeling'), sampleData: true, modules: [{ title: 'Climate Data Foundations', order: 1, lessons: [{ title: 'Reading Earth Observations', order: 1, isFreePreview: true, duration: 20 }, { title: 'Building a Regional Model', order: 2, duration: 35 }] }] },
-      { title: 'Biomedical Data Essentials', slug: 'biomedical-data-essentials', description: '<p>Illustrative course introducing clinical and genomic data with an ethics-first approach.</p><ul><li>Describe common biomedical data types.</li><li>Practice careful data-quality checks.</li><li>Apply privacy, consent, and responsible-sharing principles.</li></ul><p>Sample syllabus: biomedical data lifecycle; clinical records; genomics; reproducibility; privacy; consent; bias; communication.</p>', duration: '9 weeks', mode: 'Offline', startDate: '2027-02-08', targetAudience: 'Sample course for students interested in biomedical, public-health, or life-science data.', enrollmentContact: 'Contact ASPIER Academy to confirm the next cohort.', wingId: health?._id, instructorId: instructors[2]?._id, price: 2800, level: 'intermediate', status: 'published', thumbnail: makeDemoCover('Biomedical Data Essentials'), sampleData: true, modules: [{ title: 'Data in Modern Medicine', order: 1, lessons: [{ title: 'Biomedical Data Lifecycle', order: 1, isFreePreview: true, duration: 22 }, { title: 'Privacy and Consent', order: 2, duration: 27 }] }] }
-    ]);
-  }
-  const courseWing = await Wing.findOne({ slug: 'environmental-policy-governance' });
-  const courseInstructor = await Instructor.findOne().sort({ name: 1 });
-  await Course.updateOne({ slug: 'higher-study-research-paper-writing' }, {
-    $setOnInsert: {
-      title: 'Higher Study Oriented Basic to Advance Research Paper Writing Course',
-      slug: 'higher-study-research-paper-writing',
-      description: 'Course Overview: Designed for students and aspiring researchers preparing for higher studies abroad, this course guides learners from foundational research concepts through the preparation and publication of manuscripts in peer-reviewed journals. Participants learn to identify defensible research gaps, select suitable methods, analyze and visualize evidence, write clearly, and respond constructively to peer review.\n\nKey learning outcomes: Develop a focused research question; assess literature critically; choose appropriate study designs; communicate findings with clear tables and figures; prepare ethical, reproducible manuscripts; and plan a responsible publication strategy.\n\nEnrollment: Review the syllabus and contact ASPIER to confirm the next cohort.',
-      duration: '8 weeks',
-      mode: 'Online and Live',
-      startDate: '2026-12-20',
-      targetAudience: 'Undergraduate and graduate students, early-career researchers, and applicants preparing for higher studies abroad',
-      enrollmentContact: 'Enroll through ASPIER Academy and contact aspier.global@gmail.com for cohort information.',
-      wingId: courseWing?._id,
-      instructorId: courseInstructor?._id,
-      price: 2500,
-      level: 'beginner',
-      status: 'published',
-      thumbnail: makeDemoCover('Research Paper Writing'),
-      sampleData: true,
-      modules: [
-        { title: 'Research Topic Selection & Gap Identification', order: 1, lessons: [{ title: 'From broad interests to researchable questions', order: 1, isFreePreview: true }, { title: 'Finding and validating a research gap', order: 2 }] },
-        { title: 'Systematic Literature Review', order: 2, lessons: [{ title: 'Search strategies and evidence screening', order: 1 }, { title: 'Synthesis, critical appraisal, and review matrices', order: 2 }] },
-        { title: 'Research Methodology & Study Design', order: 3, lessons: [{ title: 'Matching methods to research questions', order: 1 }, { title: 'Ethics, sampling, and reproducibility', order: 2 }] },
-        { title: 'Data Analysis & Visualization', order: 4, lessons: [{ title: 'Preparing and checking research data', order: 1 }, { title: 'Clear, honest tables and figures', order: 2 }] },
-        { title: 'Academic Writing & Referencing', order: 5, lessons: [{ title: 'Structuring a research paper', order: 1 }, { title: 'LaTeX, Mendeley, and Zotero workflows', order: 2 }] },
-        { title: 'Journal Selection', order: 6, lessons: [{ title: 'Scope, indexing, fees, and journal quality', order: 1 }] },
-        { title: 'Peer-Review Response', order: 7, lessons: [{ title: 'Interpreting reviewer feedback', order: 1 }, { title: 'Preparing a point-by-point response', order: 2 }] },
-        { title: 'Publication Strategy', order: 8, lessons: [{ title: 'Submission planning and research visibility', order: 1 }] }
-      ]
-    }
-  }, { upsert: true });
-  await Course.updateMany({ mode: 'Online / Live' }, { $set: { mode: 'Online and Live' } });
-  if (await ClassModel.countDocuments() === 0) {
-    const courses = await Course.find().limit(2);
-    if (courses[0]) await ClassModel.create({ courseId: courses[0]._id, title: 'Sample Responsible AI Office Hours', description: 'Illustrative sample session, shown as completed without an external meeting link or recording.', scheduledAt: new Date('2025-06-15T10:00:00Z'), durationMinutes: 60, status: 'completed' });
-    if (courses[1]) await ClassModel.create({ courseId: courses[1]._id, title: 'Sample Climate Data Lab', description: 'Illustrative sample session, shown as completed without an external meeting link or recording.', scheduledAt: new Date('2025-07-20T10:00:00Z'), durationMinutes: 90, status: 'completed' });
-  }
+
+  // Seed Academy Collections
+  await seedAcademyData(false);
+
   for (const r of demoResearch) {
     const wingId = wingIdsBySlug.get(r.wingSlug) || wingIdsBySlug.get('geospatial-intelligence-remote-sensing');
     const fallbackMatch = fallbackResearchList.find((f) => f.slug === r.slug);
@@ -193,16 +624,18 @@ export async function ensureSeeded(): Promise<void> {
       if (mongoose.connection.readyState !== 1) {
         return;
       }
-      const adminExists = await User.exists({ email: FIXED_ADMIN_EMAIL });
-      if (adminExists) {
-        return;
-      }
       await seedDatabase();
     } catch (err) {
       console.warn('[seed] ensureSeeded error:', err instanceof Error ? err.message : err);
     }
   })();
   return global._seedPromise;
+}
+
+if (process.argv[1] && process.argv[1].endsWith('seed.ts')) {
+  await connectDatabase();
+  await seedDatabase();
+  await mongoose.disconnect();
 }
 
 if (process.argv[1] && process.argv[1].endsWith('seed.ts')) {

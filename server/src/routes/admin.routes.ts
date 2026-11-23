@@ -57,6 +57,8 @@ import {
   addOrUpdateFallbackScholar,
   deleteFallbackScholar
 } from '../utils/fallbackData.js';
+import { recordAudit } from '../services/audit.service.js';
+import { seedAcademyData } from '../utils/seed.js';
 
 const router = Router();
 router.use(authenticate, authorize('admin', 'superadmin'), noStore);
@@ -480,9 +482,161 @@ router.put('/courses/:id/curriculum', async (req, res) => {
   try {
     const course = await Course.findByIdAndUpdate(req.params.id, { $set: { modules: req.body.modules } }, { new: true, runValidators: true });
     if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
+    await recordAudit({
+      req,
+      action: 'update_course_curriculum',
+      description: `Updated curriculum & modules for course "${course.title}" (${(req.body.modules || []).length} modules)`,
+      resource: 'Course',
+      resourceId: String(course._id)
+    });
     res.json({ success: true, data: course });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err?.message || 'Failed to update course curriculum' });
+  }
+});
+
+router.post('/academy/seed-sample', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const result = await seedAcademyData(true);
+    await recordAudit({
+      req,
+      action: 'seed_academy_sample_data',
+      description: `Loaded sample Academy dummy content across all 5 tabs (${result.courses} courses, ${result.instructors} instructors, ${result.classes} scheduled sessions, ${result.enrollments} enrollments)`,
+      resource: 'Course'
+    });
+    res.json({
+      success: true,
+      message: 'Sample Academy dummy data seeded successfully across all 5 tabs.',
+      data: result
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || 'Failed to seed sample Academy data' });
+  }
+});
+
+router.get('/enrollments', async (_req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const enrollments = await Enrollment.find()
+      .populate('userId', 'name email phone university department')
+      .populate('courseId', 'title slug price thumbnail bannerUrl modules')
+      .sort({ createdAt: -1 });
+
+    const userIds = enrollments.map((e: any) => e.userId?._id).filter(Boolean);
+    const payments = await Payment.find({ userId: { $in: userIds } });
+    const paymentMap = new Map();
+    payments.forEach((p) => {
+      paymentMap.set(`${p.userId}_${p.courseId}`, p);
+      if (p.trxId) paymentMap.set(p.trxId, p);
+    });
+
+    const data = enrollments.map((enr: any) => {
+      const user = enr.userId || {};
+      const course = enr.courseId || {};
+      const payment = paymentMap.get(`${user._id}_${course._id}`);
+
+      let progress = enr.progressPercent || 0;
+      if (!progress && course.modules && course.modules.length > 0) {
+        let totalLessons = 0;
+        course.modules.forEach((m: any) => {
+          totalLessons += (m.lessons || []).length;
+        });
+        if (totalLessons > 0) {
+          progress = Math.min(100, Math.round(((enr.completedLessonIds || []).length / totalLessons) * 100));
+        }
+      }
+
+      return {
+        _id: enr._id,
+        enrollmentId: enr._id,
+        userId: user._id,
+        studentName: user.name || 'Student',
+        studentEmail: user.email || 'N/A',
+        studentPhone: user.phone || '',
+        university: user.university || '',
+        courseId: course._id,
+        courseTitle: course.title || 'Course',
+        paymentMethod: payment?.method || 'bKash',
+        trxId: payment?.trxId || 'N/A',
+        feePaid: payment?.amount || course.price || 0,
+        status: enr.status === 'active' ? 'Approved' : enr.status === 'pending' ? 'Pending' : enr.status === 'rejected' ? 'Rejected' : 'Expired',
+        rawStatus: enr.status,
+        progressPercent: progress,
+        enrolledAt: enr.enrolledAt || enr.createdAt,
+        paymentId: payment?._id
+      };
+    });
+
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || 'Failed to list enrollments' });
+  }
+});
+
+router.patch('/enrollments/:id', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const { status, progressPercent } = req.body;
+    const targetStatus = status === 'Approved' ? 'active' : status === 'Pending' ? 'pending' : status === 'Rejected' ? 'rejected' : status;
+
+    const enr = await Enrollment.findById(req.params.id);
+    if (!enr) return res.status(404).json({ success: false, message: 'Enrollment not found' });
+
+    if (targetStatus) enr.status = targetStatus;
+    if (typeof progressPercent === 'number') enr.progressPercent = Math.min(100, Math.max(0, progressPercent));
+    await enr.save();
+
+    if (targetStatus === 'active') {
+      await Payment.updateMany(
+        { userId: enr.userId, courseId: enr.courseId, status: 'pending' },
+        { $set: { status: 'approved', reviewedAt: new Date(), reviewedBy: (req as any).user?._id } }
+      );
+    } else if (targetStatus === 'rejected') {
+      await Payment.updateMany(
+        { userId: enr.userId, courseId: enr.courseId, status: 'pending' },
+        { $set: { status: 'rejected', reviewedAt: new Date(), reviewedBy: (req as any).user?._id } }
+      );
+    }
+
+    await recordAudit({
+      req,
+      action: 'update_enrollment_status',
+      description: `Updated enrollment status to ${targetStatus} for enrollment ${enr._id}`,
+      resource: 'Enrollment',
+      resourceId: String(enr._id)
+    });
+
+    res.json({ success: true, data: enr });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || 'Failed to update enrollment' });
+  }
+});
+
+router.delete('/enrollments/:id', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const enr = await Enrollment.findByIdAndDelete(req.params.id);
+    if (enr) {
+      await recordAudit({
+        req,
+        action: 'delete_enrollment',
+        description: `Deleted enrollment ${req.params.id}`,
+        resource: 'Enrollment',
+        resourceId: req.params.id
+      });
+    }
+    res.json({ success: true, message: 'Enrollment deleted' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || 'Failed to delete enrollment' });
   }
 });
 const uploadMemory = multer({

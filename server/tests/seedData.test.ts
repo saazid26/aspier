@@ -15,7 +15,7 @@ describe('initial sample content', () => {
 
     expect(await Wing.countDocuments()).toBe(10);
     expect(await Course.countDocuments()).toBeGreaterThanOrEqual(4);
-    expect(await Instructor.countDocuments()).toBe(3);
+    expect(await Instructor.countDocuments()).toBeGreaterThanOrEqual(3);
     expect(await Supervisor.countDocuments()).toBe(4);
     expect(await Scholar.countDocuments()).toBe(5);
     expect(await News.countDocuments()).toBe(3);

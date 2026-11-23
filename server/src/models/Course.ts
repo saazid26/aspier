@@ -1,17 +1,46 @@
 import { Schema, model } from 'mongoose';
-const lessonSchema = new Schema({ title: { type: String, required: true }, order: { type: Number, required: true }, youtubeVideoId: String, duration: { type: Number, default: 0 }, resources: [String], isFreePreview: { type: Boolean, default: false } }, { _id: true });
-const moduleSchema = new Schema({ title: { type: String, required: true }, order: { type: Number, required: true }, lessons: { type: [lessonSchema], default: [] } }, { _id: true });
+
+const lessonSchema = new Schema({
+  title: { type: String, required: true },
+  order: { type: Number, default: 1 },
+  youtubeVideoId: String,
+  videoId: String,
+  duration: { type: Schema.Types.Mixed, default: '45 mins' },
+  resources: [String],
+  isFreePreview: { type: Boolean, default: false }
+}, { _id: true });
+
+const moduleSchema = new Schema({
+  title: { type: String, required: true },
+  order: { type: Number, default: 1 },
+  moduleNumber: Number,
+  description: String,
+  week: String,
+  lessons: { type: [lessonSchema], default: [] }
+}, { _id: true });
+
 const deliveryModeSetter = (value: unknown) => {
   if (value === 'Online / Live') return 'Online and Live';
   return value;
 };
+
 const schema = new Schema({
   title: { type: String, required: true },
   slug: { type: String, required: true, unique: true, index: true },
   description: String,
+  summary: String,
   duration: String,
-  mode: { type: String, enum: ['Online and Live', 'Online and Recorded', 'Offline'], set: deliveryModeSetter, default: 'Online and Live' },
-  deliveryMode: { type: String, enum: ['Online and Live', 'Online and Recorded', 'Offline'], set: deliveryModeSetter },
+  mode: {
+    type: String,
+    enum: ['Online and Live', 'Online and Recorded', 'Offline', 'In-Person Workshop'],
+    set: deliveryModeSetter,
+    default: 'Online and Live'
+  },
+  deliveryMode: {
+    type: String,
+    enum: ['Online and Live', 'Online and Recorded', 'Offline', 'In-Person Workshop'],
+    set: deliveryModeSetter
+  },
   startDate: String,
   targetAudience: String,
   enrollmentContact: String,
@@ -19,9 +48,22 @@ const schema = new Schema({
   instructorId: { type: Schema.Types.ObjectId, ref: 'Instructor' },
   price: { type: Number, required: true, default: 0 },
   thumbnail: String,
+  bannerUrl: String,
   level: { type: String, enum: ['beginner', 'intermediate', 'advanced'], default: 'beginner' },
-  status: { type: String, enum: ['draft', 'published', 'archived'], default: 'draft', index: true },
+  status: { type: String, enum: ['draft', 'published', 'archived'], default: 'published', index: true },
   modules: { type: [moduleSchema], default: [] },
   sampleData: { type: Boolean, default: false }
 }, { timestamps: true });
+
+schema.pre('save', function (next) {
+  if (!this.slug && this.title) {
+    this.slug = this.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+  if (!this.thumbnail && this.bannerUrl) this.thumbnail = this.bannerUrl;
+  if (!this.bannerUrl && this.thumbnail) this.bannerUrl = this.thumbnail;
+  if (!this.deliveryMode && this.mode) this.deliveryMode = this.mode;
+  if (!this.mode && this.deliveryMode) this.mode = this.deliveryMode;
+  next();
+});
+
 export default model('Course', schema);
