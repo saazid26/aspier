@@ -235,7 +235,7 @@ body{min-width:0;overflow-x:clip}
 
 @media(max-width:767px){
   .notification-mobile-backdrop{display:block!important;position:fixed!important;inset:0!important;z-index:998!important;width:100vw!important;height:100vh!important;border:0!important;margin:0!important;padding:0!important;background:rgba(15,23,42,.48)!important;backdrop-filter:blur(2px)!important;-webkit-backdrop-filter:blur(2px)!important;cursor:pointer}
-  .notification-popover,.notification-popover.notification-popover-mobile,.notification-popover.public-applicant-popover{position:fixed!important;z-index:999!important;top:64px!important;left:12px!important;right:12px!important;bottom:auto!important;width:calc(100vw - 24px)!important;max-width:440px!important;max-height:min(78vh,calc(100dvh - 80px))!important;margin:0 auto!important;border:1px solid rgba(20,143,131,.24)!important;border-radius:16px!important;overflow:hidden!important;box-sizing:border-box!important;box-shadow:0 24px 64px rgba(15,23,42,.28)!important;display:flex!important;flex-direction:column!important;background:#fff!important}
+  .notification-popover,.notification-popover.notification-popover-mobile,.notification-popover.public-applicant-popover{position:fixed!important;z-index:999!important;top:64px!important;left:12px!important;right:12px!important;bottom:auto!important;width:calc(100vw - 24px)!important;max-width:410px!important;max-height:min(84dvh,calc(100dvh - 72px))!important;margin:0 auto!important;border:1px solid #e2e8f0!important;border-radius:16px!important;overflow:hidden!important;box-sizing:border-box!important;box-shadow:0 24px 64px rgba(15,23,42,.28)!important;display:flex!important;flex-direction:column!important;background:#fff!important}
   .notification-popover.public-applicant-popover.popover-expanded{max-width:540px!important;max-height:min(85dvh,calc(100dvh - 72px))!important}
   .notification-popover-head{padding:12px 14px!important}
   .notification-close-btn{width:40px!important;height:40px!important;min-width:40px!important}
@@ -244,7 +244,7 @@ body{min-width:0;overflow-x:clip}
   .notification-detail-view{padding:14px!important}
   .notification-header-actions{gap:4px}
   .notification-header-actions .notification-switch-button{max-width:150px;height:36px;line-height:1.15;text-align:center}
-  .applicant-signup-form,.applicant-login-form{display:flex!important;width:100%!important;max-width:100%!important;min-width:0!important;flex-direction:column!important;gap:12px!important;box-sizing:border-box!important;padding:14px!important;overflow-x:hidden!important;overflow-y:auto!important}
+  .applicant-signup-form,.applicant-login-form{display:flex!important;width:100%!important;max-width:100%!important;min-width:0!important;flex-direction:column!important;gap:12px!important;box-sizing:border-box!important;padding:0!important;overflow-x:hidden!important}
   .applicant-signup-form label,.applicant-login-form label,.applicant-signup-form input,.applicant-login-form input,.applicant-signup-form select,.applicant-login-form select,.applicant-signup-form button,.applicant-login-form button{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
   .applicant-signup-form input,.applicant-login-form input,.applicant-signup-form select,.applicant-login-form select{min-height:42px!important;padding:8px 12px!important;font-size:16px!important;border-radius:12px}
   .notification-copy-row{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
@@ -252,7 +252,7 @@ body{min-width:0;overflow-x:clip}
   .notification-header-actions .notification-switch-button{min-width:0!important}
 }
 @media(min-width:768px){
-  .notification-popover.public-applicant-popover{position:absolute;z-index:90;inset:auto 0 auto auto;top:calc(100% + 10px);width:420px;max-width:calc(100vw - 32px);max-height:min(85dvh,760px)}
+  .notification-popover.public-applicant-popover{position:absolute;z-index:90;inset:auto 0 auto auto;top:calc(100% + 10px);width:410px;max-width:calc(100vw - 32px);max-height:min(80vh,720px)}
   .notification-popover.public-applicant-popover.popover-expanded{width:min(540px,calc(100vw - 32px))!important;max-width:540px!important;max-height:min(85dvh,800px)!important}
 }
 .notification-detail{margin-top:12px;padding:14px;border:1px solid rgba(20,143,131,.16);border-radius:12px;background:#f7fbf9;overflow-wrap:anywhere}
@@ -370,7 +370,7 @@ body{min-width:0;overflow-x:clip}
 @media(max-width:639px){.wing-grid{grid-template-columns:minmax(0,1fr);gap:16px}.wing-card-body{padding:18px}}
 .applicant-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0;padding:4px;border-radius:12px;background:#f1f5f9}
 .applicant-tabs .tab{min-width:0;padding:9px 7px;font-size:.82rem}
-.public-applicant-popover{max-height:min(85vh,720px);overflow-y:auto}
+.public-applicant-popover{overflow:hidden}
 .applicant-signup-form,.applicant-login-form{gap:12px}
 .applicant-signup-form label,.applicant-login-form label{min-width:0}
 

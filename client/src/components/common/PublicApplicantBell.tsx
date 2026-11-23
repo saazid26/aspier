@@ -1157,87 +1157,82 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
   };
 
   // =========================================================================
-  // VIEW: CREDENTIAL LOOKUP & RECOVERY GATE
+  // VIEW: CREDENTIAL LOOKUP & RECOVERY GATE (TAB 1: CHECK, TAB 2: SIGN UP)
   // =========================================================================
   const renderLookupGate = () => (
-    <div className="space-y-4">
-      {/* TABS: CHECK APPLICATION vs SIGN UP */}
-      <div className="applicant-tabs" role="tablist" aria-label="Applicant access">
-        <button
-          role="tab"
-          aria-selected={mode === 'check'}
-          className={`tab ${mode === 'check' ? 'active' : ''}`}
-          type="button"
-          onClick={() => setMode('check')}
-        >
-          Check Application
-        </button>
-        <button
-          role="tab"
-          aria-selected={mode === 'signup'}
-          className={`tab ${mode === 'signup' ? 'active' : ''}`}
-          type="button"
-          onClick={() => setMode('signup')}
-        >
-          Sign Up
-        </button>
-      </div>
-
+    <div className="w-full">
       {mode === 'check' ? (
-        <form className="applicant-login-form space-y-3.5 p-0" onSubmit={handleCheckStatus}>
-          {/* INSTRUCTION BANNER */}
-          <div className="p-3.5 bg-teal-50/90 border border-teal-200/90 rounded-xl text-xs text-teal-950 flex items-start gap-2.5">
-            <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-            <p className="leading-relaxed text-teal-900">
-              Enter the Application ID and Private Access Code received upon submitting your application or issued via notification.
-            </p>
-          </div>
-
-          {loginError && (
-            <div className="p-3 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs flex items-start gap-2" role="alert">
-              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-              <span>{loginError}</span>
+        /* TAB 1: CHECK APPLICATION (APPLICATION VERIFICATION GATE) */
+        <div className="flex flex-col w-full">
+          {/* Inline Icon + Title Header */}
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-100 text-teal-700 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4" />
             </div>
-          )}
-
-          {/* STACKED FULL-WIDTH INPUTS (START EMPTY) */}
-          <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">Application ID</label>
-            <input
-              required
-              type="text"
-              autoComplete="username"
-              className="w-full min-h-[44px] px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border font-mono uppercase"
-              placeholder="e.g. ASPIER-2026-XXXX"
-              value={applicationId}
-              onChange={(e) => setApplicationId(e.target.value.toUpperCase())}
-            />
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 m-0">Application Verification Gate</h3>
           </div>
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+            Enter the Application ID and Private Access Code received upon submitting your application to check your approval status or manage your profile.
+          </p>
 
-          <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">Private Access Code</label>
-            <input
-              required
-              type="text"
-              autoComplete="current-password"
-              className="w-full min-h-[44px] px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border font-mono"
-              placeholder="e.g. SEC-XXXX-XXXX"
-              value={accessCode}
-              onChange={(e) => setAccessCode(e.target.value)}
-            />
-          </div>
+          <form className="flex flex-col gap-3.5 w-full" onSubmit={handleCheckStatus}>
+            {loginError && (
+              <div className="p-3 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs flex items-start gap-2" role="alert">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <span>{loginError}</span>
+              </div>
+            )}
 
-          {/* PRIMARY SUBMIT BUTTON */}
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full min-h-[44px] rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm text-sm disabled:opacity-50"
-          >
-            {busy ? 'Verifying Credentials…' : 'Check Application Status →'}
-          </button>
+            {/* Application ID Input */}
+            <div className="w-full">
+              <label className="text-xs font-semibold text-slate-700 block mb-1">Application ID</label>
+              <input
+                required
+                type="text"
+                autoComplete="username"
+                className="w-full min-h-[44px] px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border font-mono uppercase"
+                placeholder="e.g. ASPIER-2026-XXXX"
+                value={applicationId}
+                onChange={(e) => setApplicationId(e.target.value.toUpperCase())}
+              />
+            </div>
 
-          {/* INTEGRATED 'LOST YOUR ACCESS CODE?' RECOVERY SECTION */}
-          <div className="border-t border-slate-200 pt-4 mt-4">
+            {/* Private Access Code Input */}
+            <div className="w-full">
+              <label className="text-xs font-semibold text-slate-700 block mb-1">Private Access Code</label>
+              <input
+                required
+                type="text"
+                autoComplete="current-password"
+                className="w-full min-h-[44px] px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border font-mono"
+                placeholder="e.g. SEC-XXXX-XXXX"
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value)}
+              />
+            </div>
+
+            {/* Primary Submit Button */}
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full min-h-[44px] mt-1 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+            >
+              {busy ? (
+                <>
+                  <Orbit className="w-4 h-4 animate-spin" />
+                  <span>Verifying Credentials…</span>
+                </>
+              ) : (
+                <>
+                  <span>Verify Credentials</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Integrated 'Lost your access code?' Recovery Section */}
+          <div className="border-t border-slate-200 pt-4 mt-5">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 mb-1">
               <Lock className="w-3.5 h-3.5 text-slate-500" />
               Lost your access code?
@@ -1279,70 +1274,65 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
             </div>
           </div>
 
-          <p className="text-xs text-slate-500 pt-3 text-center border-t border-slate-100">
+          <p className="text-xs text-slate-500 pt-4 mt-4 text-center border-t border-slate-100">
             Haven&apos;t applied yet?{' '}
-            <Link to="/apply" onClick={() => setOpen(false)} className="text-teal-700 font-semibold underline">
-              Submit initial application (/apply)
+            <Link to="/join" onClick={() => { setOpen(false); onOpenChange?.(false); }} className="text-teal-700 hover:text-teal-900 font-semibold underline">
+              Apply to Join ASPIER →
             </Link>
           </p>
-        </form>
+        </div>
       ) : (
-        /* GATED SIGN-UP FLOW */
-        <div className="space-y-3.5 p-0">
-          <div className="step-card p-3.5 rounded-xl border border-teal-200 bg-teal-50/70">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="w-5 h-5 rounded-full bg-teal-700 text-white text-[11px] font-bold flex items-center justify-center shrink-0">1</span>
-              <h3 className="font-bold text-xs text-teal-950 uppercase tracking-wide">Step 1: Submit Application First</h3>
+        /* TAB 2: SIGN UP (STRUCTURED 2-STEP ONBOARDING CARDS) */
+        <div className="flex flex-col w-full">
+          {/* Step 1 Card */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 sm:p-4 flex flex-col gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <span className="w-6 h-6 rounded-full bg-teal-700 text-white text-xs font-bold flex items-center justify-center shrink-0">1</span>
+              <h4 className="text-sm font-bold text-slate-900 m-0">Step 1: Submit Application First</h4>
             </div>
-            <p className="text-xs text-teal-900 leading-relaxed mb-2.5">
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed m-0">
               Applicants cannot sign up directly without submitting an initial application. Apply first as a Supervisor, Young Scholar, or Research Mate.
             </p>
             <Link
-              to="/apply"
-              onClick={() => setOpen(false)}
-              className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-sm transition-all text-center"
+              to="/join"
+              onClick={() => {
+                setOpen(false);
+                onOpenChange?.(false);
+              }}
+              className="w-full min-h-[40px] px-3.5 rounded-lg bg-white hover:bg-teal-50 border border-teal-200 text-teal-800 text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition text-center shadow-xs"
             >
-              <span>Apply to Join ASPIER (/apply)</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Apply to Join ASPIER →</span>
             </Link>
           </div>
 
-          <div className="step-card p-3.5 rounded-xl border border-slate-200 bg-slate-50">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="w-5 h-5 rounded-full bg-slate-700 text-white text-[11px] font-bold flex items-center justify-center shrink-0">2</span>
-              <h3 className="font-bold text-xs text-slate-900 uppercase tracking-wide">Step 2: Check Application &amp; Verify</h3>
+          {/* Step 2 Card */}
+          <div className="rounded-xl border border-amber-200/80 bg-amber-50/40 p-3.5 sm:p-4 flex flex-col gap-2.5 mt-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-6 h-6 rounded-full bg-amber-600 text-white text-xs font-bold flex items-center justify-center shrink-0">2</span>
+              <h4 className="text-sm font-bold text-slate-900 m-0">Step 2: Check Application &amp; Verify</h4>
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed mb-2.5">
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed m-0">
               Already applied? Enter your admin-issued <strong>Application ID</strong> and <strong>Private Access Code</strong> in the Check Application gate to verify your account status.
             </p>
             <button
               type="button"
               onClick={() => setMode('check')}
-              className="w-full py-1.5 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer"
+              className="w-full min-h-[40px] px-3.5 rounded-lg bg-amber-100 hover:bg-amber-200/80 border border-amber-300/70 text-amber-950 text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer"
             >
-              Go to Check Application Gate
+              <span>Go to Check Application Gate</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="step-card p-3.5 rounded-xl border border-amber-200 bg-amber-50/60">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Lock className="w-4 h-4 text-amber-700 shrink-0" />
-              <h3 className="font-bold text-xs text-amber-950 uppercase tracking-wide">Step 3: Account Sign-Up (Locked)</h3>
-            </div>
-            <p className="text-xs text-amber-900 leading-relaxed">
-              Account creation is locked until your Application ID and Private Access Code are verified and confirmed by the Admin Panel.
-            </p>
-          </div>
-
           {pendingAt && (
-            <div className="p-3 rounded-xl border border-blue-200 bg-blue-50 text-xs text-blue-900 flex items-center justify-between" role="status">
+            <div className="mt-3 p-3 rounded-xl border border-blue-200 bg-blue-50 text-xs text-blue-900 flex items-center justify-between" role="status">
               <div className="flex items-center gap-2">
                 <Orbit size={18} className="text-blue-600 shrink-0 animate-spin" />
                 <span>Review in progress: {formatElapsed(Math.max(0, Math.floor((now - pendingAt) / 1000)))}</span>
               </div>
               <button
                 type="button"
-                className="text-blue-700 underline font-semibold text-[11px]"
+                className="text-blue-700 underline font-semibold text-[11px] cursor-pointer"
                 onClick={() => { setPendingAt(null); sessionStorage.removeItem('aspier-signup-pending-at'); }}
               >
                 Clear
@@ -1385,11 +1375,44 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
         </div>
       </div>
 
+      {/* Crisp full-width 2-column Tab Switcher */}
+      {!isExpanded && (
+        <div className="grid grid-cols-2 w-full border-b border-slate-200 bg-slate-50/70 shrink-0" role="tablist" aria-label="Applicant access">
+          <button
+            role="tab"
+            aria-selected={mode === 'check'}
+            className={`min-h-[44px] text-sm font-semibold flex items-center justify-center transition cursor-pointer box-border ${
+              mode === 'check'
+                ? 'border-b-2 border-teal-700 text-teal-800 bg-white font-bold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+            }`}
+            type="button"
+            onClick={() => setMode('check')}
+          >
+            Check Application
+          </button>
+          <button
+            role="tab"
+            aria-selected={mode === 'signup'}
+            className={`min-h-[44px] text-sm font-semibold flex items-center justify-center transition cursor-pointer box-border ${
+              mode === 'signup'
+                ? 'border-b-2 border-teal-700 text-teal-800 bg-white font-bold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+            }`}
+            type="button"
+            onClick={() => setMode('signup')}
+          >
+            Sign Up
+          </button>
+        </div>
+      )}
+
+      {/* Scrollable body container with generous bottom padding */}
       <div
-        className="p-4 space-y-3.5 overflow-y-auto overscroll-contain flex-1 min-h-0 box-border"
+        className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-5 sm:p-5 sm:pb-6 min-h-0 box-border overscroll-contain"
         style={{
           maxHeight: isMobile
-            ? 'calc(85dvh - 64px)'
+            ? 'calc(84dvh - 110px)'
             : isExpanded
             ? 'min(76vh, 680px)'
             : 'min(72vh, 540px)'
@@ -1438,8 +1461,8 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
                 tabIndex={-1}
               />
               <section
-                className={`notification-popover public-applicant-popover ${
-                  isExpanded ? 'popover-expanded' : ''
+                className={`notification-popover public-applicant-popover fixed inset-x-3 top-16 z-[999] mx-auto w-[calc(100vw-24px)] max-w-[410px] max-h-[84dvh] rounded-2xl bg-white border border-slate-200 shadow-2xl flex flex-col overflow-hidden box-border ${
+                  isExpanded ? 'popover-expanded !max-w-[540px] !max-h-[85dvh]' : ''
                 }`}
                 role="dialog"
                 aria-modal="true"
@@ -1452,8 +1475,8 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
           )
         ) : (
           <section
-            className={`notification-popover public-applicant-popover ${
-              isExpanded ? 'popover-expanded' : ''
+            className={`notification-popover public-applicant-popover sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2.5 sm:w-[410px] sm:max-h-[80vh] rounded-2xl bg-white border border-slate-200 shadow-2xl flex flex-col overflow-hidden box-border ${
+              isExpanded ? 'popover-expanded sm:!w-[540px] sm:!max-h-[85dvh]' : ''
             }`}
             role="dialog"
             aria-modal="true"
