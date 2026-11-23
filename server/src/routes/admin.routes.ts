@@ -36,6 +36,7 @@ import {
   downloadResearchApplicationCv,
   listResearchApplications,
   approveStage1ResearchApplication,
+  rejectResearchApplication,
   confirmResearchPayment,
   updateWhatsAppLink
 } from '../controllers/researchApplication.controller.js';
@@ -77,6 +78,7 @@ router.patch('/notifications/read-all', markAllAdminNotificationsRead);
 router.patch('/notifications/:id/read', markAdminNotificationRead);
 router.get('/research-applications', listResearchApplications);
 router.post('/research-applications/:id/approve-stage1', approveStage1ResearchApplication);
+router.post('/research-applications/:id/reject', rejectResearchApplication);
 router.post('/research-applications/:id/confirm-payment', confirmResearchPayment);
 router.put('/research-applications/:id/whatsapp-link', updateWhatsAppLink);
 router.get('/research-applications/:id/cv', downloadResearchApplicationCv);

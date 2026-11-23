@@ -101,6 +101,21 @@ export function ResearchApplications() {
     }
   };
 
+  // Reject Application
+  const rejectApplication = async (item: ResearchApplication) => {
+    if (!window.confirm(`Are you sure you want to reject ${item.name}'s application?`)) return;
+    setProcessingId(item._id);
+    try {
+      await api.post(`/admin/research-applications/${item._id}/reject`);
+      toast.success(`Application for ${item.name} marked as rejected.`);
+      await refetch();
+    } catch (err: any) {
+      toast.error(getApiErrorMessage(err, 'Could not reject application.'));
+    } finally {
+      setProcessingId('');
+    }
+  };
+
   // Stage 2 Confirm Payment & Set WhatsApp Link
   const confirmPayment = async (item: ResearchApplication) => {
     setProcessingId(item._id);
@@ -301,15 +316,26 @@ export function ResearchApplications() {
                   <p className="text-xs text-blue-800">
                     Approving Stage 1 will issue this access code and notify the applicant to open the Check Application portal.
                   </p>
-                  <Button
-                    type="button"
-                    disabled={processingId === item._id}
-                    onClick={() => void approveStage1(item)}
-                    className="bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs py-2 px-4 flex items-center gap-1.5"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    {processingId === item._id ? 'Approving…' : 'Approve Stage 1 & Issue Code'}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="danger"
+                      disabled={processingId === item._id}
+                      onClick={() => void rejectApplication(item)}
+                      className="text-xs py-2 px-3"
+                    >
+                      Reject Application
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={processingId === item._id}
+                      onClick={() => void approveStage1(item)}
+                      className="bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs py-2 px-4 flex items-center gap-1.5"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      {processingId === item._id ? 'Approving…' : 'Approve Stage 1 & Issue Code'}
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

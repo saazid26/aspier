@@ -1,12 +1,22 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Upload, CheckCircle2, Copy, Check, ArrowRight, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
+import {
+  FileText,
+  Upload,
+  CheckCircle2,
+  Copy,
+  Check,
+  ArrowRight,
+  ShieldCheck,
+  Sparkles,
+  AlertCircle,
+  X,
+  Loader2
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api, getApiErrorMessage } from '../../lib/api';
 import { SEO } from '../../components/common/SEO';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 import { staticWings, staticResearch } from '../../lib/staticData';
 
 type WingItem = {
@@ -28,7 +38,6 @@ type ResearchProject = {
 
 export function ResearchMateApply() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
 
   const initialWingParam = searchParams.get('wing') || '';
   const initialProjectParam = searchParams.get('project') || '';
@@ -62,6 +71,8 @@ export function ResearchMateApply() {
   const [statement, setStatement] = useState('');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfError, setPdfError] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionReceipt, setSubmissionReceipt] = useState<{
     applicationId: string;
@@ -71,11 +82,16 @@ export function ResearchMateApply() {
   } | null>(null);
   const [copiedId, setCopiedId] = useState(false);
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   // Initialize selected wing from URL param
   useEffect(() => {
     if (initialWingParam && wings.length > 0) {
       const match = wings.find(
-        (w) => w.slug === initialWingParam || w._id === initialWingParam || w.name.toLowerCase() === initialWingParam.toLowerCase()
+        (w) =>
+          w.slug === initialWingParam ||
+          w._id === initialWingParam ||
+          w.name.toLowerCase() === initialWingParam.toLowerCase()
       );
       if (match) {
         setSelectedWingSlug(match.slug);
@@ -83,7 +99,7 @@ export function ResearchMateApply() {
     } else if (wings.length > 0 && !selectedWingSlug) {
       setSelectedWingSlug(wings[0].slug);
     }
-  }, [initialWingParam, wings]);
+  }, [initialWingParam, wings, selectedWingSlug]);
 
   // Compute available projects for the currently selected Wing (Present & Future only)
   const wingProjects = useMemo(() => {
@@ -117,7 +133,10 @@ export function ResearchMateApply() {
     if (wingProjects.length > 0) {
       if (initialProjectParam) {
         const found = wingProjects.find(
-          (p) => p.slug === initialProjectParam || p.title.toLowerCase() === initialProjectParam.toLowerCase() || p._id === initialProjectParam
+          (p) =>
+            p.slug === initialProjectParam ||
+            p.title.toLowerCase() === initialProjectParam.toLowerCase() ||
+            p._id === initialProjectParam
         );
         if (found) {
           setSelectedProjectTitle(found.title);
@@ -132,30 +151,63 @@ export function ResearchMateApply() {
     } else {
       setSelectedProjectTitle('');
     }
-  }, [wingProjects, initialProjectParam]);
+  }, [wingProjects, initialProjectParam, selectedProjectTitle]);
 
-  // Handle PDF file selection & validation
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Helper to validate and set PDF file
+  const validateAndSetFile = (file: File) => {
     setPdfError('');
-    const file = e.target.files?.[0];
-    if (!file) {
-      setPdfFile(null);
-      return;
-    }
-
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
       setPdfError('Please upload a PDF document (.pdf) only.');
       setPdfFile(null);
-      return;
+      return false;
     }
 
     if (file.size > 8 * 1024 * 1024) {
       setPdfError('File size exceeds 8MB. Please upload a smaller PDF.');
       setPdfFile(null);
-      return;
+      return false;
     }
 
     setPdfFile(file);
+    return true;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      validateAndSetFile(file);
+    }
+  };
+
+  const handleRemoveFile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPdfFile(null);
+    setPdfError('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      validateAndSetFile(file);
+    }
   };
 
   const copyAppId = async (id: string) => {
@@ -171,6 +223,14 @@ export function ResearchMateApply() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
+
+    if (!fullName.trim() || !email.trim() || !university.trim() || !department.trim() || !occupation.trim() || !skills.trim()) {
+      setFormError('Please fill in all required fields marked with an asterisk (*).');
+      toast.error('Please complete all required fields.');
+      return;
+    }
+
     if (!pdfFile) {
       setPdfError('CV / Resume upload in PDF format is required.');
       toast.error('Please upload your CV in PDF format.');
@@ -216,73 +276,89 @@ export function ResearchMateApply() {
         applicationId: appId,
         name: fullName.trim(),
         wingName: chosenWingName,
-        researchTitle: selectedProjectTitle
+        researchTitle: selectedProjectTitle || 'Research Project Collaboration'
       });
 
-      toast.success('Stage 1 Research Mate application submitted successfully!');
+      toast.success('Research Mate application submitted successfully!');
     } catch (err: any) {
       const msg = getApiErrorMessage(err, 'Failed to submit application. Please review your details.');
+      setFormError(msg);
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const currentWing = wings.find((w) => w.slug === selectedWingSlug);
+
   if (submissionReceipt) {
     return (
-      <main className="container section" style={{ maxWidth: 720 }}>
-        <SEO title="Application Submitted | Research Mate" description="Your Research Mate application has been received." />
-        <article className="card p-8 rounded-2xl border border-slate-200 shadow-sm bg-white text-center space-y-6">
+      <main className="container section py-10 sm:py-16">
+        <SEO
+          title="Application Submitted | Research Mate"
+          description="Your Research Mate application has been received."
+        />
+        <article className="w-full max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-10 text-center space-y-6 box-border">
           <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-2">
             <CheckCircle2 className="w-10 h-10" />
           </div>
 
           <div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider mb-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider mb-2">
               <Sparkles className="w-3.5 h-3.5" /> Stage 1 Application Received
             </span>
-            <h1 className="text-2xl font-bold text-slate-900">Thank you, {submissionReceipt.name}!</h1>
-            <p className="text-sm text-slate-600 mt-2 max-w-lg mx-auto">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Thank you, {submissionReceipt.name}!
+            </h1>
+            <p className="text-sm text-slate-600 mt-2 max-w-lg mx-auto leading-relaxed">
               Your application to join <strong>{submissionReceipt.researchTitle}</strong> under the <strong>{submissionReceipt.wingName}</strong> as a <strong>Research Mate</strong> has been officially logged for faculty review.
             </p>
           </div>
 
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-left space-y-2 max-w-md mx-auto">
+          <div className="p-4 sm:p-5 bg-slate-50 border border-slate-200/90 rounded-xl text-left space-y-2.5 max-w-md mx-auto">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
               Your Unique Application ID
             </label>
             <div className="flex items-center gap-2">
-              <Input
+              <input
                 readOnly
                 value={submissionReceipt.applicationId}
-                className="font-mono text-base font-bold text-teal-800 bg-white select-all text-center"
+                className="w-full font-mono text-base font-bold text-teal-900 bg-white border border-slate-300 rounded-lg px-3 py-2 select-all text-center"
               />
-              <Button
+              <button
                 type="button"
                 onClick={() => copyAppId(submissionReceipt.applicationId)}
-                className={`shrink-0 flex items-center gap-1 text-xs px-3 py-2 ${copiedId ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-white'}`}
+                className={`shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2.5 rounded-lg transition-colors ${
+                  copiedId ? 'bg-emerald-600 text-white' : 'bg-slate-800 hover:bg-slate-900 text-white'
+                }`}
               >
-                {copiedId ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                {copiedId ? 'Copied' : 'Copy'}
-              </Button>
+                {copiedId ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copiedId ? 'Copied' : 'Copy ID'}
+              </button>
             </div>
-            <p className="text-xs text-slate-500 pt-1">
-              Save this ID. When our administration approves Stage 1, you will use it with your Private Access Code to complete Stage 2 verification &amp; onboarding.
+            <p className="text-xs text-slate-500 pt-1 leading-relaxed">
+              Save this ID. Joining as a Research Mate is <strong>100% free across all stages</strong>. You can check your application review progress anytime in the Check Application portal.
             </p>
           </div>
 
-          <div className="p-4 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-900 text-left space-y-1.5">
-            <p className="font-semibold text-teal-950">Next Steps &amp; Review Timeline:</p>
-            <p>1. Our academic wing review committee examines your CV, technical skills, and research alignment.</p>
-            <p>2. Upon Stage 1 approval, you will receive a notification and a <strong>Private Access Code</strong>.</p>
-            <p>3. Enter your credentials in the <strong>Check Application</strong> portal to complete Stage 2 verification (BDT 1,000 project fee) and join the official project WhatsApp group.</p>
+          <div className="p-4 bg-teal-50/80 border border-teal-200 rounded-xl text-xs text-teal-950 text-left space-y-2">
+            <p className="font-bold text-teal-950 text-sm">Next Steps &amp; Review Timeline:</p>
+            <p>1. <strong>Faculty Review:</strong> Our academic wing committee reviews your submitted CV, background, and research alignment.</p>
+            <p>2. <strong>Private Access Code:</strong> Once approved, you will receive an acceptance notification and your official Private Access Code.</p>
+            <p>3. <strong>Collaborator Onboarding:</strong> Access your project workspace, collaboration resources, and project group — completely fee-free.</p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 border-t border-slate-100">
-            <Link to="/check-application" className="button button-primary inline-flex items-center gap-2 w-full sm:w-auto">
-              Go to Check Application Portal <ArrowRight className="w-4 h-4" />
+            <Link
+              to="/check-application"
+              className="button button-primary inline-flex items-center justify-center gap-2 w-full sm:w-auto font-semibold px-6 py-2.5 rounded-xl"
+            >
+              Check Application Status <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link to={`/wings/${selectedWingSlug}`} className="button button-secondary w-full sm:w-auto">
+            <Link
+              to={selectedWingSlug ? `/wings/${selectedWingSlug}` : '/wings'}
+              className="button button-secondary inline-flex items-center justify-center w-full sm:w-auto font-semibold px-5 py-2.5 rounded-xl"
+            >
               Return to Academic Wing
             </Link>
           </div>
@@ -292,241 +368,350 @@ export function ResearchMateApply() {
   }
 
   return (
-    <main className="container section" style={{ maxWidth: 780 }}>
+    <main className="container section py-10 sm:py-16">
       <SEO
         title="Apply as Research Mate | ASPIER Academic Wings"
-        description="Apply to join ongoing and future research projects across ASPIER Academic Wings as a Research Mate."
+        description="Apply to join ongoing and future research projects across ASPIER Academic Wings as a Research Mate. 100% free across all stages."
       />
 
-      <div className="mb-6">
-        <Link to={selectedWingSlug ? `/wings/${selectedWingSlug}` : '/wings'} className="text-xs font-medium text-teal-700 hover:text-teal-900 inline-flex items-center gap-1 mb-2">
-          ← Back to {selectedWingSlug ? 'Academic Wing' : 'Wings'}
-        </Link>
-        <span className="eyebrow block">Academic Wings · Collaborative Research</span>
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mt-1">
-          Apply to Join Research (Research Mate)
-        </h1>
-        <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-          Stage 1 is free for all prospective Research Mates. Join active research investigations, co-author publications, and collaborate directly with ASPIER Supervisors and Scholars.
-        </p>
-      </div>
-
-      <form className="card p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm bg-white space-y-6" onSubmit={handleSubmit}>
-        {/* Field 1: Apply As (Locked) */}
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block mb-1">
-            Apply As <span className="text-slate-400 font-normal">(Locked Role)</span>
-          </label>
-          <div className="flex items-center gap-2 p-2.5 bg-slate-100 rounded-lg border border-slate-200 text-slate-700">
-            <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" />
-            <span className="font-semibold text-sm text-slate-800">Research Mate</span>
-            <span className="ml-auto text-xs text-slate-500 font-medium italic">Project collaborator role</span>
-          </div>
-        </div>
-
-        {/* Fields 2 & 3: Full Name & Email */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block mb-1">
-              Full Name <span className="text-rose-500">*</span>
-            </label>
-            <Input
-              required
-              placeholder="e.g. Tariqul Islam"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block mb-1">
-              Email Address <span className="text-rose-500">*</span>
-            </label>
-            <Input
-              required
-              type="email"
-              placeholder="e.g. tariqul@gmail.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Contact Phone */}
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block mb-1">
-            Phone / WhatsApp Number
-          </label>
-          <Input
-            placeholder="e.g. +880 1711-223344"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-        </div>
-
-        {/* Fields 4, 5, 6: University, Department & Occupation */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block mb-1">
-              University / Institution <span className="text-rose-500">*</span>
-            </label>
-            <Input
-              required
-              placeholder="e.g. BUET, University of Dhaka, RUET..."
-              value={university}
-              onChange={(e) => setUniversity(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block mb-1">
-              Department <span className="text-rose-500">*</span>
-            </label>
-            <Input
-              required
-              placeholder="e.g. Mechanical Engineering, Physics, CSE..."
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block mb-1">
-            Occupation / Current Workplace <span className="text-rose-500">*</span>
-          </label>
-          <Input
-            required
-            placeholder="e.g. 4th Year Undergraduate Student, Research Assistant at Lab X, Software Engineer at Company Y"
-            value={occupation}
-            onChange={(e) => setOccupation(e.target.value)}
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            Free-text field: state your current job/role and company or your current study year and student status.
-          </p>
-        </div>
-
-        {/* Field 7: Preferred Academic Wing (Dropdown) */}
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block mb-1">
-            Preferred Academic Wing <span className="text-rose-500">*</span>
-          </label>
-          <select
-            className="w-full p-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-            value={selectedWingSlug}
-            onChange={(e) => setSelectedWingSlug(e.target.value)}
-            required
+      <div className="w-full max-w-3xl mx-auto box-border">
+        {/* Header & Breadcrumb Hierarchy */}
+        <div className="flex flex-col gap-2 mb-6">
+          <Link
+            to={selectedWingSlug ? `/wings/${selectedWingSlug}` : '/wings'}
+            className="text-xs font-semibold text-teal-700 hover:text-teal-900 inline-flex items-center gap-1.5 transition-colors self-start"
           >
-            {wings.map((w) => (
-              <option key={w.slug || w._id} value={w.slug}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Field 8: Target Research Program / Project (Dynamic Sub-Selection Dropdown) */}
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block mb-1">
-            Target Research Program / Project <span className="text-rose-500">*</span>
-          </label>
-          {wingProjects.length > 0 ? (
-            <select
-              className="w-full p-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              value={selectedProjectTitle}
-              onChange={(e) => setSelectedProjectTitle(e.target.value)}
-              required
-            >
-              {wingProjects.map((p) => (
-                <option key={p._id || p.slug || p.title} value={p.title}>
-                  {p.title} ({p.category === 'future' ? 'Future Project' : 'Present / Active Project'})
-                </option>
-              ))}
-            </select>
-          ) : (
-            <Input
-              required
-              placeholder="e.g. Collaborative Environmental Research"
-              value={selectedProjectTitle}
-              onChange={(e) => setSelectedProjectTitle(e.target.value)}
-            />
-          )}
-          <p className="text-xs text-slate-500 mt-1">
-            Dynamically lists only Present and Future research initiatives under the selected Academic Wing.
+            ← Back to {currentWing ? currentWing.name : 'Academic Wing'}
+          </Link>
+          <span className="text-xs font-extrabold uppercase tracking-widest text-teal-600">
+            ACADEMIC WINGS • COLLABORATIVE RESEARCH
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-0.5">
+            Apply to Join Research (Research Mate)
+          </h1>
+          <p className="text-sm text-slate-600 leading-relaxed max-w-2xl">
+            Collaborate directly on active research projects, co-author publications, and work alongside ASPIER Supervisors and Scholars. Joining as a Research Mate is 100% free across all stages.
           </p>
         </div>
 
-        {/* Field 9: Relevant Skills */}
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block mb-1">
-            Relevant Skills &amp; Technical Toolset <span className="text-rose-500">*</span>
-          </label>
-          <Input
-            required
-            placeholder="e.g. Python, ROS, MATLAB, QGIS, Remote Sensing, Machine Learning, Laboratory Techniques"
-            value={skills}
-            onChange={(e) => setSkills(e.target.value)}
-          />
-        </div>
-
-        {/* Field 10: Statement of Interest */}
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block mb-1">
-            Statement of Interest &amp; Motivation
-          </label>
-          <textarea
-            className="w-full p-3 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 leading-relaxed"
-            rows={4}
-            placeholder="Briefly describe why you want to collaborate on this research project and how your skills contribute..."
-            value={statement}
-            onChange={(e) => setStatement(e.target.value)}
-          />
-        </div>
-
-        {/* Field 11: CV & Work Experience (PDF Upload strictly) */}
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block mb-1">
-            CV &amp; Work Experience (PDF Upload) <span className="text-rose-500">*</span>
-          </label>
-          <div className="border-2 border-dashed border-slate-300 rounded-xl p-5 text-center hover:border-teal-500 transition-colors bg-slate-50">
-            <input
-              type="file"
-              id="pdf-upload"
-              accept=".pdf,application/pdf"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            <label htmlFor="pdf-upload" className="cursor-pointer flex flex-col items-center justify-center gap-2">
-              <Upload className="w-8 h-8 text-teal-600" />
-              <span className="text-sm font-semibold text-slate-800">
-                {pdfFile ? pdfFile.name : 'Click to select your CV (.pdf)'}
-              </span>
-              <span className="text-xs text-slate-500">
-                Accepts PDF format only (Max 8MB). Stored securely for faculty and administrator review.
-              </span>
-            </label>
+        {/* Form Card Container */}
+        <form
+          className="research-mate-form w-full max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-8 box-border flex flex-col gap-6"
+          onSubmit={handleSubmit}
+        >
+          {/* Styled Locked Role Banner */}
+          <div className="flex flex-wrap items-center gap-2.5 px-4 py-3 rounded-xl bg-teal-50/80 border border-teal-200 text-teal-950">
+            <ShieldCheck className="w-5 h-5 text-teal-600 shrink-0" />
+            <span className="font-bold text-sm text-teal-950">Research Mate</span>
+            <span className="text-xs font-semibold text-teal-800 bg-teal-100/70 border border-teal-300/60 px-2 py-0.5 rounded-md">
+              Locked Role
+            </span>
+            <span className="ml-auto text-xs text-teal-700 font-medium">
+              Project Collaborator Role
+            </span>
           </div>
-          {pdfError && <p className="text-xs text-rose-600 mt-1.5 font-medium">{pdfError}</p>}
-          {pdfFile && (
-            <div className="flex items-center gap-2 mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs">
-              <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span className="font-semibold truncate">{pdfFile.name}</span>
-              <span className="text-emerald-600">({(pdfFile.size / 1024).toFixed(1)} KB)</span>
+
+          {formError && (
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2.5 text-xs text-rose-800 font-medium">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{formError}</span>
             </div>
           )}
-        </div>
 
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
-          <p className="text-xs text-slate-500">
-            Stage 1 application is 100% free. No payment required until Stage 1 acceptance.
-          </p>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2.5 px-6 rounded-lg shadow-sm"
-          >
-            {isSubmitting ? 'Submitting Application…' : 'Submit Stage 1 Application →'}
-          </Button>
-        </div>
-      </form>
+          {/* Group 1 — Applicant Details (1-Col Mobile, 2-Col Desktop) */}
+          <div>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3.5">
+              1. Applicant Details
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                  Full Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. Tariqul Islam"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="block w-full max-w-full min-w-0 box-border rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                  Email Address <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  required
+                  type="email"
+                  placeholder="e.g. tariqul@gmail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="block w-full max-w-full min-w-0 box-border rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                  Phone / WhatsApp Number
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. +880 1711-223344"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="block w-full max-w-full min-w-0 box-border rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                  University / Institution <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. BUET, University of Dhaka, RUET..."
+                  value={university}
+                  onChange={(e) => setUniversity(e.target.value)}
+                  className="block w-full max-w-full min-w-0 box-border rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                  Department <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. Mechanical Engineering, Physics, CSE..."
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  className="block w-full max-w-full min-w-0 box-border rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                  Occupation / Current Workplace <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. 4th Year Undergraduate Student, Research Assistant, Software Engineer"
+                  value={occupation}
+                  onChange={(e) => setOccupation(e.target.value)}
+                  className="block w-full max-w-full min-w-0 box-border rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
+                />
+                <p className="text-xs text-slate-500 mt-1.5">
+                  Free-text field: state your current job/role and organization or your current study year and student status.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Group 2 — Wing & Target Research Project */}
+          <div className="pt-2 border-t border-slate-100 flex flex-col gap-4 w-full">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+              2. Wing &amp; Target Research Project
+            </h2>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                Preferred Academic Wing <span className="text-rose-500">*</span>
+              </label>
+              <select
+                className="block w-full max-w-full min-w-0 box-border min-h-[44px] rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
+                value={selectedWingSlug}
+                onChange={(e) => setSelectedWingSlug(e.target.value)}
+                required
+              >
+                {wings.map((w) => (
+                  <option key={w.slug || w._id} value={w.slug}>
+                    {w.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                Target Research Program / Project <span className="text-rose-500">*</span>
+              </label>
+              {wingProjects.length > 0 ? (
+                <select
+                  className="block w-full max-w-full min-w-0 box-border min-h-[44px] rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
+                  value={selectedProjectTitle}
+                  onChange={(e) => setSelectedProjectTitle(e.target.value)}
+                  required
+                >
+                  {wingProjects.map((p) => (
+                    <option key={p._id || p.slug || p.title} value={p.title}>
+                      {p.title} ({p.category === 'future' ? 'Future Project' : 'Present / Ongoing Project'})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. Collaborative Environmental Research"
+                  value={selectedProjectTitle}
+                  onChange={(e) => setSelectedProjectTitle(e.target.value)}
+                  className="block w-full max-w-full min-w-0 box-border min-h-[44px] rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
+                />
+              )}
+              <p className="text-xs text-slate-500 mt-1.5">
+                Dynamically lists only Present and Future research initiatives under the selected Academic Wing.
+              </p>
+            </div>
+          </div>
+
+          {/* Group 3 — Qualifications & Custom PDF CV Dropzone */}
+          <div className="pt-2 border-t border-slate-100 flex flex-col gap-4 w-full">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+              3. Qualifications &amp; CV Upload
+            </h2>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                Relevant Skills &amp; Technical Toolset <span className="text-rose-500">*</span>
+              </label>
+              <input
+                required
+                type="text"
+                placeholder="e.g. Python, ROS, MATLAB, QGIS, Remote Sensing, Machine Learning, Laboratory Techniques"
+                value={skills}
+                onChange={(e) => setSkills(e.target.value)}
+                className="block w-full max-w-full min-w-0 box-border min-h-[44px] rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                Statement of Interest &amp; Motivation <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                required
+                rows={4}
+                placeholder="Briefly describe why you want to collaborate on this research project and how your skills contribute..."
+                value={statement}
+                onChange={(e) => setStatement(e.target.value)}
+                className="block w-full max-w-full min-w-0 box-border min-h-[120px] rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 leading-relaxed resize-y"
+              />
+            </div>
+
+            {/* Responsive PDF CV Upload Dropzone */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                Curriculum Vitae (PDF Upload) <span className="text-rose-500">*</span>
+              </label>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                id="pdf-upload"
+                accept=".pdf,application/pdf"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+
+              {!pdfFile ? (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`w-full rounded-xl border-2 border-dashed ${
+                    isDragging
+                      ? 'border-teal-600 bg-teal-50/60'
+                      : 'border-slate-300 hover:border-teal-600 bg-slate-50/70'
+                  } p-5 sm:p-7 text-center cursor-pointer transition box-border flex flex-col items-center justify-center gap-2`}
+                >
+                  <div className="w-12 h-12 rounded-full bg-teal-50 border border-teal-200/80 flex items-center justify-center text-teal-700">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-bold text-slate-800 block">
+                      Click to upload your CV (.pdf)
+                    </span>
+                    <span className="text-xs text-slate-500 mt-0.5 block">
+                      or drag and drop your file here
+                    </span>
+                  </div>
+                  <span className="text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full mt-1">
+                    PDF format only • Max 8MB
+                  </span>
+                </div>
+              ) : (
+                <div className="w-full rounded-xl border border-teal-200 bg-teal-50/60 p-4 box-border flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-teal-100/80 text-teal-800 flex items-center justify-center shrink-0">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-900 truncate">
+                        {pdfFile.name}
+                      </p>
+                      <p className="text-xs text-teal-700 font-medium">
+                        {(pdfFile.size / 1024).toFixed(1)} KB • Ready for submission
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveFile}
+                    className="shrink-0 text-xs font-semibold text-rose-600 hover:text-rose-800 px-3 py-1.5 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 transition-colors flex items-center gap-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Change / Remove
+                  </button>
+                </div>
+              )}
+
+              {pdfError && (
+                <p className="text-xs text-rose-600 mt-2 font-medium flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5" /> {pdfError}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Fee-Free Notice & Responsive Submit Button */}
+          <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-slate-600 font-medium text-center sm:text-left leading-relaxed">
+              Joining as a Research Mate is <strong>100% free across all stages</strong> — no payment is required.
+            </p>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full sm:w-auto min-h-[46px] px-7 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Submitting Application…
+                </>
+              ) : (
+                <>
+                  Submit Research Application
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </main>
   );
 }

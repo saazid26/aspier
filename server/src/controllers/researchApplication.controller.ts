@@ -462,6 +462,54 @@ export async function approveStage1ResearchApplication(req: AuthRequest, res: Re
   }
 }
 
+export async function rejectResearchApplication(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const id = String(req.params.id || '');
+    let application: any = null;
+
+    if (mongoose.connection.readyState === 1) {
+      application = await ResearchApplication.findById(id).catch(() => null);
+    }
+    if (!application) {
+      application = getFallbackResearchApplications().find((a) => String(a._id) === id || a.id === id || a.applicationId === id);
+    }
+    if (!application) throw new HttpError(404, 'Research application not found');
+
+    application.status = 'rejected';
+    application.reviewedBy = req.user?._id;
+    application.reviewedAt = new Date();
+
+    if (typeof application.save === 'function') {
+      await application.save().catch(() => {});
+    }
+
+    try {
+      await AuditLog.create({
+        actorId: req.user?._id,
+        action: 'reject-research-application',
+        resource: 'ResearchApplication',
+        resourceId: application.id || application._id,
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+    } catch {
+      // ignore
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: application._id || application.id,
+        status: 'rejected',
+        message: 'Research application has been rejected.'
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+
 export async function confirmResearchPayment(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const id = String(req.params.id || '');
