@@ -13,6 +13,7 @@ import { createTotpSecret, verifyTotp } from '../services/totp.service.js';
 import { env, FIXED_ADMIN_EMAIL } from '../config/env.js';
 import { notifyAdmins } from '../services/notification.service.js';
 import { sendEmail } from '../services/email.service.js';
+import { saveMedia } from '../services/media.service.js';
 import { beginWebAuthnLogin } from './webauthn.controller.js';
 
 function makeBackupCodes() {
@@ -497,4 +498,135 @@ export async function updateAdminCredentials(req: AuthRequest, res: Response, ne
     res.json({ success: true, message: 'Administrator credentials updated successfully', data: { email: user.email, name: user.name } });
   } catch (error) { next(error); }
 }
-export async function me(req: AuthRequest, res: Response): Promise<void> { res.json({ success: true, data: req.user }); }
+export async function me(req: AuthRequest, res: Response): Promise<void> {
+  if (req.user && req.user._id) {
+    const freshUser = await User.findById(req.user._id);
+    if (freshUser) {
+      res.json({
+        success: true,
+        data: {
+          _id: freshUser._id,
+          id: freshUser._id,
+          name: freshUser.name,
+          fullName: freshUser.name,
+          email: freshUser.email,
+          role: freshUser.role,
+          avatar: freshUser.avatar || '',
+          avatarUrl: freshUser.avatarUrl || freshUser.avatar || '',
+          phone: freshUser.phone || '',
+          university: freshUser.university || '',
+          department: freshUser.department || '',
+          academicLevel: freshUser.academicLevel || '',
+          studentId: freshUser.studentId || '',
+          city: freshUser.city || '',
+          bio: freshUser.bio || '',
+          isActive: freshUser.isActive,
+          createdAt: (freshUser as any).createdAt,
+          updatedAt: (freshUser as any).updatedAt
+        }
+      });
+      return;
+    }
+  }
+  res.json({ success: true, data: req.user });
+}
+
+export async function updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const {
+      name, fullName, email: rawEmail, avatarUrl, avatar,
+      phone, university, institution, department,
+      academicLevel, session, studentId, rollNumber, city, bio
+    } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user) throw new HttpError(404, 'User not found');
+
+    const updatedName = (fullName || name || '').trim();
+    if (updatedName) {
+      user.name = updatedName;
+    }
+
+    if (rawEmail) {
+      const normalizedEmail = String(rawEmail).trim().toLowerCase();
+      if (normalizedEmail !== user.email) {
+        const existing = await User.findOne({ email: normalizedEmail, _id: { $ne: user._id } });
+        if (existing) {
+          throw new HttpError(409, 'Email is already in use by another account');
+        }
+        if (['admin', 'superadmin'].includes(user.role)) {
+          throw new HttpError(403, 'Administrator email cannot be changed through profile settings');
+        }
+        user.email = normalizedEmail;
+      }
+    }
+
+    const pic = avatarUrl !== undefined ? avatarUrl : avatar;
+    if (pic !== undefined) {
+      user.avatar = pic;
+      user.avatarUrl = pic;
+    }
+
+    if (phone !== undefined) user.phone = phone.trim();
+    const univ = (university !== undefined ? university : institution) || '';
+    if (univ !== undefined) user.university = univ.trim();
+    if (department !== undefined) user.department = department.trim();
+    const level = (academicLevel !== undefined ? academicLevel : session) || '';
+    if (level !== undefined) user.academicLevel = level.trim();
+    const roll = (studentId !== undefined ? studentId : rollNumber) || '';
+    if (roll !== undefined) user.studentId = roll.trim();
+    if (city !== undefined) user.city = city.trim();
+    if (bio !== undefined) user.bio = bio.trim();
+
+    await user.save();
+
+    const sanitizedUser = {
+      _id: user._id,
+      id: user._id,
+      name: user.name,
+      fullName: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar || '',
+      avatarUrl: user.avatarUrl || user.avatar || '',
+      phone: user.phone || '',
+      university: user.university || '',
+      department: user.department || '',
+      academicLevel: user.academicLevel || '',
+      studentId: user.studentId || '',
+      city: user.city || '',
+      bio: user.bio || '',
+      isActive: user.isActive,
+      createdAt: (user as any).createdAt,
+      updatedAt: (user as any).updatedAt
+    };
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: sanitizedUser
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadAvatar(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    if (!req.file) throw new HttpError(400, 'Profile image file is required');
+    const media = await saveMedia(req.file, String(req.user._id));
+    const user = await User.findById(req.user._id);
+    if (user) {
+      user.avatar = media.url;
+      user.avatarUrl = media.url;
+      await user.save();
+    }
+    res.status(201).json({
+      success: true,
+      message: 'Profile photo uploaded successfully',
+      data: { url: media.url, avatarUrl: media.url }
+    });
+  } catch (error) {
+    next(error);
+  }
+}

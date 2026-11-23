@@ -1,14 +1,27 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { register, login, logout, refresh, forgotPassword, resetPassword, changePassword, setup2FA, verify2FA, disable2FA, activeSessions, revokeSession, revokeAllOtherSessions, updateAdminCredentials, me, admin2FASetup, completeAdmin2FALogin, admin2FAStatus, setupAdminPanel2FA, verifyAdminPanel2FA, disableAdminPanel2FA } from '../controllers/auth.controller.js';
+import multer from 'multer';
+import { updateProfileSchema } from '@aspier/shared';
+import { register, login, logout, refresh, forgotPassword, resetPassword, changePassword, setup2FA, verify2FA, disable2FA, activeSessions, revokeSession, revokeAllOtherSessions, updateAdminCredentials, me, admin2FASetup, completeAdmin2FALogin, admin2FAStatus, setupAdminPanel2FA, verifyAdminPanel2FA, disableAdminPanel2FA, updateProfile, uploadAvatar } from '../controllers/auth.controller.js';
 import { listMemberNotifications, markMemberNotificationRead, markAllMemberNotificationsRead } from '../controllers/notification.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { authLimiter, forgotLimiter, slowAuth } from '../middleware/rateLimit.js';
 import { csrfToken } from '../middleware/csrf.js';
 import { noStore } from '../middleware/noStore.js';
+import { HttpError } from '../middleware/error.js';
 import { verifyWebAuthnLogin, verifyWebAuthnRegistration, webAuthnRegistrationOptions, listWebAuthnCredentials, revokeWebAuthnCredential } from '../controllers/webauthn.controller.js';
 const router = Router();
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!/^image\/(png|jpe?g|webp)$/i.test(file.mimetype)) {
+      return cb(new HttpError(400, 'Only PNG, JPEG, or WebP images are permitted'));
+    }
+    cb(null, true);
+  }
+});
 const strongPassword = z.string().min(8).max(128)
   .regex(/[a-z]/, 'Use at least one lowercase letter')
   .regex(/[A-Z]/, 'Use at least one uppercase letter')
@@ -51,4 +64,8 @@ router.get('/sessions', authenticate, noStore, activeSessions);
 router.post('/sessions/revoke-all', authenticate, noStore, revokeAllOtherSessions);
 router.delete('/sessions/:hash', authenticate, noStore, revokeSession);
 router.get('/me', authenticate, noStore, me);
+router.patch('/profile', authenticate, noStore, validate(updateProfileSchema), updateProfile);
+router.put('/profile', authenticate, noStore, validate(updateProfileSchema), updateProfile);
+router.post('/profile/avatar', authenticate, noStore, avatarUpload.single('file'), uploadAvatar);
+router.post('/avatar', authenticate, noStore, avatarUpload.single('file'), uploadAvatar);
 export default router;
