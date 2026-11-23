@@ -375,12 +375,17 @@ export function ResearchMateApply() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 border-t border-slate-100">
-            <Link
-              to="/check-application"
-              className="button button-primary inline-flex items-center justify-center gap-2 w-full sm:w-auto font-semibold px-6 py-2.5 rounded-xl"
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('aspier-open-check-application', {
+                  detail: { applicationId: submissionReceipt.applicationId }
+                }));
+              }}
+              className="button button-primary inline-flex items-center justify-center gap-2 w-full sm:w-auto font-semibold px-6 py-2.5 rounded-xl cursor-pointer"
             >
               Check Application Status <ArrowRight className="w-4 h-4" />
-            </Link>
+            </button>
             <Link
               to={selectedWingSlug ? `/wings/${selectedWingSlug}` : '/wings'}
               className="button button-secondary inline-flex items-center justify-center w-full sm:w-auto font-semibold px-5 py-2.5 rounded-xl"

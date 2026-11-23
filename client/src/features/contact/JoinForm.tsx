@@ -48,7 +48,17 @@ export function JoinForm() {
       <label>Application ID<Input readOnly value={receipt.applicationId}/></label>
       <label>Private access code<Input readOnly value={receipt.accessCode}/></label>
       <p className="muted">The access code is shown only once here. Store it safely.</p>
-      <Link className="button button-secondary" to="/join/portal">Open application portal</Link>
+      <button
+        type="button"
+        className="button button-secondary cursor-pointer"
+        onClick={() => {
+          window.dispatchEvent(new CustomEvent('aspier-open-check-application', {
+            detail: { applicationId: receipt.applicationId, accessCode: receipt.accessCode }
+          }));
+        }}
+      >
+        Open application portal
+      </button>
     </article>
   </main>;
 
@@ -72,6 +82,17 @@ export function JoinForm() {
       <label>Statement of interest (optional)<textarea className="textarea" rows={5} maxLength={3000} value={form.statement} onChange={(event) => setForm({ ...form, statement: event.target.value })}/></label>
       <Button disabled={busy}>{busy ? 'Submitting…' : 'Submit initial application'}</Button>
     </form>
-    <p className="muted" style={{ marginTop: 18 }}>Already applied? <Link to="/join/portal">Check your application and membership status</Link>.</p>
+    <p className="muted" style={{ marginTop: 18 }}>
+      Already applied?{' '}
+      <button
+        type="button"
+        className="text-teal-700 underline font-semibold cursor-pointer bg-transparent border-0 p-0 inline text-inherit"
+        onClick={() => {
+          window.dispatchEvent(new CustomEvent('aspier-open-check-application'));
+        }}
+      >
+        Check your application and membership status
+      </button>.
+    </p>
   </main>;
 }

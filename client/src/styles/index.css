@@ -232,6 +232,7 @@ body{min-width:0;overflow-x:clip}
 @media(max-width:767px){
   .notification-mobile-backdrop{display:block!important;position:fixed!important;inset:0!important;z-index:998!important;width:100vw!important;height:100vh!important;border:0!important;margin:0!important;padding:0!important;background:rgba(15,23,42,.48)!important;backdrop-filter:blur(2px)!important;-webkit-backdrop-filter:blur(2px)!important;cursor:pointer}
   .notification-popover,.notification-popover.notification-popover-mobile,.notification-popover.public-applicant-popover{position:fixed!important;z-index:999!important;top:64px!important;left:12px!important;right:12px!important;bottom:auto!important;width:calc(100vw - 24px)!important;max-width:440px!important;max-height:min(78vh,calc(100dvh - 80px))!important;margin:0 auto!important;border:1px solid rgba(20,143,131,.24)!important;border-radius:16px!important;overflow:hidden!important;box-sizing:border-box!important;box-shadow:0 24px 64px rgba(15,23,42,.28)!important;display:flex!important;flex-direction:column!important;background:#fff!important}
+  .notification-popover.public-applicant-popover.popover-expanded{max-width:540px!important;max-height:min(85dvh,calc(100dvh - 72px))!important}
   .notification-popover-head{padding:12px 14px!important}
   .notification-close-btn{width:40px!important;height:40px!important;min-width:40px!important}
   .notification-list{padding:10px!important;gap:8px!important}
@@ -247,7 +248,8 @@ body{min-width:0;overflow-x:clip}
   .notification-header-actions .notification-switch-button{min-width:0!important}
 }
 @media(min-width:768px){
-  .notification-popover.public-applicant-popover{position:absolute;z-index:90;inset:auto 0 auto auto;top:calc(100% + 10px);width:420px;max-height:78vh}
+  .notification-popover.public-applicant-popover{position:absolute;z-index:90;inset:auto 0 auto auto;top:calc(100% + 10px);width:420px;max-width:calc(100vw - 32px);max-height:min(85dvh,760px)}
+  .notification-popover.public-applicant-popover.popover-expanded{width:min(540px,calc(100vw - 32px))!important;max-width:540px!important;max-height:min(85dvh,800px)!important}
 }
 .notification-detail{margin-top:12px;padding:14px;border:1px solid rgba(20,143,131,.16);border-radius:12px;background:#f7fbf9;overflow-wrap:anywhere}
 .notification-detail p{line-height:1.55}

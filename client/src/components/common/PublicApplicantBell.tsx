@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
@@ -15,12 +15,22 @@ import {
   MessageSquare,
   ExternalLink,
   Sparkles,
-  Clock
+  Clock,
+  User,
+  GraduationCap,
+  Building,
+  Globe,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  MapPin,
+  Share2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api, getApiErrorMessage } from '../../lib/api';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
+import { ImageUploader } from '../forms/ImageUploader';
+import { TagInputField } from '../forms/TagInputField';
+import { staticWings } from '../../lib/staticData';
 
 type ApplicantNotice = {
   _id: string;
@@ -28,16 +38,35 @@ type ApplicantNotice = {
   body: string;
   createdAt: string;
   readAt?: string;
+  activationCode?: string;
 };
 
-type ApplicantData = {
-  notifications: ApplicantNotice[];
+type MemberPortalData = {
   applicationId: string;
   name: string;
   email: string;
-  role: 'supervisor' | 'youngScholar';
+  role: 'supervisor' | 'youngScholar' | string;
   wing: string;
   status: string;
+  designation?: string;
+  institution?: string;
+  educationalBackground?: string;
+  bio?: string;
+  researchDomains?: string[];
+  photo?: string;
+  googleScholar?: string;
+  researchGate?: string;
+  orcid?: string;
+  linkedin?: string;
+  website?: string;
+  github?: string;
+  twitter?: string;
+  presentAddress?: string;
+  permanentAddress?: string;
+  publishedProfileId?: string;
+  publishedProfileType?: string;
+  activationCode?: string;
+  notifications: ApplicantNotice[];
 };
 
 type ResearchMateData = {
@@ -67,13 +96,9 @@ type ResearchMateData = {
   createdAt: string;
 };
 
-type TotpSetup = { qrDataUrl: string; manualKey: string };
-type WingOption = { _id: string; name: string; isActive: boolean };
-type Mode = 'signup' | 'check';
-type LoginStep = 'credentials' | 'setup' | 'otp';
-type SignupForm = { name: string; email: string; phone: string; password: string; confirmPassword: string; role: 'supervisor' | 'youngScholar'; wing: string; institution: string; academicStatus: string };
+type WingOption = { slug: string; name: string };
+type Mode = 'check' | 'signup';
 
-const initialSignup: SignupForm = { name: '', email: '', phone: '', password: '', confirmPassword: '', role: 'youngScholar', wing: '', institution: '', academicStatus: '' };
 const formatElapsed = (seconds: number) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -85,31 +110,71 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
   const bellRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<Mode>('check');
-  const [signup, setSignup] = useState(initialSignup);
-  const [wings, setWings] = useState<WingOption[]>([]);
-  const [pendingAt, setPendingAt] = useState<number | null>(() => {
-    const saved = Number(sessionStorage.getItem('aspier-signup-pending-at'));
-    return Number.isFinite(saved) && saved > 0 ? saved : null;
-  });
-  const [now, setNow] = useState(Date.now());
+
+  // Input states always start completely empty (no hardcoded pre-filled values)
   const [applicationId, setApplicationId] = useState('');
   const [accessCode, setAccessCode] = useState('');
-  const [totpCode, setTotpCode] = useState('');
-  const [loginStep, setLoginStep] = useState<LoginStep>('credentials');
-  const [totpSetup, setTotpSetup] = useState<TotpSetup | null>(null);
-  const [data, setData] = useState<ApplicantData | null>(null);
+
+  // Access Code Recovery state
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [isRecovering, setIsRecovering] = useState(false);
+  const [recoverySuccess, setRecoverySuccess] = useState('');
+  const [recoveryError, setRecoveryError] = useState('');
+
+  // Verified Application Data
+  const [memberData, setMemberData] = useState<MemberPortalData | null>(null);
   const [researchMateData, setResearchMateData] = useState<ResearchMateData | null>(null);
+
+  // Stage 2 Official Profile state for Supervisors / Young Scholars
+  const [profile, setProfile] = useState({
+    name: '',
+    designation: '',
+    institution: '',
+    wing: '',
+    educationalBackground: '',
+    bio: '',
+    researchDomains: [] as string[],
+    photo: '',
+    googleScholar: '',
+    researchGate: '',
+    orcid: '',
+    linkedin: '',
+    website: '',
+    github: '',
+    twitter: '',
+    presentAddress: '',
+    permanentAddress: ''
+  });
+  const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
+  const [extraProfileOpen, setExtraProfileOpen] = useState(false);
+  const [wings, setWings] = useState<WingOption[]>(staticWings);
+
+  // Research Mate Stage 2 Payment state
   const [paymentMethod, setPaymentMethod] = useState<'bKash' | 'Nagad'>('bKash');
   const [senderPhone, setSenderPhone] = useState('');
   const [trxId, setTrxId] = useState('');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState('');
-  const [signupError, setSignupError] = useState('');
-  const [loginError, setLoginError] = useState('');
-  const unreadCount = data?.notifications.filter((notice) => !notice.readAt).length || 0;
+  const [copiedId, setCopiedId] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
 
+  // Notification accordion / selection
+  const [noticesOpen, setNoticesOpen] = useState(false);
+  const [selectedNotice, setSelectedNotice] = useState<ApplicantNotice | null>(null);
+
+  // General UI state
+  const [busy, setBusy] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [pendingAt, setPendingAt] = useState<number | null>(() => {
+    const saved = Number(sessionStorage.getItem('aspier-signup-pending-at'));
+    return Number.isFinite(saved) && saved > 0 ? saved : null;
+  });
+  const [now, setNow] = useState(Date.now());
+
+  const unreadCount = memberData?.notifications?.filter((n) => !n.readAt).length || 0;
+  const isExpanded = Boolean(memberData || researchMateData);
+
+  // Responsive listener
   useEffect(() => {
     const query = window.matchMedia('(max-width: 767px)');
     const update = () => setIsMobile(query.matches);
@@ -118,7 +183,7 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
     return () => query.removeEventListener('change', update);
   }, []);
 
-
+  // Outside click & escape handlers
   useEffect(() => {
     if (!open) return;
     const closeOutside = (event: MouseEvent | TouchEvent) => {
@@ -147,51 +212,242 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
     };
   }, [open, onOpenChange]);
 
+  // Timer & Wings fetch
   useEffect(() => {
     if (!open) return;
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     void api.get('/public/wings').then((response) => {
-      setWings((response.data.data as WingOption[]).filter((wing) => wing.isActive !== false));
-    }).catch(() => toast.error('Could not load Wings. Please try again.'));
+      if (Array.isArray(response.data.data) && response.data.data.length > 0) {
+        setWings(response.data.data);
+      }
+    }).catch(() => {
+      // keep staticWings
+    });
     return () => window.clearInterval(timer);
   }, [open]);
 
-  const submitSignup = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setSignupError('');
-    if (signup.password !== signup.confirmPassword) {
-      setSignupError('Passwords do not match.');
+  // URL search parameter check on mount/update (e.g. redirected from /join/portal or /check-application)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shouldCheck = params.get('checkApplication') === 'true' || params.get('check') === '1';
+    const urlId = params.get('id') || params.get('applicationId');
+    const urlCode = params.get('code') || params.get('accessCode');
+
+    if (shouldCheck || urlId) {
+      setOpen(true);
+      setMode('check');
+      if (urlId) setApplicationId(urlId);
+      if (urlCode) setAccessCode(urlCode);
+      onOpenChange?.(true);
+    }
+  }, [onOpenChange]);
+
+  // Listen for custom programmatic event
+  useEffect(() => {
+    const handleOpenCheck = (event?: any) => {
+      setOpen(true);
+      setMode('check');
+      if (event?.detail?.applicationId) {
+        setApplicationId(event.detail.applicationId);
+      }
+      if (event?.detail?.accessCode) {
+        setAccessCode(event.detail.accessCode);
+      }
+      onOpenChange?.(true);
+    };
+    window.addEventListener('aspier-open-check-application', handleOpenCheck);
+    return () => window.removeEventListener('aspier-open-check-application', handleOpenCheck);
+  }, [onOpenChange]);
+
+  // Copy helper
+  const copyText = async (text: string, type: 'id' | 'code' | 'number') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (type === 'id') {
+        setCopiedId(true);
+        toast.success('Application ID copied!');
+        setTimeout(() => setCopiedId(false), 2000);
+      } else if (type === 'code') {
+        setCopiedCode(true);
+        toast.success('Activation Code copied!');
+        setTimeout(() => setCopiedCode(false), 2000);
+      } else {
+        setCopiedNumber(true);
+        toast.success('Payment number copied!');
+        setTimeout(() => setCopiedNumber(false), 2000);
+      }
+    } catch {
+      toast.error('Could not copy to clipboard.');
+    }
+  };
+
+  // Reset / Check Another Application
+  const handleCheckAnother = () => {
+    setMemberData(null);
+    setResearchMateData(null);
+    setApplicationId('');
+    setAccessCode('');
+    setLoginError('');
+    setRecoverySuccess('');
+    setRecoveryError('');
+    setSenderPhone('');
+    setTrxId('');
+    setSelectedNotice(null);
+    setNoticesOpen(false);
+  };
+
+  // Check Application Status
+  const handleCheckStatus = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    setRecoverySuccess('');
+    setRecoveryError('');
+
+    const appId = applicationId.trim().toUpperCase();
+    const code = accessCode.trim();
+
+    if (!appId || !code) {
+      setLoginError('Please enter both Application ID and Private Access Code.');
       return;
     }
+
     setBusy(true);
+
+    const isLikelyResearchMate = appId.includes('RM');
+
+    if (isLikelyResearchMate) {
+      try {
+        const res = await api.post('/public/research-applications/lookup', {
+          applicationId: appId,
+          accessCode: code
+        });
+        setResearchMateData(res.data.data);
+        setMemberData(null);
+        toast.success('Research Mate application retrieved successfully.');
+        setBusy(false);
+        return;
+      } catch {
+        // Fallback to membership lookup below
+      }
+    }
+
     try {
-      const { confirmPassword: _confirmPassword, ...payload } = signup;
-      const response = await api.post('/public/membership/signup', payload);
-      const submittedAt = new Date(response.data.data.createdAt).getTime();
-      setPendingAt(submittedAt);
-      sessionStorage.setItem('aspier-signup-pending-at', String(submittedAt));
-      toast.success('Sign-up submitted for review.');
-    } catch (error: any) {
-      const message = getApiErrorMessage(error, 'Could not submit sign-up.');
-      setSignupError(message);
-      toast.error(message);
+      const res = await api.post('/public/membership/lookup', {
+        applicationId: appId,
+        accessCode: code
+      });
+      const d = res.data.data as MemberPortalData;
+      setMemberData(d);
+      setResearchMateData(null);
+      const defaultRoleTitle = d.role === 'youngScholar' ? 'Young Scholar' : 'Research Supervisor';
+      setProfile({
+        name: d.name || '',
+        designation: d.designation || defaultRoleTitle,
+        institution: d.institution || '',
+        wing: d.wing || '',
+        educationalBackground: d.educationalBackground || '',
+        bio: d.bio || '',
+        researchDomains: Array.isArray(d.researchDomains) ? d.researchDomains : [],
+        photo: d.photo || '',
+        googleScholar: d.googleScholar || '',
+        researchGate: d.researchGate || '',
+        orcid: d.orcid || '',
+        linkedin: d.linkedin || '',
+        website: d.website || '',
+        github: d.github || '',
+        twitter: d.twitter || '',
+        presentAddress: d.presentAddress || '',
+        permanentAddress: d.permanentAddress || ''
+      });
+      toast.success('Application retrieved successfully.');
+    } catch (err: any) {
+      // Second fallback: try research application lookup in case user has a non-standard ID
+      try {
+        const fallbackRes = await api.post('/public/research-applications/lookup', {
+          applicationId: appId,
+          accessCode: code
+        });
+        setResearchMateData(fallbackRes.data.data);
+        setMemberData(null);
+        toast.success('Research Mate application retrieved.');
+      } catch {
+        const msg = getApiErrorMessage(err, 'Could not find application. Please verify your Application ID and Private Access Code.');
+        setLoginError(msg);
+        toast.error(msg);
+      }
     } finally {
       setBusy(false);
     }
   };
 
-  const copyPaymentNumber = async () => {
-    const num = (paymentMethod === 'bKash' ? researchMateData?.bkashNumber : researchMateData?.nagadNumber) || '01603012448';
+  // Lost Access Code Recovery
+  const handleRequestRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoveryError('');
+    setRecoverySuccess('');
+
+    if (!recoveryEmail.trim()) {
+      setRecoveryError('Please enter the email address used on your application.');
+      return;
+    }
+
+    setIsRecovering(true);
     try {
-      await navigator.clipboard.writeText(num);
-      setCopiedNumber(true);
-      toast.success('Payment number copied to clipboard!');
-      setTimeout(() => setCopiedNumber(false), 2000);
-    } catch {
-      toast.error('Could not copy number.');
+      const res = await api.post('/public/membership/access-code', {
+        email: recoveryEmail.trim(),
+        applicationId: applicationId.trim()
+      });
+      setRecoverySuccess(res.data.message || 'If the application details match, an administrator will review your access recovery request.');
+      toast.success('Recovery request submitted.');
+    } catch (err: any) {
+      const msg = getApiErrorMessage(err, 'Could not submit recovery request.');
+      setRecoveryError(msg);
+      toast.error(msg);
+    } finally {
+      setIsRecovering(false);
     }
   };
 
+  // Submit Stage 2 Official Profile for Supervisors / Young Scholars
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!memberData) return;
+    if (!profile.photo) {
+      toast.error('Please upload your 1:1 circular profile picture.');
+      return;
+    }
+    if (!profile.researchDomains || profile.researchDomains.length === 0) {
+      toast.error('Please specify at least one research domain tag.');
+      return;
+    }
+    setIsSubmittingProfile(true);
+    try {
+      const res = await api.post(`/public/membership/${memberData.applicationId}/profile`, {
+        ...profile,
+        accessCode: accessCode.trim()
+      });
+      setMemberData({
+        ...memberData,
+        status: res.data.data.status,
+        photo: profile.photo,
+        designation: profile.designation,
+        institution: profile.institution,
+        wing: profile.wing,
+        educationalBackground: profile.educationalBackground,
+        bio: profile.bio,
+        researchDomains: profile.researchDomains,
+        publishedProfileId: res.data.data.profileId,
+        publishedProfileType: res.data.data.profileType
+      });
+      toast.success('Congratulations! Your official profile is now published to the Team page.');
+    } catch (err: any) {
+      toast.error(getApiErrorMessage(err, 'Could not submit official profile.'));
+    } finally {
+      setIsSubmittingProfile(false);
+    }
+  };
+
+  // Submit Research Mate Payment
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!researchMateData) return;
@@ -223,116 +479,437 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
     }
   };
 
-  const clearResearchMate = () => {
-    setResearchMateData(null);
-    setSenderPhone('');
-    setTrxId('');
-    setLoginError('');
-  };
-
-  const applicantLogin = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setLoginError('');
-    setBusy(true);
-
-    const appId = applicationId.trim().toUpperCase();
-    const code = accessCode.trim();
-
-    // Check if ID pattern is Research Mate (contains RM or begins with ASPIER-RM)
-    const isLikelyResearchMate = appId.includes('RM');
-
-    if (isLikelyResearchMate) {
-      try {
-        const response = await api.post('/public/research-applications/lookup', {
-          applicationId: appId,
-          accessCode: code
-        });
-        setResearchMateData(response.data.data);
-        setData(null);
-        setLoginError('');
-        toast.success('Research Mate application retrieved successfully.');
-        setBusy(false);
-        return;
-      } catch (err: any) {
-        const message = getApiErrorMessage(err, 'Could not find Research Mate application. Please verify your Application ID and Private Access Code.');
-        setLoginError(message);
-        toast.error(message);
-        setBusy(false);
-        return;
-      }
-    }
-
-    try {
-      const response = await api.post('/public/membership/applicant-login', {
-        applicationId: appId,
-        accessCode: code,
-        ...(loginStep !== 'credentials' && totpCode ? { totpCode } : {})
-      });
-      const result = response.data.data;
-      if (result.requiresSetup) {
-        setTotpSetup({ qrDataUrl: result.qrDataUrl, manualKey: result.manualKey });
-        setLoginStep('setup');
-        return;
-      }
-      if (result.requiresOtp) {
-        setLoginStep('otp');
-        return;
-      }
-      if (result.authenticated) {
-        setData(result as ApplicantData);
-        setResearchMateData(null);
-        setTotpSetup(null);
-        setLoginStep('credentials');
-        setTotpCode('');
-      }
-    } catch (error: any) {
-      // Fallback: If membership login failed, attempt research application lookup in case user has a custom ID
-      try {
-        const fallbackRes = await api.post('/public/research-applications/lookup', {
-          applicationId: appId,
-          accessCode: code
-        });
-        setResearchMateData(fallbackRes.data.data);
-        setData(null);
-        setLoginError('');
-        toast.success('Research Mate application retrieved.');
-        setBusy(false);
-        return;
-      } catch {
-        const message = getApiErrorMessage(error, 'Could not verify applicant credentials. Please check your Application ID and Private Access Code.');
-        setLoginError(message);
-        toast.error(message);
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
+  // Mark notification read
   const markRead = (id: string) => {
-    setData((current) => current ? {
-      ...current,
-      notifications: current.notifications.map((notice) => notice._id === id ? { ...notice, readAt: new Date().toISOString() } : notice)
-    } : current);
+    if (!memberData) return;
+    setMemberData({
+      ...memberData,
+      notifications: memberData.notifications.map((notice) =>
+        notice._id === id ? { ...notice, readAt: new Date().toISOString() } : notice
+      )
+    });
   };
 
-  const signOut = () => {
-    setData(null);
-    setResearchMateData(null);
-    setTotpSetup(null);
-    setTotpCode('');
-    setLoginStep('credentials');
-  };
-  const copyText = async (value: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(label);
-      toast.success('Copied!');
-      window.setTimeout(() => setCopied(''), 1600);
-    } catch {
-      toast.error('Could not copy.');
-    }
+  // =========================================================================
+  // VIEW: SUPERVISOR & YOUNG SCHOLAR POST-VERIFICATION RESULTS
+  // =========================================================================
+  const renderMemberView = () => {
+    if (!memberData) return null;
+    const isSupervisor = memberData.role !== 'youngScholar';
+    const roleTitle = isSupervisor ? 'Supervisor' : 'Young Scholar';
+    const isApprovedAwaitingProfile = memberData.status === 'membership_pending';
+    const isPendingReview = memberData.status === 'initial_pending';
+    const isPublished = ['completed', 'published', 'active_member'].includes(memberData.status);
+
+    return (
+      <div className="space-y-4">
+        {/* Back navigation button */}
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <button
+            type="button"
+            onClick={handleCheckAnother}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+          >
+            ← Check another application
+          </button>
+          <span className="badge badge-green text-[11px] font-bold uppercase tracking-wider">
+            {roleTitle}
+          </span>
+        </div>
+
+        {/* Applicant Header Card */}
+        <div className="p-3.5 bg-teal-50/90 border border-teal-200 rounded-xl space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="text-sm font-bold text-slate-900 leading-snug">{memberData.name}</h4>
+            <div className="flex items-center gap-1">
+              <span className="font-mono text-[11px] font-bold text-teal-900 bg-white px-2 py-0.5 rounded border border-teal-200">
+                {memberData.applicationId}
+              </span>
+              <button
+                type="button"
+                onClick={() => copyText(memberData.applicationId, 'id')}
+                className="p-1 text-teal-700 hover:text-teal-900 bg-white border border-teal-200 rounded hover:bg-teal-50 cursor-pointer"
+                title="Copy Application ID"
+              >
+                {copiedId ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+              </button>
+            </div>
+          </div>
+          <p className="text-xs text-slate-600">
+            <strong>Wing:</strong> {memberData.wing || 'ASPIER Institute'} · <span className="font-mono">{memberData.email}</span>
+          </p>
+          <div className="flex items-center justify-between pt-1 text-[11px]">
+            <span className="text-slate-500">Status:</span>
+            <span className="font-bold text-teal-900 uppercase">{memberData.status.replaceAll('_', ' ')}</span>
+          </div>
+        </div>
+
+        {/* STATUS 1: STAGE 1 REVIEW PENDING */}
+        {isPendingReview && (
+          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold text-amber-900">
+              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Stage 1 Review in Progress</span>
+            </div>
+            <p className="leading-relaxed text-amber-800">
+              Your initial application to join ASPIER as a {roleTitle} is under faculty evaluation by the academic wing committee.
+            </p>
+            <p className="text-[11px] font-semibold text-amber-900">
+              Joining ASPIER is <strong>100% free across all stages</strong>. Once approved, complete your official profile here to appear on the Team page.
+            </p>
+          </div>
+        )}
+
+        {/* STATUS 2: STAGE 1 APPROVED -> COMPLETE STAGE 2 OFFICIAL PROFILE */}
+        {isApprovedAwaitingProfile && (
+          <div className="space-y-3.5">
+            {/* Approval Banner */}
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Congratulations — your {roleTitle} application is approved!</span>
+              </div>
+              <p className="leading-relaxed text-emerald-800">
+                Joining ASPIER is <strong>100% free across all stages</strong> — there are zero fees or payment gateways. Please complete your official academic profile below to auto-publish your profile to the public Team page.
+              </p>
+            </div>
+
+            {/* Stage 2 Official Profile Form */}
+            <form onSubmit={handleProfileSubmit} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
+              <div className="border-b border-slate-200 pb-2">
+                <h5 className="text-xs font-bold uppercase tracking-wider text-teal-900 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-teal-700" />
+                  Stage 2: Official Academic Profile
+                </h5>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Your submitted details will be immediately published to the public ASPIER Team page.
+                </p>
+              </div>
+
+              {/* 1. Identity & Role */}
+              <div className="space-y-2.5">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Full Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    value={profile.name}
+                    onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                    className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Academic / Professional Role Title <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    placeholder={isSupervisor ? 'e.g. Assistant Professor, Dept. of CSE' : 'e.g. Young Scholar — Hydrology & Climate'}
+                    value={profile.designation}
+                    onChange={(e) => setProfile({ ...profile, designation: e.target.value })}
+                    className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Institution / University / Affiliation <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="e.g. University of Rajshahi / BUET / MIT"
+                    value={profile.institution}
+                    onChange={(e) => setProfile({ ...profile, institution: e.target.value })}
+                    className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Assigned Academic Wing <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={profile.wing}
+                    onChange={(e) => setProfile({ ...profile, wing: e.target.value })}
+                    className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
+                  >
+                    <option value="">Select Wing</option>
+                    {wings.map((w) => (
+                      <option key={w.slug} value={w.slug}>
+                        {w.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Educational Background <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="e.g. Ph.D. in Aeronautical Engineering or B.Sc. in Physics"
+                    value={profile.educationalBackground}
+                    onChange={(e) => setProfile({ ...profile, educationalBackground: e.target.value })}
+                    className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
+                  />
+                </div>
+              </div>
+
+              {/* 2. 1:1 Circular Profile Photo */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-200">
+                <label className="text-[11px] font-bold text-slate-800 block">
+                  Profile Photo (1:1 Circular Portrait) <span className="text-rose-500">*</span>
+                </label>
+                <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
+                  <ImageUploader
+                    value={profile.photo}
+                    onUploaded={(url) => setProfile({ ...profile, photo: url })}
+                    shape="circle"
+                    maxSizeMB={2}
+                    endpoint={`/public/membership/${memberData.applicationId}/photo`}
+                    headers={{ 'x-application-code': accessCode.trim() }}
+                    helperText="500 × 500 px • 1:1 Circular portrait • Max 2MB"
+                  />
+                </div>
+              </div>
+
+              {/* 3. Professional Bio */}
+              <div className="space-y-1 pt-2 border-t border-slate-200">
+                <label className="text-[11px] font-bold text-slate-800 block">
+                  Professional Bio / Research Summary <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="3-4 sentence summary of your research domain, background, and academic focus..."
+                  value={profile.bio}
+                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                  className="w-full p-2.5 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
+                />
+              </div>
+
+              {/* 4. Research Domains (Tags) */}
+              <div className="space-y-1 pt-2 border-t border-slate-200">
+                <label className="text-[11px] font-bold text-slate-800 block">
+                  Academic Focus / Research Domains <span className="text-rose-500">*</span>
+                </label>
+                <TagInputField
+                  value={profile.researchDomains}
+                  onChange={(tags) => setProfile({ ...profile, researchDomains: tags })}
+                  placeholder="Type tags separated by commas (e.g. Remote Sensing, Hydrology, Climate Risk)"
+                  className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white box-border"
+                />
+              </div>
+
+              {/* 5. Optional External Profiles Toggle */}
+              <div className="pt-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setExtraProfileOpen(!extraProfileOpen)}
+                  className="flex items-center justify-between w-full text-xs font-semibold text-slate-700 hover:text-teal-800 py-1 cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Share2 className="w-3.5 h-3.5 text-slate-500" />
+                    Academic Profiles &amp; Addresses (Optional)
+                  </span>
+                  {extraProfileOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+
+                {extraProfileOpen && (
+                  <div className="space-y-2 pt-2.5">
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Google Scholar URL</label>
+                      <input
+                        type="url"
+                        placeholder="https://scholar.google.com/citations?user=..."
+                        value={profile.googleScholar}
+                        onChange={(e) => setProfile({ ...profile, googleScholar: e.target.value })}
+                        className="w-full min-h-[38px] px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">ResearchGate URL</label>
+                      <input
+                        type="url"
+                        placeholder="https://www.researchgate.net/profile/..."
+                        value={profile.researchGate}
+                        onChange={(e) => setProfile({ ...profile, researchGate: e.target.value })}
+                        className="w-full min-h-[38px] px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">ORCID ID</label>
+                      <input
+                        type="text"
+                        placeholder="0000-0002-1825-0097"
+                        value={profile.orcid}
+                        onChange={(e) => setProfile({ ...profile, orcid: e.target.value })}
+                        className="w-full min-h-[38px] px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">LinkedIn Profile</label>
+                      <input
+                        type="url"
+                        placeholder="https://linkedin.com/in/..."
+                        value={profile.linkedin}
+                        onChange={(e) => setProfile({ ...profile, linkedin: e.target.value })}
+                        className="w-full min-h-[38px] px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Personal Website</label>
+                      <input
+                        type="url"
+                        placeholder="https://yourdomain.edu"
+                        value={profile.website}
+                        onChange={(e) => setProfile({ ...profile, website: e.target.value })}
+                        className="w-full min-h-[38px] px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Present Address</label>
+                      <input
+                        type="text"
+                        placeholder="City, Country"
+                        value={profile.presentAddress}
+                        onChange={(e) => setProfile({ ...profile, presentAddress: e.target.value })}
+                        className="w-full min-h-[38px] px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Profile Button */}
+              <button
+                type="submit"
+                disabled={isSubmittingProfile}
+                className="w-full min-h-[46px] rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-sm text-xs sm:text-sm transition-all disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                {isSubmittingProfile ? 'Submitting & Publishing Profile…' : 'Submit Official Profile & Publish to Team Page →'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* STATUS 3: COMPLETED / PUBLISHED / ACTIVE MEMBER */}
+        {isPublished && (
+          <div className="space-y-3.5">
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2 text-xs text-emerald-950">
+              <div className="flex items-center gap-2 font-bold text-emerald-900 text-sm">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>Official Profile Published!</span>
+              </div>
+              <p className="leading-relaxed text-emerald-800">
+                Your official {roleTitle} profile has been published to the public ASPIER Team page. Joining ASPIER is completely fee-free.
+              </p>
+              <div className="pt-1">
+                <Link
+                  to="/team"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex items-center justify-center gap-1.5 w-full min-h-[40px] px-4 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs transition-colors"
+                >
+                  <span>View Live Profile on Team Page →</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Secret Activation Code for Account Creation */}
+            {memberData.activationCode && (
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800">Secret Account Activation Code:</span>
+                  <button
+                    type="button"
+                    onClick={() => copyText(memberData.activationCode!, 'code')}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-700 hover:text-teal-900 bg-white border border-slate-300 px-2 py-0.5 rounded cursor-pointer"
+                  >
+                    {copiedCode ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                    {copiedCode ? 'Copied' : 'Copy Code'}
+                  </button>
+                </div>
+                <code className="block p-2 bg-white rounded-lg border border-slate-200 font-mono text-xs text-slate-900 break-all">
+                  {memberData.activationCode}
+                </code>
+                <p className="text-[11px] text-slate-500">
+                  Use this one-time code to activate your login account.
+                </p>
+                <Link
+                  to="/login"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex items-center justify-center gap-1.5 w-full min-h-[40px] px-4 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs transition-colors"
+                >
+                  <span>Activate Account &amp; Log In →</span>
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Member Notifications Center Accordion */}
+        {memberData.notifications && memberData.notifications.length > 0 && (
+          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+            <button
+              type="button"
+              onClick={() => setNoticesOpen(!noticesOpen)}
+              className="w-full p-3 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-xs font-semibold text-slate-700 cursor-pointer"
+            >
+              <span className="flex items-center gap-1.5">
+                <Bell className="w-3.5 h-3.5 text-teal-700" />
+                Administrative Notices ({memberData.notifications.length})
+                {unreadCount > 0 && (
+                  <span className="ml-1 px-1.5 py-0.2 bg-rose-500 text-white text-[10px] font-bold rounded-full">
+                    {unreadCount} new
+                  </span>
+                )}
+              </span>
+              {noticesOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {noticesOpen && (
+              <div className="p-3 space-y-2 border-t border-slate-200 max-h-56 overflow-y-auto">
+                {memberData.notifications.map((n) => (
+                  <div
+                    key={n._id}
+                    onClick={() => markRead(n._id)}
+                    className={`p-2.5 rounded-lg border text-xs cursor-pointer transition-colors ${
+                      n.readAt ? 'bg-slate-50/60 border-slate-200' : 'bg-teal-50/60 border-teal-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <strong className="text-slate-900 font-semibold">{n.title}</strong>
+                      <span className="text-[10px] text-slate-400">{new Date(n.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">{n.body}</p>
+                    {n.activationCode && (
+                      <div className="mt-1.5 p-1.5 bg-white rounded border border-slate-200 font-mono text-[11px] text-slate-900 break-all">
+                        Activation Code: <strong>{n.activationCode}</strong>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
+  // =========================================================================
+  // VIEW: RESEARCH MATE POST-VERIFICATION RESULTS
+  // =========================================================================
   const renderResearchMateView = () => {
     if (!researchMateData) return null;
     const isStage1Approved = researchMateData.status === 'stage1_approved';
@@ -344,19 +921,39 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
     const officialNumber = (paymentMethod === 'bKash' ? researchMateData.bkashNumber : researchMateData.nagadNumber) || '01603012448';
 
     return (
-      <div className="p-4 space-y-3.5 overflow-y-auto" style={{ maxHeight: isMobile ? 'calc(78vh - 60px)' : '480px' }}>
+      <div className="space-y-4">
+        {/* Back navigation button */}
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <button
+            type="button"
+            onClick={handleCheckAnother}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+          >
+            ← Check another application
+          </button>
+          <span className="badge badge-green text-[11px] font-bold uppercase tracking-wider">
+            Research Mate
+          </span>
+        </div>
+
         {/* Header Summary Card */}
-        <div className="p-3 bg-teal-50/90 border border-teal-200 rounded-xl space-y-1">
+        <div className="p-3.5 bg-teal-50/90 border border-teal-200 rounded-xl space-y-1.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1 text-teal-800 font-bold text-xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
-              Research Mate Application
-            </span>
-            <span className="font-mono text-[11px] font-bold text-teal-900 bg-white px-2 py-0.5 rounded border border-teal-200">
-              {researchMateData.applicationId}
-            </span>
+            <h4 className="text-sm font-bold text-slate-900">{researchMateData.name}</h4>
+            <div className="flex items-center gap-1">
+              <span className="font-mono text-[11px] font-bold text-teal-900 bg-white px-2 py-0.5 rounded border border-teal-200">
+                {researchMateData.applicationId}
+              </span>
+              <button
+                type="button"
+                onClick={() => copyText(researchMateData.applicationId, 'id')}
+                className="p-1 text-teal-700 hover:text-teal-900 bg-white border border-teal-200 rounded hover:bg-teal-50 cursor-pointer"
+                title="Copy Application ID"
+              >
+                {copiedId ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+              </button>
+            </div>
           </div>
-          <h4 className="text-sm font-bold text-slate-900">{researchMateData.name}</h4>
           <p className="text-xs text-slate-600 leading-snug">
             <strong>Project:</strong> {researchMateData.researchTitle}
           </p>
@@ -365,36 +962,36 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
           </p>
         </div>
 
-        {/* STATUS: PENDING */}
+        {/* STATUS: PENDING STAGE 1 REVIEW */}
         {isPending && (
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
-            <div className="flex items-center gap-1.5 font-bold text-amber-950">
+          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold text-amber-900">
               <Clock className="w-4 h-4 text-amber-600 shrink-0" />
               <span>Stage 1: Under Faculty Review</span>
             </div>
-            <p className="leading-relaxed">
-              Your application is being evaluated by the academic wing committee. Once approved, you will be notified to complete Stage 2 verification.
+            <p className="leading-relaxed text-amber-800">
+              Your application is being evaluated by the academic wing committee. Stage 1 is completely free. Once approved, you will be notified to complete Stage 2 verification.
             </p>
           </div>
         )}
 
         {/* STATUS: STAGE 1 APPROVED (Awaiting BDT 1,000 Payment) */}
         {isStage1Approved && (
-          <div className="space-y-3">
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
-              <div className="flex items-center gap-1.5 font-bold text-blue-950 mb-1">
+          <div className="space-y-3.5">
+            <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-950">
+              <div className="flex items-center gap-1.5 font-bold text-blue-900 mb-1">
                 <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>Stage 1 Approved — Ready for Onboarding</span>
               </div>
-              <p className="leading-relaxed">
+              <p className="leading-relaxed text-blue-800">
                 Congratulations! You are accepted to collaborate on <strong>{researchMateData.researchTitle}</strong>. Complete Stage 2 project verification below:
               </p>
             </div>
 
             {/* BDT 1,000 Payment Card */}
-            <form onSubmit={handlePaymentSubmit} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+            <form onSubmit={handlePaymentSubmit} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3.5">
               <div className="flex items-center justify-between">
-                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1">
+                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                   <CreditCard className="w-3.5 h-3.5 text-teal-700" />
                   Stage 2: Project Fee (BDT 1,000)
                 </h5>
@@ -410,9 +1007,9 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('bKash')}
-                    className={`py-1.5 px-3 rounded-lg text-xs font-bold border transition-colors ${
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
                       paymentMethod === 'bKash'
-                        ? 'bg-[#D12053] text-white border-[#D12053]'
+                        ? 'bg-[#D12053] text-white border-[#D12053] shadow-sm'
                         : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
                     }`}
                   >
@@ -421,9 +1018,9 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('Nagad')}
-                    className={`py-1.5 px-3 rounded-lg text-xs font-bold border transition-colors ${
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
                       paymentMethod === 'Nagad'
-                        ? 'bg-[#F7941D] text-white border-[#F7941D]'
+                        ? 'bg-[#F7941D] text-white border-[#F7941D] shadow-sm'
                         : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
                     }`}
                   >
@@ -433,15 +1030,15 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
               </div>
 
               {/* Official Number with Copy Button */}
-              <div className="p-2.5 bg-white border border-slate-200 rounded-lg text-xs flex items-center justify-between gap-2">
+              <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs flex items-center justify-between gap-2">
                 <div>
                   <span className="text-[10px] text-slate-500 block uppercase font-bold">{paymentMethod} Personal Number</span>
                   <strong className="font-mono text-sm text-slate-900 tracking-wide">{officialNumber}</strong>
                 </div>
                 <button
                   type="button"
-                  onClick={copyPaymentNumber}
-                  className={`shrink-0 flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded border transition-colors ${
+                  onClick={() => copyText(officialNumber, 'number')}
+                  className={`shrink-0 flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors cursor-pointer ${
                     copiedNumber ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
                   }`}
                 >
@@ -451,70 +1048,71 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
               </div>
 
               {/* Sender Phone & TrxID */}
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div>
                   <label className="text-[11px] font-semibold text-slate-700 block mb-1">
                     Sender Phone Number <span className="text-rose-500">*</span>
                   </label>
-                  <Input
+                  <input
                     required
                     type="tel"
                     placeholder="e.g. 01711223344"
                     value={senderPhone}
                     onChange={(e) => setSenderPhone(e.target.value)}
-                    className="text-xs bg-white"
+                    className="w-full min-h-[42px] px-3.5 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
                   />
                 </div>
                 <div>
                   <label className="text-[11px] font-semibold text-slate-700 block mb-1">
                     Transaction ID (TrxID) <span className="text-rose-500">*</span>
                   </label>
-                  <Input
+                  <input
                     required
+                    type="text"
                     placeholder="e.g. BL9A8BC1X7"
                     value={trxId}
                     onChange={(e) => setTrxId(e.target.value.toUpperCase())}
-                    className="font-mono text-xs bg-white uppercase"
+                    className="w-full min-h-[42px] px-3.5 py-2 font-mono text-base sm:text-xs bg-white uppercase rounded-xl border border-slate-300 placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
                   />
                 </div>
               </div>
 
-              <Button
+              <button
                 type="submit"
                 disabled={isSubmittingPayment}
-                className="w-full min-h-[44px] bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5"
+                className="w-full min-h-[44px] bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all disabled:opacity-50"
               >
                 {isSubmittingPayment ? 'Submitting Payment…' : 'Submit Payment Details'}
-              </Button>
+              </button>
             </form>
           </div>
         )}
 
         {/* STATUS: PAYMENT SUBMITTED (Verification Pending) */}
         {isPaymentSubmitted && (
-          <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-xl space-y-2 text-xs text-purple-950">
-            <div className="flex items-center gap-1.5 font-bold text-purple-900">
+          <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-2.5 text-xs text-purple-950">
+            <div className="flex items-center gap-1.5 font-bold text-purple-900 text-sm">
               <CreditCard className="w-4 h-4 text-purple-700 shrink-0" />
               <span>Payment Submitted — Verification Pending</span>
             </div>
             <p className="leading-relaxed text-purple-900">
-              Your BDT 1,000 payment details have been submitted.
+              Your BDT 1,000 onboarding payment details have been submitted. An administrator is currently verifying your transaction.
             </p>
-            <div className="bg-white p-2.5 rounded-lg border border-purple-200 space-y-1 font-mono text-[11px]">
+            <div className="bg-white p-3 rounded-lg border border-purple-200 space-y-1 font-mono text-[11px]">
               <div><span className="text-slate-500 font-sans">Method:</span> <strong>{researchMateData.paymentMethod || paymentMethod}</strong></div>
               <div><span className="text-slate-500 font-sans">Sender:</span> <strong>{researchMateData.paymentSenderPhone || senderPhone || '—'}</strong></div>
               <div><span className="text-slate-500 font-sans">TrxID:</span> <strong className="text-purple-800">{researchMateData.trxId || trxId}</strong></div>
             </div>
             <p className="text-[11px] text-purple-800">
-              Once an administrator verifies your transaction, your official WhatsApp Group link will appear here.
+              Once verified, your official WhatsApp Group link will appear here.
             </p>
           </div>
         )}
 
         {/* STATUS: APPROVED (Final Approved with WhatsApp Link) */}
         {isApproved && (
-          <div className="space-y-3">
-            <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5 text-xs text-emerald-950">
+          <div className="space-y-3.5">
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5 text-xs text-emerald-950">
               <div className="flex items-center gap-1.5 font-bold text-emerald-900 text-sm">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>Final Approved &amp; Enrolled!</span>
@@ -524,7 +1122,7 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
               </p>
             </div>
 
-            <div className="p-3.5 bg-white border border-emerald-200 rounded-xl shadow-sm text-center space-y-2.5">
+            <div className="p-4 bg-white border border-emerald-200 rounded-xl shadow-sm text-center space-y-2.5">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
                 Official Project WhatsApp Group
               </span>
@@ -535,7 +1133,7 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
                 href={researchMateData.whatsAppGroupLink || 'https://chat.whatsapp.com'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold text-xs shadow-md transition-all"
+                className="inline-flex items-center justify-center gap-2 w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold text-xs shadow-md transition-all cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4 fill-white" />
                 Join WhatsApp Group
@@ -547,458 +1145,323 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
 
         {/* STATUS: REJECTED */}
         {isRejected && (
-          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 space-y-1">
+          <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 space-y-1">
             <strong>Application Not Selected:</strong>
             <p className="leading-relaxed">
               Thank you for your interest. Unfortunately, this project position has been filled. We encourage you to apply for other academic wings and projects.
             </p>
           </div>
         )}
-
-        {/* Switch / Reset Button */}
-        <Button
-          type="button"
-          variant="secondary"
-          className="w-full text-xs py-2"
-          onClick={clearResearchMate}
-        >
-          Check Another Application ID
-        </Button>
       </div>
     );
   };
 
-  return <div className="notification-bell-wrap public-applicant-bell" ref={bellRef}>
-    <button className="notification-bell" type="button" aria-label={`${unreadCount} unread applicant notifications`} aria-expanded={open} onClick={() => {
-      const next = !open;
-      setOpen(next);
-      onOpenChange?.(next);
-    }}>
-      <Bell size={20}/>{unreadCount > 0 && <span className="notification-count">{unreadCount}</span>}
-    </button>
-    {open && (isMobile ? createPortal(
-      <>
-      <button type="button" className="notification-mobile-backdrop" aria-label="Close applicant notifications" onClick={() => setOpen(false)} tabIndex={-1}/>
-      <section className="notification-popover public-applicant-popover" role="dialog" aria-modal="true" aria-label="Applicant notifications">
-        <div className="notification-popover-head">
-          <div className="notification-title">
-            <strong>Applicant Notifications</strong>
-            {unreadCount > 0 && <span className="notification-header-count">{unreadCount}</span>}
+  // =========================================================================
+  // VIEW: CREDENTIAL LOOKUP & RECOVERY GATE
+  // =========================================================================
+  const renderLookupGate = () => (
+    <div className="space-y-4">
+      {/* TABS: CHECK APPLICATION vs SIGN UP */}
+      <div className="applicant-tabs" role="tablist" aria-label="Applicant access">
+        <button
+          role="tab"
+          aria-selected={mode === 'check'}
+          className={`tab ${mode === 'check' ? 'active' : ''}`}
+          type="button"
+          onClick={() => setMode('check')}
+        >
+          Check Application
+        </button>
+        <button
+          role="tab"
+          aria-selected={mode === 'signup'}
+          className={`tab ${mode === 'signup' ? 'active' : ''}`}
+          type="button"
+          onClick={() => setMode('signup')}
+        >
+          Sign Up
+        </button>
+      </div>
+
+      {mode === 'check' ? (
+        <form className="applicant-login-form space-y-3.5 p-0" onSubmit={handleCheckStatus}>
+          {/* INSTRUCTION BANNER */}
+          <div className="p-3.5 bg-teal-50/90 border border-teal-200/90 rounded-xl text-xs text-teal-950 flex items-start gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+            <p className="leading-relaxed text-teal-900">
+              Enter the Application ID and Private Access Code received upon submitting your application or issued via notification.
+            </p>
           </div>
-          <div className="notification-header-actions">
-            {(data || researchMateData) && (
+
+          {loginError && (
+            <div className="p-3 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs flex items-start gap-2" role="alert">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <span>{loginError}</span>
+            </div>
+          )}
+
+          {/* STACKED FULL-WIDTH INPUTS (START EMPTY) */}
+          <div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">Application ID</label>
+            <input
+              required
+              type="text"
+              autoComplete="username"
+              className="w-full min-h-[44px] px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border font-mono uppercase"
+              placeholder="e.g. ASPIER-2026-XXXX"
+              value={applicationId}
+              onChange={(e) => setApplicationId(e.target.value.toUpperCase())}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">Private Access Code</label>
+            <input
+              required
+              type="text"
+              autoComplete="current-password"
+              className="w-full min-h-[44px] px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border font-mono"
+              placeholder="e.g. SEC-XXXX-XXXX"
+              value={accessCode}
+              onChange={(e) => setAccessCode(e.target.value)}
+            />
+          </div>
+
+          {/* PRIMARY SUBMIT BUTTON */}
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full min-h-[44px] rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm text-sm disabled:opacity-50"
+          >
+            {busy ? 'Verifying Credentials…' : 'Check Application Status →'}
+          </button>
+
+          {/* INTEGRATED 'LOST YOUR ACCESS CODE?' RECOVERY SECTION */}
+          <div className="border-t border-slate-200 pt-4 mt-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 mb-1">
+              <Lock className="w-3.5 h-3.5 text-slate-500" />
+              Lost your access code?
+            </h4>
+            <p className="text-xs text-slate-500 mb-2.5 leading-relaxed">
+              Enter the email address used on your application to request an access recovery review.
+            </p>
+
+            {recoverySuccess && (
+              <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs mb-2 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span>{recoverySuccess}</span>
+              </div>
+            )}
+
+            {recoveryError && (
+              <div className="p-3 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs mb-2 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <span>{recoveryError}</span>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="email"
+                placeholder="Email used on application"
+                value={recoveryEmail}
+                onChange={(e) => setRecoveryEmail(e.target.value)}
+                className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border bg-white"
+              />
               <button
                 type="button"
-                className="notification-switch-button"
-                onClick={() => {
-                  setData(null);
-                  setResearchMateData(null);
-                  setMode('check');
-                }}
+                onClick={handleRequestRecovery}
+                disabled={isRecovering}
+                className="w-full sm:w-auto min-h-[42px] px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs flex items-center justify-center shrink-0 transition-colors cursor-pointer disabled:opacity-50"
               >
-                Switch / Check Another ID
+                {isRecovering ? 'Requesting…' : 'Request Recovery'}
               </button>
-            )}
-            <button type="button" aria-label="Close notifications" onClick={() => setOpen(false)}><X size={18}/></button>
+            </div>
           </div>
-        </div>
 
+          <p className="text-xs text-slate-500 pt-3 text-center border-t border-slate-100">
+            Haven&apos;t applied yet?{' '}
+            <Link to="/apply" onClick={() => setOpen(false)} className="text-teal-700 font-semibold underline">
+              Submit initial application (/apply)
+            </Link>
+          </p>
+        </form>
+      ) : (
+        /* GATED SIGN-UP FLOW */
+        <div className="space-y-3.5 p-0">
+          <div className="step-card p-3.5 rounded-xl border border-teal-200 bg-teal-50/70">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-5 h-5 rounded-full bg-teal-700 text-white text-[11px] font-bold flex items-center justify-center shrink-0">1</span>
+              <h3 className="font-bold text-xs text-teal-950 uppercase tracking-wide">Step 1: Submit Application First</h3>
+            </div>
+            <p className="text-xs text-teal-900 leading-relaxed mb-2.5">
+              Applicants cannot sign up directly without submitting an initial application. Apply first as a Supervisor, Young Scholar, or Research Mate.
+            </p>
+            <Link
+              to="/apply"
+              onClick={() => setOpen(false)}
+              className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-sm transition-all text-center"
+            >
+              <span>Apply to Join ASPIER (/apply)</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="step-card p-3.5 rounded-xl border border-slate-200 bg-slate-50">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-5 h-5 rounded-full bg-slate-700 text-white text-[11px] font-bold flex items-center justify-center shrink-0">2</span>
+              <h3 className="font-bold text-xs text-slate-900 uppercase tracking-wide">Step 2: Check Application &amp; Verify</h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed mb-2.5">
+              Already applied? Enter your admin-issued <strong>Application ID</strong> and <strong>Private Access Code</strong> in the Check Application gate to verify your account status.
+            </p>
+            <button
+              type="button"
+              onClick={() => setMode('check')}
+              className="w-full py-1.5 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer"
+            >
+              Go to Check Application Gate
+            </button>
+          </div>
+
+          <div className="step-card p-3.5 rounded-xl border border-amber-200 bg-amber-50/60">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+              <h3 className="font-bold text-xs text-amber-950 uppercase tracking-wide">Step 3: Account Sign-Up (Locked)</h3>
+            </div>
+            <p className="text-xs text-amber-900 leading-relaxed">
+              Account creation is locked until your Application ID and Private Access Code are verified and confirmed by the Admin Panel.
+            </p>
+          </div>
+
+          {pendingAt && (
+            <div className="p-3 rounded-xl border border-blue-200 bg-blue-50 text-xs text-blue-900 flex items-center justify-between" role="status">
+              <div className="flex items-center gap-2">
+                <Orbit size={18} className="text-blue-600 shrink-0 animate-spin" />
+                <span>Review in progress: {formatElapsed(Math.max(0, Math.floor((now - pendingAt) / 1000)))}</span>
+              </div>
+              <button
+                type="button"
+                className="text-blue-700 underline font-semibold text-[11px]"
+                onClick={() => { setPendingAt(null); sessionStorage.removeItem('aspier-signup-pending-at'); }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  // Popover Inner Content
+  const popoverContent = (
+    <div className="flex flex-col h-full max-h-full min-h-0 overflow-hidden box-border">
+      <div className="notification-popover-head">
+        <div className="notification-title">
+          <strong>Applicant Portal &amp; Notifications</strong>
+          {unreadCount > 0 && <span className="notification-header-count">{unreadCount}</span>}
+        </div>
+        <div className="notification-header-actions">
+          {isExpanded && (
+            <button
+              type="button"
+              className="notification-switch-button"
+              onClick={handleCheckAnother}
+            >
+              ← Check Another ID
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label="Close notifications"
+            onClick={() => {
+              setOpen(false);
+              onOpenChange?.(false);
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div
+        className="p-4 space-y-3.5 overflow-y-auto overscroll-contain flex-1 min-h-0 box-border"
+        style={{
+          maxHeight: isMobile
+            ? 'calc(85dvh - 64px)'
+            : isExpanded
+            ? 'min(76vh, 680px)'
+            : 'min(72vh, 540px)'
+        }}
+      >
         {researchMateData ? (
           renderResearchMateView()
-        ) : data ? (
-          <div className="notification-detail-view p-4 space-y-3 overflow-y-auto" style={{ maxHeight: 'calc(78vh - 60px)' }}>
-            <div className="applicant-login-summary p-3 bg-teal-50 border border-teal-200 rounded-xl">
-              <div className="flex items-center gap-1.5 text-teal-800 font-bold text-sm mb-0.5">
-                <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
-                <span>{data.name}</span>
-              </div>
-              <div className="text-xs text-slate-600 flex items-center justify-between">
-                <span>{data.role === 'youngScholar' ? 'Young Scholar' : 'Supervisor'} · {data.wing}</span>
-                <span className="badge badge-green text-[10px] px-2 py-0.5 font-bold uppercase">{data.status.replaceAll('_', ' ')}</span>
-              </div>
-            </div>
-
-            {data.status === 'published' && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 space-y-2">
-                <p><strong>Profile Published!</strong> Your ASPIER account is active. Use your Secret Activation Code from notifications below to complete account activation.</p>
-                <Link to="/login" onClick={() => setOpen(false)} className="button button-primary w-full text-center text-xs py-2 block">
-                  Activate Member Account
-                </Link>
-              </div>
-            )}
-
-            <div className="notification-list space-y-2">
-              <strong className="text-xs uppercase tracking-wider text-slate-500 block mb-1">Your Notifications</strong>
-              {data.notifications.map((notice) => (
-                <button type="button" key={notice._id} className={`notification-item ${notice.readAt ? '' : 'unread'}`} onClick={() => markRead(notice._id)}>
-                  <span className="notification-unread-dot" aria-hidden="true"/>
-                  <span>
-                    <strong>{notice.title}</strong>
-                    <small>{new Date(notice.createdAt).toLocaleString()}</small>
-                    <small>{notice.body}</small>
-                  </span>
-                </button>
-              ))}
-              {data.notifications.length === 0 && <p className="muted text-xs p-3 text-center">No notifications yet.</p>}
-            </div>
-
-            <Button type="button" variant="secondary" className="w-full text-xs" onClick={signOut}>
-              Sign out of Applicant View
-            </Button>
-          </div>
+        ) : memberData ? (
+          renderMemberView()
         ) : (
-          <div className="overflow-y-auto" style={{ maxHeight: 'calc(78vh - 60px)' }}>
-            <div className="applicant-tabs" role="tablist" aria-label="Applicant access">
-              <button
-                role="tab"
-                aria-selected={mode === 'check'}
-                className={`tab ${mode === 'check' ? 'active' : ''}`}
-                type="button"
-                onClick={() => setMode('check')}
-              >
-                Check Application
-              </button>
-              <button
-                role="tab"
-                aria-selected={mode === 'signup'}
-                className={`tab ${mode === 'signup' ? 'active' : ''}`}
-                type="button"
-                onClick={() => setMode('signup')}
-              >
-                Sign Up
-              </button>
-            </div>
-
-            {/* STEP 2: CHECK APPLICATION (VERIFICATION GATE) */}
-            {mode === 'check' && (
-              <form className="form applicant-login-form p-4 space-y-3" onSubmit={applicantLogin}>
-                <div className="p-3 bg-teal-50/80 border border-teal-200/90 rounded-xl text-xs text-teal-900 flex items-start gap-2">
-                  <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong>Application Verification Gate:</strong>
-                    <p className="mt-0.5 leading-relaxed text-teal-800">
-                      Enter the admin-issued <strong>Application ID</strong> and <strong>Private Access Code</strong> received upon approval to verify your status.
-                    </p>
-                  </div>
-                </div>
-
-                {loginError && <p className="applicant-error-message text-xs p-2.5 bg-red-50 text-red-700 rounded-lg border border-red-200" role="alert">{loginError}</p>}
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Application ID</label>
-                  <Input
-                    required
-                    autoComplete="username"
-                    className="notification-form-input text-sm"
-                    placeholder="e.g. ASPIER-2026-XXXX"
-                    value={applicationId}
-                    onChange={(event) => setApplicationId(event.target.value)}
-                  />
-                </div>
-                <div className="notification-copy-row">
-                  <code className="notification-code-box text-xs">{applicationId || 'Application ID will appear here'}</code>
-                  {applicationId && <button type="button" onClick={() => void copyText(applicationId, 'application-id')}>{copied === 'application-id' ? 'Copied!' : 'Copy'}</button>}
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Private Access Code</label>
-                  <Input
-                    required
-                    autoComplete="current-password"
-                    className="notification-form-input text-sm"
-                    placeholder="Private 24-character code"
-                    value={accessCode}
-                    onChange={(event) => setAccessCode(event.target.value)}
-                  />
-                </div>
-                <div className="notification-copy-row">
-                  <code className="notification-code-box break-all text-xs">{accessCode || 'Private Access Code will appear here'}</code>
-                  {accessCode && <button type="button" onClick={() => void copyText(accessCode, 'access-code')}>{copied === 'access-code' ? 'Copied!' : 'Copy'}</button>}
-                </div>
-
-                {loginStep === 'setup' && totpSetup && (
-                  <div className="applicant-totp-setup p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">
-                    <h3 className="font-bold text-slate-900 mb-1">Set up Google Authenticator</h3>
-                    <p className="text-slate-600 mb-2">Scan the QR code in Google Authenticator, then enter its current six-digit code to bind 2FA.</p>
-                    <img src={totpSetup.qrDataUrl} alt="Google Authenticator setup QR code" className="mx-auto my-2 rounded border border-slate-200 w-36 h-36" />
-                    <label className="block mt-2">Manual setup key: <code className="block mt-1 font-mono">{totpSetup.manualKey}</code></label>
-                  </div>
-                )}
-
-                {loginStep === 'otp' && <p className="text-xs text-slate-600">Enter the current 6-digit code from Google Authenticator.</p>}
-
-                {loginStep !== 'credentials' && (
-                  <div>
-                    <label className="text-xs font-semibold text-slate-700 block mb-1">6-digit authenticator code</label>
-                    <Input
-                      required
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      pattern="[0-9]{6}"
-                      maxLength={6}
-                      value={totpCode}
-                      onChange={(event) => setTotpCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="123456"
-                    />
-                  </div>
-                )}
-
-                <Button className="notification-submit-button w-full font-semibold" disabled={busy}>
-                  {busy ? 'Verifying…' : loginStep === 'credentials' ? 'Verify Credentials' : 'Verify & Continue'}
-                </Button>
-
-                <p className="text-xs text-slate-500 pt-2 text-center border-t border-slate-100">
-                  Haven't applied yet?{' '}
-                  <Link to="/apply" onClick={() => setOpen(false)} className="text-teal-700 font-semibold underline">
-                    Submit initial application (/apply)
-                  </Link>
-                </p>
-              </form>
-            )}
-
-            {/* 3-STEP GATED ONBOARDING FLOW (WHEN SIGN UP IS CLICKED) */}
-            {mode === 'signup' && (
-              <div className="mobile-gated-workflow p-4 space-y-3.5">
-                {/* Step 1: Submit Application First */}
-                <div className="step-card p-3.5 rounded-xl border border-teal-200 bg-teal-50/70">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="w-5 h-5 rounded-full bg-teal-700 text-white text-[11px] font-bold flex items-center justify-center shrink-0">1</span>
-                    <h3 className="font-bold text-xs text-teal-950 uppercase tracking-wide">Step 1: Submit Application First</h3>
-                  </div>
-                  <p className="text-xs text-teal-900 leading-relaxed mb-2.5">
-                    Applicants cannot sign up directly without submitting an initial application. Apply first as a Research Supervisor or Young Scholar.
-                  </p>
-                  <Link
-                    to="/apply"
-                    onClick={() => setOpen(false)}
-                    className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-sm transition-all text-center"
-                  >
-                    <span>Apply to Join ASPIER (/apply)</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-
-                {/* Step 2: Check Application & Enter Credentials */}
-                <div className="step-card p-3.5 rounded-xl border border-slate-200 bg-slate-50">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="w-5 h-5 rounded-full bg-slate-700 text-white text-[11px] font-bold flex items-center justify-center shrink-0">2</span>
-                    <h3 className="font-bold text-xs text-slate-900 uppercase tracking-wide">Step 2: Check Application &amp; Verify</h3>
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed mb-2.5">
-                    Already applied? Enter your admin-issued <strong>Application ID</strong> and <strong>Private Access Code</strong> in the Check Application gate to verify your account status.
-                  </p>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setMode('check')}
-                    className="w-full text-xs py-1.5"
-                  >
-                    Go to Check Application Gate
-                  </Button>
-                </div>
-
-                {/* Step 3: Account Creation Gated */}
-                <div className="step-card p-3.5 rounded-xl border border-amber-200 bg-amber-50/60">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <Lock className="w-4 h-4 text-amber-700 shrink-0" />
-                    <h3 className="font-bold text-xs text-amber-950 uppercase tracking-wide">Step 3: Account Sign-Up (Locked)</h3>
-                  </div>
-                  <p className="text-xs text-amber-900 leading-relaxed">
-                    Account creation is locked until your Application ID and Private Access Code are verified and confirmed by the Admin Panel.
-                  </p>
-                </div>
-
-                {pendingAt && (
-                  <div className="applicant-pending card p-3 rounded-xl border border-blue-200 bg-blue-50 text-xs text-blue-900 flex items-center justify-between" role="status">
-                    <div className="flex items-center gap-2">
-                      <Orbit size={18} className="text-blue-600 shrink-0 animate-spin" />
-                      <span>Review in progress: {formatElapsed(Math.max(0, Math.floor((now - pendingAt) / 1000)))}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="text-blue-700 underline font-semibold text-[11px]"
-                      onClick={() => { setPendingAt(null); sessionStorage.removeItem('aspier-signup-pending-at'); }}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          renderLookupGate()
         )}
-      </section>
-      </>,
-      document.body
-    ) : (
-      <section className="notification-popover public-applicant-popover" role="dialog" aria-modal="true" aria-label="Applicant notifications">
-        <div className="notification-popover-head">
-          <div className="notification-title">
-            <strong>Applicant Notifications</strong>
-            {unreadCount > 0 && <span className="notification-header-count">{unreadCount}</span>}
-          </div>
-          <div className="notification-header-actions">
-            {(data || researchMateData) && (
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="notification-bell-wrap public-applicant-bell" ref={bellRef}>
+      <button
+        className="notification-bell"
+        type="button"
+        aria-label={`${unreadCount} unread applicant notifications`}
+        aria-expanded={open}
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          onOpenChange?.(next);
+        }}
+      >
+        <Bell size={20} />
+        {unreadCount > 0 && <span className="notification-count">{unreadCount}</span>}
+      </button>
+
+      {open &&
+        (isMobile ? (
+          createPortal(
+            <>
               <button
                 type="button"
-                className="notification-switch-button"
+                className="notification-mobile-backdrop"
+                aria-label="Close applicant notifications"
                 onClick={() => {
-                  setData(null);
-                  setResearchMateData(null);
-                  setMode('check');
+                  setOpen(false);
+                  onOpenChange?.(false);
                 }}
+                tabIndex={-1}
+              />
+              <section
+                className={`notification-popover public-applicant-popover ${
+                  isExpanded ? 'popover-expanded' : ''
+                }`}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Applicant notifications and check status"
               >
-                Switch / Check Another ID
-              </button>
-            )}
-            <button type="button" aria-label="Close notifications" onClick={() => setOpen(false)}><X size={18}/></button>
-          </div>
-        </div>
-
-        {researchMateData ? (
-          renderResearchMateView()
-        ) : data ? (
-          <div className="p-4 space-y-3">
-            <div className="applicant-login-summary">
-              <strong>{data.name}</strong>
-              <span>{data.role === 'youngScholar' ? 'Young Scholar' : 'Supervisor'} · {data.wing}</span>
-              <span className="badge badge-green">{data.status.replaceAll('_', ' ')}</span>
-            </div>
-            <div className="notification-list">
-              {data.notifications.map((notice) => (
-                <button type="button" key={notice._id} className={`notification-item ${notice.readAt ? '' : 'unread'}`} onClick={() => markRead(notice._id)}>
-                  <span className="notification-unread-dot" aria-hidden="true"/>
-                  <span>
-                    <strong>{notice.title}</strong>
-                    <small>{new Date(notice.createdAt).toLocaleString()}</small>
-                    <small>{notice.body}</small>
-                  </span>
-                </button>
-              ))}
-            </div>
-            {data.notifications.length === 0 && <p className="muted">No notifications yet.</p>}
-            <Button type="button" variant="secondary" onClick={signOut}>Sign out</Button>
-          </div>
+                {popoverContent}
+              </section>
+            </>,
+            document.body
+          )
         ) : (
-          <div className="notification-desktop-content">
-            <div className="applicant-tabs" role="tablist" aria-label="Applicant access">
-              <button role="tab" aria-selected={mode === 'check'} className={`tab ${mode === 'check' ? 'active' : ''}`} type="button" onClick={() => setMode('check')}>Check Application</button>
-              <button role="tab" aria-selected={mode === 'signup'} className={`tab ${mode === 'signup' ? 'active' : ''}`} type="button" onClick={() => setMode('signup')}>Sign Up</button>
-            </div>
-            {mode === 'check' && (
-              <form className="form applicant-login-form p-4 space-y-3" onSubmit={applicantLogin}>
-                <div className="p-3 bg-teal-50/80 border border-teal-200/90 rounded-xl text-xs text-teal-900 flex items-start gap-2">
-                  <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong>Application Verification Gate:</strong>
-                    <p className="mt-0.5 leading-relaxed text-teal-800">
-                      Enter your admin-issued <strong>Application ID</strong> and <strong>Private Access Code</strong> to verify status.
-                    </p>
-                  </div>
-                </div>
-
-                {loginError && <p className="applicant-error-message text-xs p-2.5 bg-red-50 text-red-700 rounded-lg border border-red-200" role="alert">{loginError}</p>}
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Application ID</label>
-                  <Input
-                    required
-                    autoComplete="username"
-                    className="notification-form-input text-sm"
-                    placeholder="e.g. ASPIER-RM-2026-XXXX"
-                    value={applicationId}
-                    onChange={(event) => setApplicationId(event.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Private Access Code</label>
-                  <Input
-                    required
-                    autoComplete="current-password"
-                    className="notification-form-input text-sm"
-                    placeholder="Private 24-character code"
-                    value={accessCode}
-                    onChange={(event) => setAccessCode(event.target.value)}
-                  />
-                </div>
-
-                {loginStep === 'setup' && totpSetup && (
-                  <div className="applicant-totp-setup p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">
-                    <h3 className="font-bold text-slate-900 mb-1">Set up Google Authenticator</h3>
-                    <p className="text-slate-600 mb-2">Scan the QR code in Google Authenticator, then enter its current six-digit code to bind 2FA.</p>
-                    <img src={totpSetup.qrDataUrl} alt="Google Authenticator setup QR code" className="mx-auto my-2 rounded border border-slate-200 w-36 h-36" />
-                    <label className="block mt-2">Manual setup key: <code className="block mt-1 font-mono">{totpSetup.manualKey}</code></label>
-                  </div>
-                )}
-
-                {loginStep === 'otp' && <p className="text-xs text-slate-600">Enter the current 6-digit code from Google Authenticator.</p>}
-
-                {loginStep !== 'credentials' && (
-                  <div>
-                    <label className="text-xs font-semibold text-slate-700 block mb-1">6-digit authenticator code</label>
-                    <Input
-                      required
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      pattern="[0-9]{6}"
-                      maxLength={6}
-                      value={totpCode}
-                      onChange={(event) => setTotpCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="123456"
-                    />
-                  </div>
-                )}
-
-                <Button className="notification-submit-button w-full font-semibold" disabled={busy}>
-                  {busy ? 'Verifying…' : 'Verify Credentials'}
-                </Button>
-
-                <p className="text-xs text-slate-500 pt-2 text-center border-t border-slate-100">
-                  Haven&apos;t applied yet?{' '}
-                  <Link to="/apply" onClick={() => setOpen(false)} className="text-teal-700 font-semibold underline">
-                    Submit initial application (/apply)
-                  </Link>
-                </p>
-              </form>
-            )}
-
-            {mode === 'signup' && (
-              <div className="p-4 space-y-3">
-                <div className="p-3 rounded-xl border border-teal-200 bg-teal-50/70 text-xs text-teal-950 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-teal-700 text-white text-[11px] font-bold flex items-center justify-center shrink-0">1</span>
-                    <strong className="uppercase">Step 1: Submit Application First</strong>
-                  </div>
-                  <p className="text-teal-900 leading-relaxed">
-                    Direct sign-up is locked. Please submit an application as a Supervisor, Young Scholar, or Research Mate first.
-                  </p>
-                  <Link
-                    to="/apply"
-                    onClick={() => setOpen(false)}
-                    className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold"
-                  >
-                    Apply to Join ASPIER (/apply) <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-
-                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-700 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-slate-700 text-white text-[11px] font-bold flex items-center justify-center shrink-0">2</span>
-                    <strong className="uppercase text-slate-900">Step 2: Check Application</strong>
-                  </div>
-                  <p className="text-slate-600 leading-relaxed">
-                    Already applied? Enter your Application ID and Access Code in the Check Application gate.
-                  </p>
-                  <Button type="button" variant="secondary" onClick={() => setMode('check')} className="w-full text-xs py-1.5">
-                    Go to Check Application Gate
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-    ))}
-  </div>;
+          <section
+            className={`notification-popover public-applicant-popover ${
+              isExpanded ? 'popover-expanded' : ''
+            }`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Applicant notifications and check status"
+          >
+            {popoverContent}
+          </section>
+        ))}
+    </div>
+  );
 }

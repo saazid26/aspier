@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import { connectDatabase } from '../config/db.js';
 import { z } from 'zod';
 import MembershipApplication from '../models/MembershipApplication.js';
+import ResearchApplication from '../models/ResearchApplication.js';
 import Setting from '../models/Setting.js';
 import Supervisor from '../models/Supervisor.js';
 import Scholar from '../models/Scholar.js';
@@ -328,10 +329,18 @@ export async function membershipPortal(req: Request, res: Response, next: NextFu
 export async function requestMembershipAccessCode(req: Request, res: Response, next: NextFunction) {
   try {
     const { applicationId, email } = parseBody(z.object({
-      applicationId: z.string().regex(/^[a-f\d]{24}$/i),
+      applicationId: z.string().trim().optional().or(z.literal('')),
       email: z.string().trim().email().max(254)
     }), req.body);
-    const application = await MembershipApplication.findOne({ _id: applicationId, email: email.toLowerCase() });
+
+    const memQuery: any = { email: email.toLowerCase() };
+    if (applicationId) {
+      memQuery.$or = [
+        ...( /^[a-f\d]{24}$/i.test(applicationId) ? [{ _id: applicationId }] : []),
+        { publicApplicationId: applicationId.toUpperCase() }
+      ];
+    }
+    const application = await MembershipApplication.findOne(memQuery);
     if (application) {
       const accessCode = randomBytes(24).toString('base64url');
       await MembershipApplication.updateOne({ _id: application._id }, { $set: { accessCodeHash: sha256(accessCode) } });
@@ -341,6 +350,25 @@ export async function requestMembershipAccessCode(req: Request, res: Response, n
         category: 'applicant-access-code',
         link: '/admin/membership-applications'
       });
+    } else {
+      const researchQuery: any = { email: email.toLowerCase() };
+      if (applicationId) {
+        researchQuery.$or = [
+          ...( /^[a-f\d]{24}$/i.test(applicationId) ? [{ _id: applicationId }] : []),
+          { applicationId: applicationId.toUpperCase() }
+        ];
+      }
+      const researchApp = await ResearchApplication.findOne(researchQuery);
+      if (researchApp) {
+        const accessCode = randomBytes(24).toString('base64url');
+        await ResearchApplication.updateOne({ _id: researchApp._id }, { $set: { accessCodeHash: sha256(accessCode) } });
+        await notifyAdmins({
+          title: 'Research Mate access code reset',
+          body: `Research Mate ${researchApp.name} (${researchApp.email}) requested access recovery. New private access code: ${accessCode}`,
+          category: 'applicant-access-code',
+          link: '/admin/research-applications'
+        });
+      }
     }
     res.json({ success: true, message: 'If the application details match, the access recovery request is available to an administrator.' });
   } catch (error) {
