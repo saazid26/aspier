@@ -170,8 +170,7 @@ export function MembershipPortal() {
       const response = await api.post(`/public/membership/${details.applicationId}/profile`, {
         ...profile,
         accessCode: access.accessCode,
-        researchDomains: profile.researchDomains.split(',').map((domain) => domain.trim()).filter(Boolean),
-        ...(details.role === 'youngScholar' ? { paymentMethod, trxId } : {})
+        researchDomains: profile.researchDomains.split(',').map((domain) => domain.trim()).filter(Boolean)
       });
       setDetails({ ...details, status: response.data.data.status });
       toast.success('Final academic profile submitted for review.');
@@ -278,7 +277,7 @@ export function MembershipPortal() {
           Check Application Portal
         </h1>
         <p className="text-sm text-slate-600 mt-2">
-          Track Stage 1 review progress, continue to 2-step verification, submit BDT 1,000 project fees, and access your official WhatsApp research coordination groups.
+          Track Stage 1 review progress, complete fee-free academic profiles, or submit Research Mate project onboarding and access official WhatsApp research groups.
         </p>
       </div>
 
@@ -642,23 +641,7 @@ export function MembershipPortal() {
               <h3>Congratulations — your {categoryLabel} application is approved!</h3>
               <h3>Stage 2: Complete your academic profile</h3>
               <form className="form" onSubmit={submitProfile}>
-                {details.role === 'youngScholar' && (
-                  <>
-                    <p>Young Scholar Stage 2 includes a <strong>৳1,000 BDT</strong> membership payment. Send it via bKash or Nagad, then submit your TrxID with your academic profile and photo.</p>
-                    {details.paymentInstructions && <p className="muted">{details.paymentInstructions}</p>}
-                    <div className="auth-mode-tabs" role="tablist" aria-label="Payment method">
-                      <button className={`button ${paymentMethod === 'bKash' ? 'button-primary' : 'button-secondary'}`} type="button" onClick={() => setPaymentMethod('bKash')}>bKash</button>
-                      <button className={`button ${paymentMethod === 'Nagad' ? 'button-primary' : 'button-secondary'}`} type="button" onClick={() => setPaymentMethod('Nagad')}>Nagad</button>
-                    </div>
-                    <div className="activation-code-box">
-                      <p>Official {paymentMethod} number</p>
-                      <code>{(paymentMethod === 'bKash' ? details.bkashNumber : details.nagadNumber) || '01603012448'}</code>
-                      <Button type="button" variant="secondary" onClick={() => void copyPaymentNumber()}>Copy Number</Button>
-                    </div>
-                    <label>Transaction ID (TrxID)<Input required minLength={3} maxLength={80} value={trxId} onChange={(event) => setTrxId(event.target.value)}/></label>
-                  </>
-                )}
-                {details.role === 'supervisor' && <p>Supervisor membership is free. No payment or transaction details are required.</p>}
+                <p className="text-sm text-slate-600 mb-4">Joining ASPIER is completely free across all stages. Please complete your academic profile and upload a photo to finalize your membership.</p>
                 <label>Full name<Input required value={profile.name} onChange={(event) => set('name', event.target.value)}/></label>
                 <label>Present address<textarea className="textarea" rows={2} required value={profile.presentAddress} onChange={(event) => set('presentAddress', event.target.value)}/></label>
                 <label>Permanent address<textarea className="textarea" rows={2} required value={profile.permanentAddress} onChange={(event) => set('permanentAddress', event.target.value)}/></label>
@@ -689,29 +672,7 @@ export function MembershipPortal() {
 
           {details.status === 'final_pending' && <p>Your final academic application has been submitted. The ASPIER team will review it and notify you when it is accepted or needs changes.</p>}
 
-          {details.status === 'payment_pending' && details.role === 'youngScholar' && (
-            <>
-              <h3>Stage 2: Membership payment</h3>
-              <p>Membership fee: <strong>৳{details.membershipFee ?? 0} BDT</strong></p>
-              {details.paymentInstructions && <p className="muted">{details.paymentInstructions}</p>}
-              <div className="auth-mode-tabs" role="tablist" aria-label="Payment method">
-                <button className={`button ${paymentMethod === 'bKash' ? 'button-primary' : 'button-secondary'}`} type="button" onClick={() => setPaymentMethod('bKash')}>bKash</button>
-                <button className={`button ${paymentMethod === 'Nagad' ? 'button-primary' : 'button-secondary'}`} type="button" onClick={() => setPaymentMethod('Nagad')}>Nagad</button>
-              </div>
-              <div className="activation-code-box">
-                <p>Official {paymentMethod} number</p>
-                <code>{(paymentMethod === 'bKash' ? details.bkashNumber : details.nagadNumber) || '01603012448'}</code>
-                <Button type="button" variant="secondary" onClick={() => void copyPaymentNumber()}>Copy Number</Button>
-                <p>Send the membership fee using the selected payment service, then enter your transaction ID below.</p>
-              </div>
-              <form className="form" onSubmit={submitPayment}>
-                <label>Transaction ID (TrxID)<Input required minLength={3} maxLength={80} value={trxId} onChange={(event) => setTrxId(event.target.value)}/></label>
-                <Button disabled={busy}>{busy ? 'Submitting…' : 'Submit TrxID for verification'}</Button>
-              </form>
-            </>
-          )}
-
-          {details.status === 'verification_pending' && <p>{details.role === 'youngScholar' ? 'Your academic profile and BDT 1,000 payment TrxID have been submitted. An administrator will verify both before publishing your profile.' : 'Your profile is awaiting administrator approval.'}</p>}
+          {details.status === 'verification_pending' && <p>Your academic profile has been submitted. An administrator will review it before publishing your profile to the ASPIER Team.</p>}
           {details.status === 'published' && <><p>Your profile is approved and published on the ASPIER Team page.</p><Link to="/team">View ASPIER Team</Link></>}
           {details.status === 'rejected' && <p>This application was not approved. Contact ASPIER if you need more information.</p>}
           <button className="button button-secondary" type="button" style={{ marginTop: 16 }} onClick={() => setDetails(null)}>Check another application</button>

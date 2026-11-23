@@ -66,9 +66,9 @@ const statusBadge = (status: string) => {
     case 'initial_pending':
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200"><Clock className="w-3 h-3" /> Stage 1 Review</span>;
     case 'final_pending':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200"><Clock className="w-3 h-3" /> Supervisor Profile Review</span>;
+      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200"><Clock className="w-3 h-3" /> Profile Review (Fee-Free)</span>;
     case 'verification_pending':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200"><Clock className="w-3 h-3" /> Young Scholar Payment Review</span>;
+      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200"><Clock className="w-3 h-3" /> Profile Review</span>;
     default:
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200">{status}</span>;
   }
@@ -204,10 +204,10 @@ export function MembershipApplications() {
           Stage 1: Primary
         </button>
         <button className={`tab ${stage === 'final_pending' ? 'active' : ''}`} type="button" onClick={() => setStage('final_pending')}>
-          Stage 2: Supervisor
+          Stage 2: Profile Review
         </button>
         <button className={`tab ${stage === 'verification_pending' ? 'active' : ''}`} type="button" onClick={() => setStage('verification_pending')}>
-          Stage 2: Scholar Payment
+          Stage 2: Legacy Verification
         </button>
         <button className={`tab ${stage === 'onboarding_sent' ? 'active' : ''}`} type="button" onClick={() => setStage('onboarding_sent')}>
           Onboarding Dispatched
@@ -396,7 +396,7 @@ export function MembershipApplications() {
                     onClick={() => runAction(application._id, 'publish')}
                   >
                     <UserCheck className="w-4 h-4 mr-1.5 inline" />
-                    {stage === 'final_pending' ? 'Publish Profile Directly (Free)' : 'Verify TrxID & Publish'}
+                    Publish Profile Directly (Free)
                   </Button>
                 )}
 

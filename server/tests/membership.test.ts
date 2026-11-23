@@ -165,7 +165,7 @@ describe('membership application workflow', () => {
     await deleteMediaAsset(String(photo._id));
   });
 
-  it('requires Young Scholars to submit BDT 1,000 payment with the Stage 2 profile before publication', async () => {
+  it('allows Young Scholars to complete Stage 2 profile 100% fee-free without payment or TrxID before publication', async () => {
     const submitted = await request(app).post('/api/v1/public/join').send({
       name: 'Rafi Hasan',
       email: 'rafi.scholar@example.com',
@@ -181,9 +181,9 @@ describe('membership application workflow', () => {
     const { agent: admin } = await loginAdminAs(FIXED_ADMIN_EMAIL, env.ADMIN_PASSWORD);
     expect((await admin.post(`/api/v1/admin/membership-applications/${applicationId}/approve`)).status).toBe(200);
     const stageTwo = await request(app).post('/api/v1/public/membership/lookup').send({ applicationId, accessCode });
-    expect(stageTwo.body.data.membershipFee).toBe(1000);
-    expect(stageTwo.body.data.bkashNumber).toBe('01603012448');
-    expect(stageTwo.body.data.nagadNumber).toBe('01603012448');
+    expect(stageTwo.body.data.membershipFee).toBeUndefined();
+    expect(stageTwo.body.data.bkashNumber).toBeUndefined();
+    expect(stageTwo.body.data.nagadNumber).toBeUndefined();
 
     const uploadedPhoto = await request(app)
       .post(`/api/v1/public/membership/${applicationId}/photo`)
@@ -202,16 +202,10 @@ describe('membership application workflow', () => {
       researchDomains: ['Biotechnology', 'Public Health'],
       photo: uploadedPhoto.body.data.url
     };
-    const missingPayment = await request(app).post(`/api/v1/public/membership/${applicationId}/profile`).send(profileData);
-    expect(missingPayment.status).toBe(400);
 
-    const profile = await request(app).post(`/api/v1/public/membership/${applicationId}/profile`).send({
-      ...profileData,
-      paymentMethod: 'Nagad',
-      trxId: 'YS-STAGE2-TRX-001'
-    });
+    const profile = await request(app).post(`/api/v1/public/membership/${applicationId}/profile`).send(profileData);
     expect(profile.status).toBe(201);
-    expect(profile.body.data.status).toBe('verification_pending');
+    expect(profile.body.data.status).toBe('final_pending');
     const published = await admin.post(`/api/v1/admin/membership-applications/${applicationId}/publish`);
     expect(published.status).toBe(200);
     expect(published.body.data.profileType).toBe('scholar');

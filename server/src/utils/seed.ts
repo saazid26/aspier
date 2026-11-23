@@ -56,7 +56,7 @@ export async function seedDatabase(): Promise<void> {
     heroImage: makeDemoCover('Research for our planet and beyond'),
     missionText: 'The Aeronautical, Spatial, Planetary Institute for Environmental Research advances rigorous research and inclusive education for a resilient planet.',
     contactEmail: 'aspier.global@gmail.com', contactPhone: '+880 1700 000000', address: 'Rajshahi University, Bangladesh',
-    bkashNumber: '01603012448', nagadNumber: '01603012448', membershipFee: 1000,
+    bkashNumber: '01603012448', nagadNumber: '01603012448', membershipFee: 0,
     founderName: 'Md Saazid Bin Saif',
     founderTitle: 'Founder, ASPIER',
     founderDescription: 'Founder, ASPIER',
@@ -83,7 +83,7 @@ export async function seedDatabase(): Promise<void> {
   await Setting.updateOne({ singleton: 'main', seoDescription: 'Explore ASPIER research wings, scholars, and academy courses.' }, { $set: { seoDescription: defaultSettings.seoDescription } });
   await Setting.updateOne({ singleton: 'main', bkashNumber: '01700000000' }, { $set: { bkashNumber: '01603012448' } });
   await Setting.updateOne({ singleton: 'main', nagadNumber: '01800000000' }, { $set: { nagadNumber: '01603012448' } });
-  await Setting.updateOne({ singleton: 'main', membershipFee: { $exists: false } }, { $set: { membershipFee: 1000 } });
+  await Setting.updateOne({ singleton: 'main', membershipFee: { $exists: false } }, { $set: { membershipFee: 0 } });
   if (await Instructor.countDocuments() === 0) await Instructor.create([
     { name: 'Dr. Farzana Rahman', slug: 'farzana-rahman', title: 'Sample AI Research Lead', bio: 'Illustrative instructor profile covering trustworthy machine learning and applied language technologies. Replace with verified details before publication.', expertise: ['Machine Learning', 'Natural Language Processing'], photo: makeDemoAvatar('FR'), sampleData: true },
     { name: 'Prof. Nabil Hasan', slug: 'nabil-hasan', title: 'Sample Earth Systems Instructor', bio: 'Illustrative instructor profile focused on climate observations, geospatial evidence, and regional adaptation. Replace with verified details before publication.', expertise: ['Climate Data', 'Remote Sensing'], photo: makeDemoAvatar('NH'), sampleData: true },

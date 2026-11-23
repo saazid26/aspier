@@ -56,7 +56,7 @@ export function JoinForm() {
     <SEO title="Apply for ASPIER Fellowship" description="Apply to join ASPIER as a supervisor, young scholar, or research fellow." />
     <span className="eyebrow">Membership application</span>
     <h1>Join the ASPIER Team</h1>
-    <p className="muted">Stage 1 is free for all applicants. If approved, Supervisors complete a fee-free academic profile; Young Scholars submit their profile and BDT 1,000 payment details in Stage 2.</p>
+    <p className="muted">Joining ASPIER is completely free for all applicants across all stages. Submit your initial application in Stage 1, and if approved, complete your academic profile in Stage 2 at no cost.</p>
     <form className="form" onSubmit={submit}>
       <label>Apply as
         <select className="select" required value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>

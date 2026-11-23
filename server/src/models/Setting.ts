@@ -55,7 +55,7 @@ const schema = new Schema({
   address: String,
   bkashNumber: { type: String, default: '01603012448' },
   nagadNumber: { type: String, default: '01603012448' },
-  membershipFee: { type: Number, default: 1000, min: 0 },
+  membershipFee: { type: Number, default: 0, min: 0 },
   paymentInstructions: String,
   seoTitle: String,
   seoDescription: String

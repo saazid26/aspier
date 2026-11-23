@@ -289,9 +289,6 @@ export async function membershipPortal(req: Request, res: Response, next: NextFu
     const activationCode = application.activationCodeEncrypted && !application.activationCodeUsedAt
       ? decrypt(application.activationCodeEncrypted)
       : undefined;
-    const settings = await Setting.findOne({ singleton: 'main' });
-    const paymentAvailable = application.role === 'youngScholar'
-      && ['membership_pending', 'payment_pending', 'verification_pending'].includes(application.status);
     res.json({
       success: true,
       data: {
@@ -303,13 +300,7 @@ export async function membershipPortal(req: Request, res: Response, next: NextFu
         wing: application.wing || application.wingInterest,
         wingInterest: application.wingInterest,
         status: application.status,
-        ...(paymentAvailable ? {
-          membershipFee: 1000,
-          bkashNumber: application.paymentBkashNumber || settings?.bkashNumber || '01603012448',
-          nagadNumber: application.paymentNagadNumber || settings?.nagadNumber || '01603012448',
-          paymentInstructions: application.paymentInstructions || settings?.paymentInstructions || ''
-        } : {})
-        ,activationCode,
+        activationCode,
         notifications
       }
     });
@@ -360,10 +351,6 @@ export async function submitMembershipProfile(req: Request, res: Response, next:
     const application = await findWithCode(String(req.params.id || ''), data.accessCode);
     if (application.status !== 'membership_pending') throw new HttpError(409, 'This application is not accepting a membership profile');
     const isYoungScholar = application.role === 'youngScholar';
-    if (isYoungScholar) {
-      if (!data.paymentMethod || !data.trxId) throw new HttpError(400, 'Young Scholar Stage 2 requires payment method and TrxID');
-      if (await MembershipApplication.exists({ trxId: data.trxId, _id: { $ne: application._id } })) throw new HttpError(409, 'This transaction ID has already been submitted');
-    }
     if (!await MediaAsset.exists({ url: data.photo, membershipApplicationId: application._id })) throw new HttpError(400, 'Upload your profile picture using the application photo field');
     application.set({
       name: data.name,
@@ -379,30 +366,27 @@ export async function submitMembershipProfile(req: Request, res: Response, next:
       bio: data.bio,
       researchDomains: data.researchDomains,
       photo: data.photo,
-      ...(isYoungScholar ? { paymentMethod: data.paymentMethod, trxId: data.trxId, membershipFee: 1000, status: 'verification_pending' } : { status: 'final_pending' })
+      membershipFee: 0,
+      status: 'final_pending'
     });
     await application.save();
+    const roleTitle = isYoungScholar ? 'Young Scholar' : 'Supervisor';
     await notifyAdmins({
-      title: isYoungScholar ? 'Young Scholar profile and payment submitted' : 'Supervisor profile submitted',
-      body: isYoungScholar
-        ? `${application.name} submitted a Young Scholar profile with ${data.paymentMethod} TrxID ${data.trxId} for verification.`
-        : `${application.name} submitted a Supervisor academic profile for review.`,
-      category: isYoungScholar ? 'payment-verification' : 'final-application',
+      title: `${roleTitle} profile submitted`,
+      body: `${application.name} submitted a ${roleTitle} academic profile for review.`,
+      category: 'final-application',
       link: '/admin/membership-applications'
     });
     await notifyMember({
       applicationId: application._id,
-      title: isYoungScholar ? 'Stage 2 profile and payment received' : 'Supervisor profile received',
-      body: isYoungScholar
-        ? 'Your academic profile and BDT 1,000 payment TrxID have been submitted for verification.'
-        : 'Your academic profile has been submitted for review. Supervisor membership is fee-free.',
-      category: isYoungScholar ? 'payment-verification-received' : 'final-application-received',
+      title: `${roleTitle} profile received`,
+      body: 'Your academic profile has been submitted for review. ASPIER membership is completely fee-free across all stages.',
+      category: 'final-application-received',
       link: '/join/portal'
     });
     res.status(201).json({ success: true, data: { applicationId: application.id, status: application.status } });
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 11000) next(new HttpError(409, 'This transaction ID has already been submitted'));
-    else next(error);
+    next(error);
   }
 }
 
@@ -520,25 +504,16 @@ export async function approveInitialApplication(req: AuthRequest, res: Response,
     const application = await MembershipApplication.findById(req.params.id);
     if (!application) throw new HttpError(404, 'Application not found');
     if (application.status !== 'initial_pending') throw new HttpError(409, 'Application is not awaiting initial review');
-    const settings = await Setting.findOne({ singleton: 'main' });
     application.status = 'membership_pending';
-    if (application.role === 'youngScholar') {
-      application.membershipFee = 1000;
-      application.paymentBkashNumber = settings?.bkashNumber || '01603012448';
-      application.paymentNagadNumber = settings?.nagadNumber || '01603012448';
-      application.paymentInstructions = settings?.paymentInstructions || '';
-    } else {
-      application.membershipFee = undefined;
-      application.paymentBkashNumber = undefined;
-      application.paymentNagadNumber = undefined;
-      application.paymentInstructions = undefined;
-    }
+    application.membershipFee = 0;
+    application.paymentBkashNumber = undefined;
+    application.paymentNagadNumber = undefined;
+    application.paymentInstructions = undefined;
     application.reviewedBy = req.user._id;
     application.reviewedAt = new Date();
     await application.save();
-    const body = application.role === 'youngScholar'
-      ? `Congratulations ${application.name}, your Young Scholar Stage 1 application for ${application.wingInterest} is approved. Complete Stage 2 with your academic profile and BDT 1,000 payment via bKash or Nagad. Numbers: ${application.paymentBkashNumber}. ${application.paymentInstructions || 'Enter the TrxID and upload your profile in the applicant portal.'}`
-      : `Congratulations ${application.name}, your Supervisor application for ${application.wingInterest} is approved. Supervisor membership is free; complete Stage 2 by submitting your academic profile and photo in the applicant portal.`;
+    const roleTitle = application.role === 'youngScholar' ? 'Young Scholar' : 'Supervisor';
+    const body = `Congratulations ${application.name}, your ${roleTitle} application for ${application.wingInterest} is approved. Joining ASPIER is completely free across all stages; complete Stage 2 by submitting your academic profile and photo in the applicant portal.`;
     await notifyMember({
       applicationId: application._id,
       title: 'Your ASPIER application is approved',
@@ -564,17 +539,17 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
     const candidate = await MembershipApplication.findById(applicationId);
     if (!candidate) throw new HttpError(404, 'Application not found');
     const isSupervisor = candidate.role === 'supervisor' || candidate.category === 'teammate';
-    const requiredStatus = isSupervisor ? 'final_pending' : 'verification_pending';
-    if (!isSupervisor && (!candidate.paymentMethod || !candidate.trxId || candidate.membershipFee !== 1000)) {
-      throw new HttpError(409, 'Young Scholar profile and BDT 1,000 payment must be submitted before approval');
+    if (!['final_pending', 'verification_pending'].includes(candidate.status)) {
+      throw new HttpError(409, 'Application is not awaiting profile review');
     }
+    const previousStatus = candidate.status;
     const application = await MembershipApplication.findOneAndUpdate(
-      { _id: applicationId, status: requiredStatus },
+      { _id: applicationId, status: { $in: ['final_pending', 'verification_pending'] } },
       { $set: { status: 'publishing', reviewedBy: req.user._id, reviewedAt: new Date() } },
       { new: true }
     );
     if (!application) {
-      throw new HttpError(409, 'Application is not awaiting profile and payment review');
+      throw new HttpError(409, 'Application is not awaiting profile review');
     }
     const activationCode = randomBytes(18).toString('base64url');
     application.activationCodeHash = sha256(activationCode);
@@ -641,15 +616,13 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
       }
       await MembershipApplication.updateOne(
         { _id: application._id, status: 'publishing' },
-        { $set: { status: requiredStatus }, $unset: { reviewedBy: 1, reviewedAt: 1 } }
+        { $set: { status: previousStatus }, $unset: { reviewedBy: 1, reviewedAt: 1 } }
       );
       throw error;
     }
     await AuditLog.create({ actorId: req.user._id, action: 'publish-membership-application', resource: 'MembershipApplication', resourceId: application.id, ip: req.ip, userAgent: req.headers['user-agent'] });
     if (application.memberUserId) await User.updateOne({ _id: application.memberUserId }, { $set: { isActive: true } });
-    const publishMsg = isSupervisor
-      ? `Your Supervisor profile is published. Your membership has no fee. Use this one-time Secret Activation Code to register your account: ${activationCode}`
-      : `Your BDT 1,000 payment has been verified and your Young Scholar profile published. Use this one-time Secret Activation Code to register your account: ${activationCode}`;
+    const publishMsg = `Your ${isSupervisor ? 'Supervisor' : 'Young Scholar'} profile is published. Joining ASPIER is completely fee-free. Use this one-time Secret Activation Code to register your account: ${activationCode}`;
     await notifyMember({
       applicationId: application._id,
       ...(application.memberUserId ? { userId: application.memberUserId } : {}),

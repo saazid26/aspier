@@ -170,7 +170,7 @@ export const fallbackSettings = {
   founderGoogleScholarUrl: "https://scholar.google.com/",
   bkashNumber: "01603012448",
   nagadNumber: "01603012448",
-  membershipFee: 1000
+  membershipFee: 0
 };
 
 const defaultDummyModules = [
