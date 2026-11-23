@@ -70,6 +70,7 @@ export function PublicLayout() {
         <div ref={navLinksRef} className={`nav-links ${menuOpen ? 'nav-links-open' : ''}`}>
           {links.map(({to,label,end}) => <NavLink key={to} to={to} end={end} className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} onClick={() => setMenuOpen(false)}>{label}</NavLink>)}
           <NavLink to="/join" className={({isActive}) => isActive ? 'nav-link nav-apply active' : 'nav-link nav-apply'} onClick={() => setMenuOpen(false)}>Apply</NavLink>
+          <NavLink to="/join/portal" className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} onClick={() => setMenuOpen(false)}>Check Application</NavLink>
           <NavLink to="/login" className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} onClick={() => setMenuOpen(false)}>Login</NavLink>
         </div>
       </div>
