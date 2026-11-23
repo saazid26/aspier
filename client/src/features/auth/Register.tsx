@@ -82,7 +82,7 @@ export function Register() {
               });
               toast.success('Student account created! Please sign in to continue.');
               const defaultLogin = '/academy/login';
-              const targetRedirect = redirect || '/student';
+              const targetRedirect = redirect || '/academy/student';
               const loginTarget = `${defaultLogin}?redirect=${encodeURIComponent(targetRedirect)}`;
               navigate(loginTarget);
             } catch (error: any) {
@@ -150,7 +150,7 @@ export function Register() {
           <Link
             to={redirect
               ? `/academy/login?redirect=${encodeURIComponent(redirect)}`
-              : `/academy/login?redirect=${encodeURIComponent('/student')}`}
+              : `/academy/login?redirect=${encodeURIComponent('/academy/student')}`}
             style={{ textDecoration: 'underline', color: '#148f83', fontWeight: 600 }}
           >
             Sign in here

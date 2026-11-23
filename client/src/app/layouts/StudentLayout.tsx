@@ -3,7 +3,7 @@ import { NotificationBell } from '../../components/common/NotificationBell';
 import { useMe } from '../../features/auth/useMe';
 
 const studentNavLinks = [
-  { to: '/academy/student/dashboard', label: 'Dashboard', exact: true },
+  { to: '/academy/student', label: 'Dashboard', exact: true },
   { to: '/academy/student/courses', label: 'My Courses' },
   { to: '/academy/student/payments', label: 'Payments' },
   { to: '/academy/student/profile', label: 'Profile' },
@@ -19,8 +19,10 @@ export function StudentLayout() {
     if (exact) {
       return (
         location.pathname === '/academy/student' ||
+        location.pathname === '/academy/student/' ||
         location.pathname === '/academy/student/dashboard' ||
         location.pathname === '/student' ||
+        location.pathname === '/student/' ||
         location.pathname === '/student/dashboard'
       );
     }
@@ -32,7 +34,7 @@ export function StudentLayout() {
     <div className="member-layout">
       <header className="member-header flex items-center justify-between gap-3 px-4 sm:px-6 py-3 bg-white border-b border-slate-200">
         <div className="flex items-center gap-3">
-          <Link to="/academy/student/dashboard" className="font-bold text-slate-900 text-sm sm:text-base hover:text-teal-800 transition">
+          <Link to="/academy/student" className="font-bold text-slate-900 text-sm sm:text-base hover:text-teal-800 transition">
             Student Portal
           </Link>
           {me?.name && (

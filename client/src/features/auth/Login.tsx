@@ -255,7 +255,7 @@ export function Login() {
         <Button type="button" variant="secondary" onClick={() => void copyToClipboard(backupCodes.join('\n'), 'Recovery codes')}>Copy recovery codes</Button>
         <a className="button button-secondary" download="aspier-recovery-codes.txt" href={`data:text/plain;charset=utf-8,${encodeURIComponent(`ASPIER one-time recovery codes\n\n${backupCodes.join('\n')}\n`)}`}>Download recovery codes</a>
       </section>}
-      {setupComplete && <Button onClick={() => navigate(['admin', 'superadmin'].includes(role) ? '/admin' : '/student/dashboard')}>Continue to ASPIER</Button>}
+      {setupComplete && <Button onClick={() => navigate(['admin', 'superadmin'].includes(role) ? '/admin' : '/academy/student')}>Continue to ASPIER</Button>}
       {!memberRole && !setupToken && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: '0.88rem' }}>
           <Link className="muted" to={isAcademy ? '/academy/forgot' : '/forgot'}>Forgot password?</Link>

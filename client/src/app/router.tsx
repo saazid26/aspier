@@ -176,6 +176,27 @@ function LegacyCheckApplicationRedirect() {
   return <Navigate to={`/?${searchParams.toString()}`} replace />;
 }
 
+function LegacyStudentRedirect() {
+  const location = useLocation();
+  const subPath = location.pathname.replace(/^\/student(\/|$)/, '');
+  const destination = subPath ? `/academy/student/${subPath}` : '/academy/student';
+  return <Navigate to={`${destination}${location.search}${location.hash}`} replace />;
+}
+
+function LegacyStudentPortalRedirect() {
+  const location = useLocation();
+  const subPath = location.pathname.replace(/^\/academy\/student-portal(\/|$)/, '');
+  const destination = subPath ? `/academy/student/${subPath}` : '/academy/student';
+  return <Navigate to={`${destination}${location.search}${location.hash}`} replace />;
+}
+
+function LegacyAcademyPortalRedirect() {
+  const location = useLocation();
+  const subPath = location.pathname.replace(/^\/academy\/portal(\/|$)/, '');
+  const destination = subPath ? `/academy/student/${subPath}` : '/academy/student';
+  return <Navigate to={`${destination}${location.search}${location.hash}`} replace />;
+}
+
 export function AppRouter(){return <BrowserRouter><ScrollToTop/><Suspense fallback={<main className="container section"><div className="skeleton" style={{height:80}}/></main>}><Routes>
 <Route element={<PublicLayout/>}><Route index element={<Home/>}/><Route path="wings" element={<WingsGrid/>}/><Route path="wings/:slug" element={<WingPage/>}/><Route path="wings/:wingSlug/research/:slug" element={<ResearchDetail/>}/><Route path="wings/apply-research" element={<ResearchMateApply/>}/><Route path="research-mate-apply" element={<ResearchMateApply/>}/><Route path="research" element={<Navigate to="/wings" replace/>}/><Route path="research/:slug" element={<ResearchDetail/>}/><Route path="team" element={<Team/>}/><Route path="supervisors" element={<SupervisorList/>}/><Route path="supervisors/:slug" element={<SupervisorProfile/>}/><Route path="scholars" element={<ScholarList/>}/><Route path="scholars/:slug" element={<ScholarProfile/>}/><Route path="news" element={<NewsList/>}/><Route path="news/:slug" element={<NewsDetail/>}/><Route path="announcements" element={<NewsList/>}/><Route path="announcements/:slug" element={<NewsDetail/>}/><Route path="contact" element={<ContactForm/>}/><Route path="apply" element={<Navigate to="/join" replace/>}/><Route path="join" element={<JoinForm/>}/><Route path="join/portal" element={<LegacyCheckApplicationRedirect/>}/><Route path="check-application" element={<LegacyCheckApplicationRedirect/>}/><Route path="login" element={<Login/>}/><Route path="register" element={<LegacyRegisterRedirect/>}/><Route path="forgot" element={<Forgot/>}/><Route path="reset" element={<Reset/>}/><Route path="onboarding" element={<Onboarding/>}/></Route>
 <Route element={<AcademyLayout/>}>
@@ -184,20 +205,18 @@ export function AppRouter(){return <BrowserRouter><ScrollToTop/><Suspense fallba
   <Route path="academy/login" element={<Login/>}/>
   <Route path="academy/forgot" element={<Forgot/>}/>
   <Route path="academy/reset" element={<Reset/>}/>
-  <Route element={<Guard roles={['student','instructor','supervisor','youngScholar','admin','superadmin']}><StudentLayout/></Guard>}>
-    <Route path="academy/student" element={<StudentDashboard/>}/>
-    <Route path="academy/student/dashboard" element={<StudentDashboard/>}/>
-    <Route path="academy/student/courses" element={<MyCourses/>}/>
-    <Route path="academy/student/payments" element={<PaymentHistory/>}/>
-    <Route path="academy/student/profile" element={<Profile/>}/>
-    <Route path="academy/student/security" element={<WebAuthnSettings/>}/>
+  <Route path="academy/student" element={<Guard roles={['student','instructor','supervisor','youngScholar','admin','superadmin']}><StudentLayout/></Guard>}>
+    <Route index element={<StudentDashboard/>}/>
+    <Route path="dashboard" element={<StudentDashboard/>}/>
+    <Route path="courses" element={<MyCourses/>}/>
+    <Route path="payments" element={<PaymentHistory/>}/>
+    <Route path="profile" element={<Profile/>}/>
+    <Route path="security" element={<WebAuthnSettings/>}/>
   </Route>
-  <Route path="academy/portal" element={<Navigate to="/academy/student" replace/>}/>
-  <Route path="academy/portal/courses" element={<Navigate to="/academy/student/courses" replace/>}/>
-  <Route path="academy/portal/payments" element={<Navigate to="/academy/student/payments" replace/>}/>
-  <Route path="academy/portal/profile" element={<Navigate to="/academy/student/profile" replace/>}/>
-  <Route path="academy/portal/security" element={<Navigate to="/academy/student/security" replace/>}/>
-  <Route path="academy/portal/*" element={<Navigate to="/academy/student" replace/>}/>
+  <Route path="academy/student-portal" element={<LegacyStudentPortalRedirect/>}/>
+  <Route path="academy/student-portal/*" element={<LegacyStudentPortalRedirect/>}/>
+  <Route path="academy/portal" element={<LegacyAcademyPortalRedirect/>}/>
+  <Route path="academy/portal/*" element={<LegacyAcademyPortalRedirect/>}/>
   <Route path="academy/courses/:id" element={<CourseDetail/>}/>
   <Route path="academy/courses/:id/payment" element={<EnrollPayment/>}/>
   <Route path="academy/courses/:id/payment-status" element={<PaymentStatus/>}/>
@@ -205,13 +224,8 @@ export function AppRouter(){return <BrowserRouter><ScrollToTop/><Suspense fallba
   <Route path="academy/classes" element={<ClassSchedule/>}/>
   <Route path="academy/instructors/:id" element={<InstructorProfile/>}/>
 </Route>
-<Route path="student" element={<Navigate to="/academy/student" replace/>}/>
-<Route path="student/dashboard" element={<Navigate to="/academy/student/dashboard" replace/>}/>
-<Route path="student/courses" element={<Navigate to="/academy/student/courses" replace/>}/>
-<Route path="student/payments" element={<Navigate to="/academy/student/payments" replace/>}/>
-<Route path="student/profile" element={<Navigate to="/academy/student/profile" replace/>}/>
-<Route path="student/security" element={<Navigate to="/academy/student/security" replace/>}/>
-<Route path="student/*" element={<Navigate to="/academy/student" replace/>}/>
+<Route path="student" element={<LegacyStudentRedirect/>}/>
+<Route path="student/*" element={<LegacyStudentRedirect/>}/>
 <Route element={<Guard roles={['admin','superadmin']}><AdminLayout/></Guard>}>
   <Route path="admin" element={<AdminDashboard/>}/>
   <Route path="admin/branding" element={<BrandingSettings/>}/>

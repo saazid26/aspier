@@ -54,7 +54,7 @@ export function Catalog() {
         <p className="muted">Courses are managed in Admin → ASPIER Academy / Courses.</p>
         <div className="academy-header-actions">
           <Link className="button button-primary" to="/academy/register">Register</Link>
-          <Link className="button button-secondary" to="/student">Student Portal</Link>
+          <Link className="button button-secondary" to="/academy/student">Student Portal</Link>
         </div>
       </header>
       <div className="grid academy-course-grid">
