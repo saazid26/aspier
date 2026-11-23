@@ -20,6 +20,7 @@ type ResearchDetailData = {
   coverImage?: string;
   publicationUrl?: string;
   doiUrl?: string;
+  showReadPaperButton?: boolean;
   sampleData?: boolean;
   authors?: string[];
   supervisors?: string[];
@@ -98,7 +99,7 @@ export function ResearchDetail() {
           <RichTextContent content={data.objectives}/>
         </section>
       )}
-      {(data.publicationUrl || data.doiUrl) && (
+      {(data.category === 'past' || data.showReadPaperButton !== false) && (data.publicationUrl || data.doiUrl) && (data.showReadPaperButton !== false) && (
         <div style={{ marginTop: 24, marginBottom: 16 }}>
           <a
             className="button button-primary read-paper-btn"

@@ -17,7 +17,17 @@ import { notifyAdmins } from '../services/notification.service.js';
 import { authLimiter, slowAuth } from '../middleware/rateLimit.js';
 import { submitResearchApplication, lookupResearchApplication, submitResearchPayment, downloadResearchApplicationCv } from '../controllers/researchApplication.controller.js';
 import { validateOnboardingToken, uploadOnboardingPhoto, completeOnboarding } from '../controllers/onboarding.controller.js';
-import { fallbackWings, fallbackSettings, fallbackNews, demoResearch, demoSupervisors, demoScholars, demoFoundingMembers } from '../utils/fallbackData.js';
+import {
+  fallbackWings,
+  fallbackSettings,
+  fallbackNews,
+  demoResearch,
+  demoSupervisors,
+  demoScholars,
+  demoFoundingMembers,
+  getFallbackWings,
+  getFallbackResearch
+} from '../utils/fallbackData.js';
 
 const router = Router();
 
@@ -82,38 +92,64 @@ router.get('/wings', async (_req, res) => {
   } catch (err) {
     console.warn('[wings] fallback:', err instanceof Error ? err.message : err);
   }
-  return res.json({ success: true, data: fallbackWings });
+  return res.json({ success: true, data: getFallbackWings().filter((w) => w.isActive !== false) });
 });
 
 router.get('/wings/:slug', async (req, res) => {
   try {
-    const wing = await Wing.findOne({ slug: req.params.slug });
+    let wing: any = null;
+    let researchList: any[] = [];
+    wing = await Wing.findOne({ slug: req.params.slug });
     if (wing) {
-      const research = await Research.find({ wingId: wing._id, status: 'published' }).sort({ publishedAt: -1 }).catch(() => []);
-      return res.json({ success: true, data: { ...wing.toObject(), research } });
+      researchList = await Research.find({ wingId: wing._id, status: { $in: ['published', 'ongoing'] } }).sort({ publishedAt: -1 }).catch(() => []);
+      if (!researchList || researchList.length === 0) {
+        researchList = getFallbackResearch().filter((r) => r.wingSlug === wing.slug || r.wingId?.toString() === wing._id?.toString());
+      }
+      return res.json({ success: true, data: { ...wing.toObject(), research: researchList } });
     }
   } catch (err) {
     console.warn('[wings/:slug] fallback:', err instanceof Error ? err.message : err);
   }
-  const fallback = fallbackWings.find((w) => w.slug === req.params.slug);
+  const fallback = getFallbackWings().find((w) => w.slug === req.params.slug);
   if (!fallback) return res.status(404).json({ success: false, message: 'Wing not found' });
-  const relatedResearch = demoResearch.filter((r) => r.wingSlug === fallback.slug);
+  const relatedResearch = getFallbackResearch().filter((r) => r.wingSlug === fallback.slug || r.wingId?.toString() === fallback._id?.toString());
   return res.json({ success: true, data: { ...fallback, research: relatedResearch } });
 });
 
 router.get('/research', async (req, res) => {
   try {
-    const filter: Record<string, any> = { status: 'published' };
+    const filter: Record<string, any> = { status: { $in: ['published', 'ongoing'] } };
     if (req.query.wingId) filter.wingId = req.query.wingId;
-    if (req.query.category) filter.category = req.query.category;
+    if (req.query.category) {
+      const cat = String(req.query.category);
+      if (cat === 'ongoing' || cat === 'present') filter.category = { $in: ['ongoing', 'present'] };
+      else filter.category = cat;
+    }
     const list = await Research.find(filter).sort({ featured: -1, publishedAt: -1 }).limit(100);
     if (list && list.length > 0) return res.json({ success: true, data: list });
   } catch (err) {
     console.warn('[research] fallback:', err instanceof Error ? err.message : err);
   }
-  let results = [...demoResearch];
-  if (req.query.category) results = results.filter((r) => r.category === req.query.category);
+  let results = [...getFallbackResearch()];
+  if (req.query.wingId) results = results.filter((r) => r.wingId?.toString() === req.query.wingId?.toString());
+  if (req.query.category) {
+    const cat = String(req.query.category);
+    if (cat === 'ongoing' || cat === 'present') results = results.filter((r) => r.category === 'ongoing' || r.category === 'present');
+    else results = results.filter((r) => r.category === cat);
+  }
   return res.json({ success: true, data: results });
+});
+
+router.get('/research/:slug', async (req, res) => {
+  try {
+    const item = await Research.findOne({ slug: req.params.slug });
+    if (item) return res.json({ success: true, data: item });
+  } catch (err) {
+    console.warn('[research/:slug] fallback:', err instanceof Error ? err.message : err);
+  }
+  const item = getFallbackResearch().find((r) => r.slug === req.params.slug);
+  if (!item) return res.status(404).json({ success: false, message: 'Research project not found' });
+  return res.json({ success: true, data: item });
 });
 
 const pdfCvUpload = multer({

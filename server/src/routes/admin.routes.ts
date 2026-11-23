@@ -38,7 +38,17 @@ import {
   confirmResearchPayment,
   updateWhatsAppLink
 } from '../controllers/researchApplication.controller.js';
-import { demoFoundingMembers, demoSupervisors, demoScholars } from '../utils/fallbackData.js';
+import {
+  demoFoundingMembers,
+  demoSupervisors,
+  demoScholars,
+  getFallbackWings,
+  addOrUpdateFallbackWing,
+  deleteFallbackWing,
+  getFallbackResearch,
+  addOrUpdateFallbackResearch,
+  deleteFallbackResearch
+} from '../utils/fallbackData.js';
 
 const router = Router();
 router.use(authenticate, authorize('admin', 'superadmin'), noStore);
@@ -92,6 +102,104 @@ router.get('/scholars', audit('list', 'Scholar'), async (_req, res) => {
   return res.json({ success: true, data: demoScholars, pagination: { page: 1, limit: 100, total: demoScholars.length, pages: 1 } });
 });
 
+router.get('/wings', audit('list', 'Wing'), async (_req, res) => {
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const list = await Wing.find().sort({ order: 1, createdAt: 1 });
+      if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
+    }
+  } catch {}
+  const list = getFallbackWings();
+  return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
+});
+
+router.post('/wings', audit('create', 'Wing'), async (req, res) => {
+  try {
+    let item: any = null;
+    if (mongoose.connection.readyState === 1) {
+      item = await Wing.create(req.body);
+    }
+    const saved = addOrUpdateFallbackWing(item ? item.toObject() : req.body);
+    return res.status(201).json({ success: true, data: item || saved });
+  } catch (err: any) {
+    const saved = addOrUpdateFallbackWing(req.body);
+    return res.status(201).json({ success: true, data: saved });
+  }
+});
+
+router.put('/wings/:id', audit('update', 'Wing'), async (req, res) => {
+  try {
+    let item: any = null;
+    if (mongoose.connection.readyState === 1) {
+      item = await Wing.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    }
+    const saved = addOrUpdateFallbackWing({ ...req.body, _id: req.params.id });
+    return res.json({ success: true, data: item || saved });
+  } catch (err: any) {
+    const saved = addOrUpdateFallbackWing({ ...req.body, _id: req.params.id });
+    return res.json({ success: true, data: saved });
+  }
+});
+
+router.delete('/wings/:id', audit('delete', 'Wing'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState === 1) {
+      await Wing.findByIdAndDelete(req.params.id);
+    }
+  } catch {}
+  deleteFallbackWing(String(req.params.id));
+  return res.json({ success: true, message: 'Wing deleted' });
+});
+
+router.get('/research', audit('list', 'Research'), async (_req, res) => {
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const list = await Research.find().populate('wingId', 'name slug').sort({ createdAt: -1 });
+      if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
+    }
+  } catch {}
+  const list = getFallbackResearch();
+  return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
+});
+
+router.post('/research', audit('create', 'Research'), async (req, res) => {
+  try {
+    let item: any = null;
+    if (mongoose.connection.readyState === 1) {
+      item = await Research.create(req.body);
+    }
+    const saved = addOrUpdateFallbackResearch(item ? item.toObject() : req.body);
+    return res.status(201).json({ success: true, data: item || saved });
+  } catch (err: any) {
+    const saved = addOrUpdateFallbackResearch(req.body);
+    return res.status(201).json({ success: true, data: saved });
+  }
+});
+
+router.put('/research/:id', audit('update', 'Research'), async (req, res) => {
+  try {
+    let item: any = null;
+    if (mongoose.connection.readyState === 1) {
+      item = await Research.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    }
+    const saved = addOrUpdateFallbackResearch({ ...req.body, _id: req.params.id });
+    return res.json({ success: true, data: item || saved });
+  } catch (err: any) {
+    const saved = addOrUpdateFallbackResearch({ ...req.body, _id: req.params.id });
+    return res.json({ success: true, data: saved });
+  }
+});
+
+router.delete('/research/:id', audit('delete', 'Research'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState === 1) {
+      await Research.findByIdAndDelete(req.params.id);
+    }
+  } catch {}
+  deleteFallbackResearch(String(req.params.id));
+  return res.json({ success: true, message: 'Research project deleted' });
+});
+
 const mountCrud = (path: string, model: any) => {
   const crud = crudFactory(model);
   router.get(`/${path}`, audit('list', model.modelName), crud.list);
@@ -100,7 +208,7 @@ const mountCrud = (path: string, model: any) => {
   router.put(`/${path}/:id`, audit('update', model.modelName), crud.update);
   router.delete(`/${path}/:id`, audit('delete', model.modelName), crud.delete);
 };
-mountCrud('wings', Wing); mountCrud('research', Research); mountCrud('founding-members', FoundingMember); mountCrud('supervisors', Supervisor); mountCrud('scholars', Scholar); mountCrud('news', News); mountCrud('courses', Course); mountCrud('users', User); mountCrud('messages', Message); mountCrud('instructors', Instructor);
+mountCrud('founding-members', FoundingMember); mountCrud('supervisors', Supervisor); mountCrud('scholars', Scholar); mountCrud('news', News); mountCrud('courses', Course); mountCrud('users', User); mountCrud('messages', Message); mountCrud('instructors', Instructor);
 
 router.get('/payments', paymentQueue);
 router.get('/membership-applications', adminMembershipApplications);

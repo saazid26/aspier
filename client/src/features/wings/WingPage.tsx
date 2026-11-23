@@ -19,6 +19,7 @@ type ResearchItem = {
   status?: string;
   publicationUrl?: string;
   doiUrl?: string;
+  showReadPaperButton?: boolean;
 };
 
 export function WingPage() {
@@ -38,7 +39,7 @@ export function WingPage() {
   // Combine wing research with static fallback research if empty
   const wingResearch: ResearchItem[] = (data.research && data.research.length > 0)
     ? data.research
-    : staticResearch.map((r) => ({ ...r, category: r.category as any }));
+    : staticResearch.filter((r: any) => r.wingSlug === slug || r.wingId === data._id).map((r) => ({ ...r, category: r.category as any }));
 
   const pastResearch = wingResearch.filter((r) => r.category === 'past');
   const presentResearch = wingResearch.filter((r) => r.category === 'present' || r.category === 'ongoing' || !r.category);
@@ -165,7 +166,7 @@ export function WingPage() {
                     </p>
                   )}
                   <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle, #f1f5f9)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {activeResearchTab === 'past' && (item.publicationUrl || item.doiUrl) && (
+                    {activeResearchTab === 'past' && item.showReadPaperButton !== false && (item.publicationUrl || item.doiUrl) && (
                       <a
                         className="button button-primary read-paper-btn"
                         href={(item.publicationUrl || item.doiUrl)!.startsWith('http') ? (item.publicationUrl || item.doiUrl) : `https://${item.publicationUrl || item.doiUrl}`}

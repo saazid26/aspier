@@ -406,3 +406,64 @@ export function getFallbackApplications(): any[] {
   return global._fallbackApplications;
 }
 
+const wingIdMap = new Map(fallbackWings.map((w) => [w.slug, w._id]));
+
+export const fallbackResearchList = demoResearch.map((r, idx) => ({
+  _id: `60d0fe4f5311236168a10b${(idx + 1).toString(16).padStart(2, '0')}`,
+  ...r,
+  wingId: wingIdMap.get(r.wingSlug) || (fallbackWings[0] ? fallbackWings[0]._id : '60d0fe4f5311236168a109ca')
+}));
+
+export function getFallbackWings(): any[] {
+  if (!(global as any)._fallbackWings) {
+    (global as any)._fallbackWings = [...fallbackWings];
+  }
+  return (global as any)._fallbackWings;
+}
+
+export function addOrUpdateFallbackWing(wing: any): any {
+  const wings = getFallbackWings();
+  const id = wing._id || wing.id || `wing-${Date.now()}`;
+  const idx = wings.findIndex((w) => w._id === id || w.slug === wing.slug);
+  const updated = { ...wing, _id: id };
+  if (idx >= 0) {
+    wings[idx] = { ...wings[idx], ...updated };
+  } else {
+    wings.push(updated);
+  }
+  return updated;
+}
+
+export function deleteFallbackWing(id: string): void {
+  const wings = getFallbackWings();
+  const idx = wings.findIndex((w) => w._id === id || w.slug === id);
+  if (idx >= 0) wings.splice(idx, 1);
+}
+
+export function getFallbackResearch(): any[] {
+  if (!(global as any)._fallbackResearch) {
+    (global as any)._fallbackResearch = [...fallbackResearchList];
+  }
+  return (global as any)._fallbackResearch;
+}
+
+export function addOrUpdateFallbackResearch(item: any): any {
+  const list = getFallbackResearch();
+  const id = item._id || item.id || `research-${Date.now()}`;
+  const idx = list.findIndex((r) => r._id === id || r.slug === item.slug);
+  const updated = { ...item, _id: id };
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...updated };
+  } else {
+    list.unshift(updated);
+  }
+  return updated;
+}
+
+export function deleteFallbackResearch(id: string): void {
+  const list = getFallbackResearch();
+  const idx = list.findIndex((r) => r._id === id || r.slug === id);
+  if (idx >= 0) list.splice(idx, 1);
+}
+
+

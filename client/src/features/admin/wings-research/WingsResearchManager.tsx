@@ -126,17 +126,22 @@ export function WingsResearchManager() {
     e.preventDefault();
     setSavingResearch(true);
     try {
+      const payload = {
+        ...editingResearch,
+        showReadPaperButton: editingResearch.showReadPaperButton !== false
+      };
       if (editingResearch._id) {
-        await api.put(`/admin/research/${editingResearch._id}`, editingResearch);
+        await api.put(`/admin/research/${editingResearch._id}`, payload);
         toast.success('Research project updated successfully.');
       } else {
-        await api.post('/admin/research', editingResearch);
+        await api.post('/admin/research', payload);
         toast.success('Research project created successfully.');
       }
       setResearchModalOpen(false);
       setEditingResearch(null);
       await refetchResearch();
       await queryClient.invalidateQueries({ queryKey: ['public-research'] });
+      await queryClient.invalidateQueries({ queryKey: ['wing'] });
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Could not save research');
     } finally {
@@ -260,10 +265,11 @@ export function WingsResearchManager() {
                   abstract: '',
                   content: '',
                   authors: [],
-                  category: 'ongoing',
-                  status: 'ongoing',
+                  category: 'present',
+                  status: 'published',
                   publicationUrl: '',
                   doiUrl: '',
+                  showReadPaperButton: true,
                   coverImage: ''
                 });
                 setResearchModalOpen(true);
@@ -273,56 +279,76 @@ export function WingsResearchManager() {
             </Button>
           </div>
 
-          <Table headers={['Cover', 'Title', 'Wing', 'Status', 'Authors', 'Actions']}>
-            {research.map((item) => (
-              <tr key={item._id}>
-                <td style={{ width: 80 }}>
-                  {item.coverImage ? (
-                    <img src={item.coverImage} alt={item.title} style={{ width: 64, height: 40, objectFit: 'cover', borderRadius: 6 }} />
-                  ) : (
-                    <span className="muted" style={{ fontSize: '0.8rem' }}>None</span>
-                  )}
-                </td>
-                <td><strong>{item.title}</strong></td>
-                <td>
-                  <span style={{ fontSize: '0.85rem' }}>
-                    {typeof item.wingId === 'object' ? item.wingId?.name : (wings.find((w) => w._id === item.wingId)?.name || 'General')}
-                  </span>
-                </td>
-                <td>
-                  <Badge variant={item.status === 'published' ? 'green' : item.status === 'ongoing' ? 'blue' : 'amber'}>
-                    {item.status || 'ongoing'}
-                  </Badge>
-                </td>
-                <td>
-                  <span style={{ fontSize: '0.85rem' }}>
-                    {Array.isArray(item.authors) ? item.authors.join(', ') : item.authors || 'ASPIER Fellows'}
-                  </span>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setEditingResearch({
-                          ...item,
-                          wingId: typeof item.wingId === 'object' ? item.wingId?._id : item.wingId
-                        });
-                        setResearchModalOpen(true);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="danger"
-                      onClick={() => deleteResearchItem(item._id, item.title)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+          <Table headers={['Cover', 'Title', 'Wing', 'Category', 'Read Paper (DOI)', 'Status', 'Actions']}>
+            {research.map((item) => {
+              const isPast = item.category === 'past';
+              const hasPaperUrl = Boolean(item.publicationUrl || item.doiUrl);
+              const readPaperActive = isPast && hasPaperUrl && item.showReadPaperButton !== false;
+              return (
+                <tr key={item._id}>
+                  <td style={{ width: 80 }}>
+                    {item.coverImage ? (
+                      <img src={item.coverImage} alt={item.title} style={{ width: 64, height: 40, objectFit: 'cover', borderRadius: 6 }} />
+                    ) : (
+                      <span className="muted" style={{ fontSize: '0.8rem' }}>None</span>
+                    )}
+                  </td>
+                  <td>
+                    <strong>{item.title}</strong>
+                    {item.slug && <span className="muted" style={{ display: 'block', fontSize: '0.78rem' }}>slug: {item.slug}</span>}
+                  </td>
+                  <td>
+                    <span style={{ fontSize: '0.85rem' }}>
+                      {typeof item.wingId === 'object' ? item.wingId?.name : (wings.find((w) => w._id === item.wingId)?.name || 'General')}
+                    </span>
+                  </td>
+                  <td>
+                    <Badge variant={item.category === 'past' ? 'gray' : item.category === 'future' ? 'blue' : 'green'}>
+                      {item.category === 'past' ? 'Past Research' : item.category === 'future' ? 'Future Research' : 'Present Research'}
+                    </Badge>
+                  </td>
+                  <td>
+                    {isPast ? (
+                      readPaperActive ? (
+                        <Badge variant="green">Enabled (Visible)</Badge>
+                      ) : (
+                        <Badge variant="amber">{hasPaperUrl ? 'Disabled (Hidden)' : 'No Link'}</Badge>
+                      )
+                    ) : (
+                      <span className="muted" style={{ fontSize: '0.8rem' }}>—</span>
+                    )}
+                  </td>
+                  <td>
+                    <Badge variant={item.status === 'published' ? 'green' : item.status === 'ongoing' ? 'blue' : 'amber'}>
+                      {item.status || 'published'}
+                    </Badge>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setEditingResearch({
+                            ...item,
+                            wingId: typeof item.wingId === 'object' ? item.wingId?._id : item.wingId,
+                            showReadPaperButton: item.showReadPaperButton !== false
+                          });
+                          setResearchModalOpen(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={() => deleteResearchItem(item._id, item.title)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </Table>
         </div>
       )}
@@ -508,23 +534,50 @@ export function WingsResearchManager() {
               </select>
             </label>
 
-            <label>
-              Published Paper / DOI Link
-              <Input
-                value={editingResearch.publicationUrl || editingResearch.doiUrl || ''}
-                onChange={(e) => setEditingResearch({
-                  ...editingResearch,
-                  publicationUrl: e.target.value,
-                  doiUrl: e.target.value
-                })}
-                placeholder="https://doi.org/10.1016/... or https://journal.org/paper-123"
-              />
-              <span className="muted" style={{ fontSize: '0.82rem', display: 'block', marginTop: 4 }}>
-                {editingResearch.category === 'past'
-                  ? 'For Past Research, saving this link automatically displays a prominent "Read Paper" button on both the summary card and detail page.'
-                  : 'Optional DOI or publication URL for external reference.'}
-              </span>
-            </label>
+            <div style={{ marginTop: 12, padding: 14, background: editingResearch.category === 'past' ? '#f0fdf4' : '#f8fafc', border: `1px solid ${editingResearch.category === 'past' ? '#86efac' : '#e2e8f0'}`, borderRadius: 8 }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>
+                Published Paper / DOI Link
+                <Input
+                  value={editingResearch.publicationUrl || editingResearch.doiUrl || ''}
+                  onChange={(e) => setEditingResearch({
+                    ...editingResearch,
+                    publicationUrl: e.target.value,
+                    doiUrl: e.target.value
+                  })}
+                  placeholder="https://doi.org/10.1016/... or https://journal.org/paper-123"
+                />
+              </label>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                <div>
+                  <span style={{ fontWeight: 600, fontSize: '0.9rem', display: 'block', color: 'var(--text, #1e293b)' }}>
+                    Show &apos;Read Paper&apos; Link / Button on Frontend
+                  </span>
+                  <span className="muted" style={{ fontSize: '0.8rem' }}>
+                    Toggle whether the &quot;Read Paper&quot; action button appears on the wing cards and research detail page.
+                  </span>
+                </div>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={editingResearch.showReadPaperButton !== false}
+                    onChange={(e) => setEditingResearch({ ...editingResearch, showReadPaperButton: e.target.checked })}
+                    style={{ width: 18, height: 18, accentColor: '#0f766e', cursor: 'pointer' }}
+                  />
+                  <span style={{ color: editingResearch.showReadPaperButton !== false ? '#0f766e' : '#64748b' }}>
+                    {editingResearch.showReadPaperButton !== false ? 'ON (Visible)' : 'OFF (Hidden)'}
+                  </span>
+                </label>
+              </div>
+
+              {editingResearch.category === 'past' && (
+                <div style={{ marginTop: 8, fontSize: '0.82rem', color: editingResearch.showReadPaperButton !== false && (editingResearch.publicationUrl || editingResearch.doiUrl) ? '#15803d' : '#b45309' }}>
+                  {editingResearch.showReadPaperButton !== false && (editingResearch.publicationUrl || editingResearch.doiUrl)
+                    ? '✓ "Read Paper" button is ACTIVE and will be shown on the live site.'
+                    : '⚠ "Read Paper" button is INACTIVE and hidden on the frontend.'}
+                </div>
+              )}
+            </div>
 
             <div style={{ marginTop: 12 }}>
               <label style={{ fontWeight: 600, display: 'block', marginBottom: 8 }}>

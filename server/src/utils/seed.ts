@@ -1,7 +1,6 @@
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import mongoose from 'mongoose';
 import { connectDatabase } from '../config/db.js';
+import { env, FIXED_ADMIN_EMAIL } from '../config/env.js';
 import { hashPassword } from '../services/password.service.js';
 import User from '../models/User.js';
 import Wing from '../models/Wing.js';
@@ -14,9 +13,8 @@ import Supervisor from '../models/Supervisor.js';
 import Scholar from '../models/Scholar.js';
 import FoundingMember from '../models/FoundingMember.js';
 import News from '../models/News.js';
-import mongoose from 'mongoose';
-import { env, FIXED_ADMIN_EMAIL } from '../config/env.js';
 import { demoResearch, demoScholars, demoSupervisors, demoFoundingMembers, makeDemoAvatar, makeDemoCover } from './seedData/demoContent.js';
+import { fallbackWings } from './fallbackData.js';
 
 export async function seedDatabase(): Promise<void> {
   const admin = await User.findOne({ email: FIXED_ADMIN_EMAIL });
@@ -35,33 +33,19 @@ export async function seedDatabase(): Promise<void> {
   if (!await User.exists({ email: 'student@aspier.org' })) {
     await User.create({ name: 'Demo Student', email: 'student@aspier.org', passwordHash: await hashPassword('Student@1234'), role: 'student', isActive: true });
   }
-  const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
-  const wingDataCandidates = [
-    path.resolve(moduleDirectory, 'seedData/wings.json'),
-    path.resolve(moduleDirectory, '../../src/utils/seedData/wings.json'),
-    path.resolve(process.cwd(), 'src/utils/seedData/wings.json'),
-    path.resolve(process.cwd(), 'server/src/utils/seedData/wings.json')
-  ];
-  let wingsJson: string | undefined;
-  for (const candidate of [...new Set(wingDataCandidates)]) {
-    try {
-      wingsJson = await readFile(candidate, 'utf8');
-      break;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
-  }
-  if (!wingsJson) {
-    throw new Error(`ASPIER seed data not found; checked: ${wingDataCandidates.join(', ')}`);
-  }
-  const wings = JSON.parse(wingsJson) as any[];
-  const legacyWingSlugs = ['quantum-science', 'ai-data-science', 'climate-earth-systems', 'health-biomedical', 'space-astronomy', 'renewable-energy', 'cybersecurity-digital-trust', 'robotics-intelligent-systems', 'social-policy', 'creative-computing-humanities'];
-  for (const [index, wing] of wings.entries()) {
-    const seedWing = { ...wing, coverImage: makeDemoCover(wing.name) };
-    if (await Wing.exists({ slug: wing.slug })) continue;
-    const legacy = await Wing.findOne({ slug: legacyWingSlugs[index] });
-    if (legacy) await Wing.updateOne({ _id: legacy._id }, { $set: seedWing });
-    else await Wing.create(seedWing);
+  for (const wing of fallbackWings) {
+    const seedWing = {
+      name: wing.name,
+      slug: wing.slug,
+      shortDescription: wing.shortDescription,
+      description: wing.description,
+      disciplines: wing.disciplines,
+      objectives: wing.objectives,
+      order: wing.order,
+      isActive: wing.isActive !== false,
+      coverImage: wing.coverImage || makeDemoCover(wing.name)
+    };
+    await Wing.findOneAndUpdate({ slug: wing.slug }, { $set: seedWing }, { upsert: true, new: true });
   }
   const wingIdsBySlug = new Map((await Wing.find().select('_id slug')).map((wing) => [wing.slug, wing._id]));
   const defaultSettings = {
@@ -151,11 +135,28 @@ export async function seedDatabase(): Promise<void> {
     if (courses[0]) await ClassModel.create({ courseId: courses[0]._id, title: 'Sample Responsible AI Office Hours', description: 'Illustrative sample session, shown as completed without an external meeting link or recording.', scheduledAt: new Date('2025-06-15T10:00:00Z'), durationMinutes: 60, status: 'completed' });
     if (courses[1]) await ClassModel.create({ courseId: courses[1]._id, title: 'Sample Climate Data Lab', description: 'Illustrative sample session, shown as completed without an external meeting link or recording.', scheduledAt: new Date('2025-07-20T10:00:00Z'), durationMinutes: 90, status: 'completed' });
   }
-  if (await Research.countDocuments() === 0) {
-    await Research.insertMany(demoResearch.map(({ wingSlug, ...research }) => ({
-      ...research,
-      wingId: wingIdsBySlug.get(wingSlug)
-    })));
+  for (const r of demoResearch) {
+    const wingId = wingIdsBySlug.get(r.wingSlug) || wingIdsBySlug.get('geospatial-intelligence-remote-sensing');
+    const researchDoc = {
+      title: r.title,
+      slug: r.slug,
+      wingId,
+      category: r.category,
+      abstract: r.abstract,
+      content: r.content,
+      objectives: r.objectives,
+      publicationUrl: r.publicationUrl || '',
+      doiUrl: r.doiUrl || '',
+      showReadPaperButton: r.showReadPaperButton !== false,
+      status: r.status || 'published',
+      authors: r.authors || ['ASPIER Research Wing Group'],
+      supervisors: r.supervisors || ['ASPIER Senior Research Supervisors'],
+      publishedAt: r.publishedAt || new Date(),
+      featured: r.featured || false,
+      sampleData: true,
+      coverImage: r.coverImage || makeDemoCover(r.title)
+    };
+    await Research.updateOne({ slug: r.slug }, { $setOnInsert: researchDoc }, { upsert: true });
   }
   if (await FoundingMember.countDocuments() === 0) await FoundingMember.create(demoFoundingMembers);
   if (await Supervisor.countDocuments() === 0) await Supervisor.create(demoSupervisors.map(({ wingSlug, ...supervisor }) => ({

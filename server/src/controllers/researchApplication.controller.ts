@@ -14,7 +14,7 @@ import type { AuthRequest } from '../middleware/auth.js';
 import { notifyAdmins } from '../services/notification.service.js';
 import { sendEmail } from '../services/email.service.js';
 import AuditLog from '../models/AuditLog.js';
-import { getFallbackResearchApplications } from '../utils/fallbackData.js';
+import { getFallbackResearchApplications, getFallbackResearch } from '../utils/fallbackData.js';
 
 const cvDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../private-cvs');
 
@@ -24,23 +24,47 @@ const DUMMY_PDF_BUFFER = Buffer.from(
 
 const researchMateSchema = z.object({
   role: z.string().optional().default('Research Mate'),
-  name: z.string().trim().min(2).max(120),
-  email: z.string().trim().email().max(254),
+  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(120),
+  email: z.string().trim().email('Invalid email address').max(254),
   phone: z.string().trim().max(40).optional().default(''),
-  university: z.string().trim().min(2).max(200),
-  department: z.string().trim().min(2).max(200),
-  occupation: z.string().trim().min(2).max(300),
-  wingName: z.string().trim().min(2),
-  wingSlug: z.string().trim().min(2).optional().default(''),
-  researchTitle: z.string().trim().min(2),
+  university: z.string().trim().optional().default('University Applicant'),
+  department: z.string().trim().optional().default('Academic Department'),
+  occupation: z.string().trim().optional().default('Student / Researcher'),
+  wingName: z.string().trim().optional().default('Academic Wing'),
+  wingSlug: z.string().trim().optional().default(''),
+  researchTitle: z.string().trim().optional().default('Research Project'),
   researchSlug: z.string().trim().optional().default(''),
-  skills: z.string().trim().min(2).max(5000),
+  skills: z.string().trim().min(2, 'Please list your skills').max(5000),
   statement: z.string().trim().max(5000).optional().default('')
 });
 
 export async function submitResearchApplication(req: Request, res: Response, next: NextFunction) {
   try {
-    const parsed = researchMateSchema.safeParse(req.body);
+    let targetResearch: any = null;
+    const researchParamId = req.params.id ? String(req.params.id) : '';
+    if (researchParamId) {
+      if (mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(researchParamId)) {
+        targetResearch = await Research.findById(researchParamId);
+      }
+      if (!targetResearch) {
+        targetResearch = getFallbackResearch().find((r) => r._id === researchParamId || r.slug === researchParamId);
+      }
+      if (targetResearch && targetResearch.category === 'past') {
+        throw new HttpError(404, 'Applications are not accepted for past research');
+      }
+    }
+
+    const rawBody = {
+      ...req.body,
+      university: req.body.university || req.body.institution || 'University Applicant',
+      department: req.body.department || req.body.academicStatus || 'Academic Department',
+      occupation: req.body.occupation || req.body.academicStatus || 'Applicant',
+      wingName: req.body.wingName || (targetResearch ? 'Academic Wing' : 'Interdisciplinary Wing'),
+      researchTitle: req.body.researchTitle || (targetResearch ? targetResearch.title : 'Research Project'),
+      researchSlug: req.body.researchSlug || (targetResearch ? targetResearch.slug : '')
+    };
+
+    const parsed = researchMateSchema.safeParse(rawBody);
     if (!parsed.success) {
       throw new HttpError(400, parsed.error.issues.map((i) => i.message).join('. '));
     }
@@ -48,8 +72,8 @@ export async function submitResearchApplication(req: Request, res: Response, nex
 
     // PDF validation
     let cvData: Buffer | undefined;
-    let cvFilename = 'applicant-cv.pdf';
-    let cvMimeType = 'application/pdf';
+    let cvFilename: string | undefined;
+    let cvMimeType: string | undefined;
     let cvStorageKey: string | undefined;
 
     if (req.file) {
@@ -335,6 +359,9 @@ export async function listResearchApplications(req: AuthRequest, res: Response) 
       try {
         const filter = typeof status === 'string' && status !== 'all' ? { status } : {};
         list = await ResearchApplication.find(filter).sort({ createdAt: -1 }).lean();
+        if (list && list.length > 0) {
+          return res.json({ success: true, data: list });
+        }
       } catch (err) {
         console.warn('[research-applications] DB list error:', err);
       }
@@ -346,14 +373,7 @@ export async function listResearchApplications(req: AuthRequest, res: Response) 
       ? inMem
       : inMem.filter((a: any) => a.status === filterStatus);
 
-    const combined = [...(list || [])];
-    for (const item of filteredInMem) {
-      if (!combined.some((c) => String(c._id) === String(item._id) || c.applicationId === item.applicationId)) {
-        combined.push(item);
-      }
-    }
-
-    res.json({ success: true, data: combined });
+    res.json({ success: true, data: filteredInMem });
   } catch {
     res.json({ success: true, data: getFallbackResearchApplications() });
   }

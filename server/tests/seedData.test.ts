@@ -19,9 +19,9 @@ describe('initial sample content', () => {
     expect(await Supervisor.countDocuments()).toBe(4);
     expect(await Scholar.countDocuments()).toBe(5);
     expect(await News.countDocuments()).toBe(3);
-    expect(await Research.countDocuments({ category: 'ongoing' })).toBe(3);
-    expect(await Research.countDocuments({ category: 'past' })).toBe(3);
-    expect(await Research.countDocuments({ category: 'future' })).toBe(3);
+    expect(await Research.countDocuments({ category: 'ongoing' })).toBe(10);
+    expect(await Research.countDocuments({ category: 'past' })).toBe(10);
+    expect(await Research.countDocuments({ category: 'future' })).toBe(10);
 
     const [featuredResearch, founder, coverCourse, sampleSupervisor] = await Promise.all([
       Research.findOne({ slug: 'sample-monsoon-flood-mapping' }),
