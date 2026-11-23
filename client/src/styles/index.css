@@ -719,11 +719,23 @@ img,video,iframe,canvas,svg{max-width:100%}
   cursor: pointer !important;
 }
 
-.research-mate-form h2 {
+.research-mate-form h2,
+.research-mate-form .form-section-title {
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
   line-height: 1.35 !important;
-  margin-top: 0 !important;
-  margin-bottom: 0.75rem !important;
-  display: block !important;
+  margin: 0 !important;
+  color: #1e293b !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  display: inline-block !important;
+}
+
+@media (min-width: 640px) {
+  .research-mate-form h2,
+  .research-mate-form .form-section-title {
+    font-size: 1rem !important;
+  }
 }
 
 @media (min-width: 640px) {
