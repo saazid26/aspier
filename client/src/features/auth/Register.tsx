@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { GraduationCap, Lock } from 'lucide-react';
 import { api, getApiErrorMessage } from '../../lib/api';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -76,7 +77,8 @@ export function Register() {
               await api.post('/auth/register', {
                 name: form.name,
                 email: form.email,
-                password: form.password
+                password: form.password,
+                role: 'student'
               });
               toast.success('Student account created! Please sign in to continue.');
               const defaultLogin = '/academy/login';
@@ -93,6 +95,20 @@ export function Register() {
           }}
         >
           {formError && <p className="applicant-error-message" role="alert">{formError}</p>}
+          <label>
+            Role
+            <div
+              className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-100/90 border border-slate-200 text-slate-700 text-sm font-semibold select-none cursor-not-allowed"
+              title="Registration in ASPIER Academy is permanently locked to Student role"
+            >
+              <GraduationCap className="w-4 h-4 text-teal-700 shrink-0" />
+              <span>Student</span>
+              <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200 uppercase tracking-wider">
+                <Lock className="w-3 h-3 text-slate-400" />
+                Locked
+              </span>
+            </div>
+          </label>
           <label>
             Full Name
             <Input required minLength={2} placeholder="e.g. Nusrat Jahan" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

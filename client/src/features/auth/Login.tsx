@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { GraduationCap, Lock } from 'lucide-react';
 import { api, getApiErrorMessage } from '../../lib/api';
 import { useCsrf } from '../../hooks/useCsrf';
 import { Input } from '../../components/ui/Input';
@@ -17,7 +18,8 @@ export function Login() {
   const redirect = searchParams.get('redirect');
   const isAcademy = location.pathname.startsWith('/academy');
   const isStudentRedirect = Boolean(redirect && (redirect.includes('student') || redirect.includes('academy')));
-  const [role, setRole] = useState<Role>(() => (isAcademy || isStudentRedirect) ? 'learner' : 'admin');
+  const isStudentLocked = isAcademy || isStudentRedirect;
+  const [role, setRole] = useState<Role>(() => isStudentLocked ? 'learner' : 'admin');
   const [mode, setMode] = useState<'login' | 'activate'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -150,11 +152,29 @@ export function Login() {
   };
 
   return <>
-    <SEO title="Login"/>
+    <SEO title={isStudentLocked ? "Student Portal Login | ASPIER Academy" : "Login"}/>
     <main className="auth-card">
-      <h1>{mode === 'activate' ? 'Activate member account' : 'Welcome back'}</h1>
-      <p className="muted">Sign in to the ASPIER platform.</p>
-      {isStudentRedirect && (
+      {isAcademy && (
+        <Link
+          to="/academy"
+          className="back-link"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: '0.86rem',
+            color: '#148f83',
+            marginBottom: 16,
+            fontWeight: 600,
+            textDecoration: 'none'
+          }}
+        >
+          ← Back to ASPIER Academy
+        </Link>
+      )}
+      <h1>{mode === 'activate' ? 'Activate member account' : isStudentLocked ? 'Student Portal Login' : 'Welcome back'}</h1>
+      <p className="muted">{isStudentLocked ? 'Sign in to access your courses and student dashboard.' : 'Sign in to the ASPIER platform.'}</p>
+      {isStudentLocked && (
         <div
           className="student-login-notice"
           style={{
@@ -177,14 +197,33 @@ export function Login() {
       )}
       {!setupComplete && <form className="form" onSubmit={submit}>
         {formError && <p className="applicant-error-message" role="alert">{formError}</p>}
-        {!setupToken && <label>Role
-          <select className="select" required value={role} onChange={(event) => changeRole(event.target.value as Role)}>
-            <option value="admin">Admin</option>
-            <option value="supervisor">Supervisor</option>
-            <option value="youngScholar">Young Scholar</option>
-            <option value="learner">Student / Instructor</option>
-          </select>
-        </label>}
+        {!setupToken && (
+          isStudentLocked ? (
+            <label>
+              Role
+              <div
+                className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-100/90 border border-slate-200 text-slate-700 text-sm font-semibold select-none cursor-not-allowed"
+                title="Student Portal login is locked to Student role"
+              >
+                <GraduationCap className="w-4 h-4 text-teal-700 shrink-0" />
+                <span>Student</span>
+                <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200 uppercase tracking-wider">
+                  <Lock className="w-3 h-3 text-slate-400" />
+                  Locked
+                </span>
+              </div>
+            </label>
+          ) : (
+            <label>Role
+              <select className="select" required value={role} onChange={(event) => changeRole(event.target.value as Role)}>
+                <option value="admin">Admin</option>
+                <option value="supervisor">Supervisor</option>
+                <option value="youngScholar">Young Scholar</option>
+                <option value="learner">Student</option>
+              </select>
+            </label>
+          )
+        )}
         {memberRole && !setupToken && <div className="auth-mode-tabs">
           <button type="button" className={`button ${mode === 'activate' ? 'button-primary' : 'button-secondary'}`} onClick={() => setMode('activate')}>First-Time Registration (Activate with Secret Code)</button>
           <button type="button" className={`button ${mode === 'login' ? 'button-primary' : 'button-secondary'}`} onClick={() => setMode('login')}>Member Login</button>
@@ -227,7 +266,7 @@ export function Login() {
           <Link
             className="muted"
             to={redirect ? `/academy/register?redirect=${encodeURIComponent(redirect)}` : '/academy/register'}
-            style={{ textDecoration: 'underline' }}
+            style={{ textDecoration: 'underline', color: '#148f83', fontWeight: 600 }}
           >
             Create Student Account
           </Link>

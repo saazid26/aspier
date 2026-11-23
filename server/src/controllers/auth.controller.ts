@@ -23,9 +23,12 @@ function makeBackupCodes() {
 
 export async function register(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { name, email: rawEmail, password } = req.body;
+    const { name, email: rawEmail, password, role: requestedRole } = req.body;
     const email = String(rawEmail).trim().toLowerCase();
     if (String(email).trim().toLowerCase() === FIXED_ADMIN_EMAIL) throw new HttpError(403, 'The administrator email is reserved');
+    if (requestedRole && requestedRole !== 'student') {
+      throw new HttpError(403, 'Public registration is restricted to students only');
+    }
     const errors = passwordStrength(password);
     if (errors.length) throw new HttpError(400, errors.join('. '));
     if (await User.exists({ email })) throw new HttpError(409, 'Email is already registered');
@@ -172,7 +175,7 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
     const roleMatches = !requestedRole
       || (requestedRole === 'admin' && ['admin', 'superadmin'].includes(user.role))
       || requestedRole === user.role
-      || (requestedRole === 'learner' && ['student', 'instructor'].includes(user.role));
+      || (['learner', 'student'].includes(requestedRole) && ['student', 'instructor'].includes(user.role));
     if (!roleMatches) throw new HttpError(401, 'The selected role does not match this account');
     if (adminAccount && user.isAdmin2FAEnabled) {
       if (user.otpLockedUntil && user.otpLockedUntil > new Date()) throw new HttpError(429, 'Authenticator verification is temporarily locked. Try again later.');

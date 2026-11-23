@@ -27,7 +27,12 @@ const strongPassword = z.string().min(8).max(128)
   .regex(/[A-Z]/, 'Use at least one uppercase letter')
   .regex(/\d/, 'Use at least one number')
   .refine((value) => !value.toLowerCase().includes('password') && !value.includes('123456'), 'Password is too common');
-const registerSchema = z.object({ name: z.string().trim().min(2).max(100), email: z.string().email().transform((value) => value.trim().toLowerCase()), password: strongPassword });
+const registerSchema = z.object({
+  name: z.string().trim().min(2).max(100),
+  email: z.string().email().transform((value) => value.trim().toLowerCase()),
+  password: strongPassword,
+  role: z.literal('student').optional()
+});
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1).max(128), role: z.string().optional(), totpCode: z.string().max(100).optional(), strongKey: z.string().max(128).optional() });
 router.get('/csrf-token', csrfToken);
 router.post('/register', authLimiter, slowAuth, validate(registerSchema), register);

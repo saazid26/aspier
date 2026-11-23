@@ -74,7 +74,7 @@ function Guard({children,roles}:{children:ReactNode;roles: string[]}){
   useEffect(()=>{api.get('/auth/me').then(r=>setState({loading:false,role:r.data.data.role})).catch(()=>setState({loading:false}))},[]);
   if(state.loading)return <main className="container section">Loading...</main>;
   if(!state.role){
-    const loginPath = location.pathname.startsWith('/academy') ? '/academy/login' : '/login';
+    const loginPath = (location.pathname.startsWith('/academy') || location.pathname.startsWith('/student')) ? '/academy/login' : '/login';
     return <Navigate to={`${loginPath}?redirect=${encodeURIComponent(location.pathname)}`} replace/>;
   }
   if(!roles.includes(state.role))return <Navigate to="/" replace/>;
