@@ -17,6 +17,8 @@ import {
   Sparkles,
   Clock,
   User,
+  UserPlus,
+  KeyRound,
   GraduationCap,
   Building,
   Globe,
@@ -110,6 +112,7 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
   const bellRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const appIdInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<Mode>('check');
 
   // Input states always start completely empty (no hardcoded pre-filled values)
@@ -1170,94 +1173,101 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
   const renderLookupGate = () => (
     <div className="w-full">
       {mode === 'check' ? (
-        /* TAB 1: CHECK APPLICATION (APPLICATION VERIFICATION GATE) */
+        /* TAB 1: CHECK APPLICATION (EXECUTIVE VERIFICATION CARD + RECOVERY CARD) */
         <div className="flex flex-col w-full">
-          {/* Inline Icon + Title Header */}
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100 text-teal-700 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <h3 className="text-sm font-bold text-slate-900 m-0">Application Verification Gate</h3>
-          </div>
-          <p className="text-xs text-slate-600 leading-relaxed mb-3">
-            Enter the Application ID and Private Access Code received upon submitting your application to check your approval status or manage your profile.
-          </p>
-
-          <form className="flex flex-col gap-2.5 w-full" onSubmit={handleCheckStatus}>
-            {loginError && (
-              <div className="p-2.5 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs flex items-start gap-2" role="alert">
-                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                <span>{loginError}</span>
+          {/* Card 1 — Application Verification Gate */}
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-4.5 shadow-xs">
+            <div className="flex items-start gap-3 mb-3.5">
+              <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 text-teal-700 flex items-center justify-center shrink-0 mt-0.5">
+                <ShieldCheck className="w-4.5 h-4.5" />
               </div>
-            )}
-
-            {/* Application ID Input */}
-            <div className="w-full">
-              <label className="text-xs font-semibold text-slate-700 block mb-1">Application ID</label>
-              <input
-                required
-                type="text"
-                autoComplete="username"
-                className="w-full min-h-[40px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border font-mono uppercase"
-                placeholder="e.g. ASPIER-2026-XXXX"
-                value={applicationId}
-                onChange={(e) => setApplicationId(e.target.value.toUpperCase())}
-              />
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 m-0">Application Verification Gate</h3>
+                <p className="text-xs text-slate-600 leading-relaxed mt-0.5 m-0">
+                  Enter your assigned Application ID and Private Access Code to check status and proceed to Stage 2.
+                </p>
+              </div>
             </div>
 
-            {/* Private Access Code Input */}
-            <div className="w-full">
-              <label className="text-xs font-semibold text-slate-700 block mb-1">Private Access Code</label>
-              <input
-                required
-                type="text"
-                autoComplete="current-password"
-                className="w-full min-h-[40px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border font-mono"
-                placeholder="e.g. SEC-XXXX-XXXX"
-                value={accessCode}
-                onChange={(e) => setAccessCode(e.target.value)}
-              />
-            </div>
-
-            {/* Primary Submit Button */}
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full min-h-[42px] mt-0.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
-            >
-              {busy ? (
-                <>
-                  <Orbit className="w-4 h-4 animate-spin" />
-                  <span>Verifying Credentials…</span>
-                </>
-              ) : (
-                <>
-                  <span>Verify Credentials</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
+            <form className="flex flex-col gap-3 w-full" onSubmit={handleCheckStatus}>
+              {loginError && (
+                <div className="p-3 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs flex items-start gap-2" role="alert">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                  <span>{loginError}</span>
+                </div>
               )}
-            </button>
-          </form>
 
-          {/* Integrated 'Lost your access code?' Recovery Section */}
-          <div className="border-t border-slate-200/90 pt-3 mt-3.5">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 mb-1">
-              <Lock className="w-3.5 h-3.5 text-slate-500" />
-              Lost your access code?
-            </h4>
-            <p className="text-xs text-slate-500 mb-2 leading-relaxed">
-              Enter the email address used on your application to request an access recovery review.
+              {/* Application ID Input */}
+              <div className="w-full">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Application ID</label>
+                <input
+                  ref={appIdInputRef}
+                  required
+                  type="text"
+                  autoComplete="username"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 font-mono text-base sm:text-sm rounded-xl border border-slate-300 bg-slate-50/40 focus:bg-white focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 placeholder:font-sans placeholder:text-slate-400 box-border uppercase"
+                  placeholder="e.g. ASPIER-2026-XXXX"
+                  value={applicationId}
+                  onChange={(e) => setApplicationId(e.target.value.toUpperCase())}
+                />
+              </div>
+
+              {/* Private Access Code Input */}
+              <div className="w-full">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Private Access Code</label>
+                <input
+                  required
+                  type="text"
+                  autoComplete="current-password"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 font-mono text-base sm:text-sm rounded-xl border border-slate-300 bg-slate-50/40 focus:bg-white focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 placeholder:font-sans placeholder:text-slate-400 box-border"
+                  placeholder="e.g. SEC-XXXX-XXXX"
+                  value={accessCode}
+                  onChange={(e) => setAccessCode(e.target.value)}
+                />
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full min-h-[44px] mt-1 rounded-xl bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 hover:to-emerald-800 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              >
+                {busy ? (
+                  <>
+                    <Orbit className="w-4 h-4 animate-spin" />
+                    <span>Verifying Credentials…</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Check Application Status</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Card 2 — Lost your access code? Recovery Card */}
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3.5 sm:p-4 mt-3.5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <KeyRound className="w-4 h-4 text-slate-600 shrink-0" />
+              <h4 className="text-xs sm:text-sm font-bold text-slate-800 m-0">
+                Lost your access code?
+              </h4>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed mb-3 m-0">
+              Enter the email address used on your application to request an access recovery review from our admissions team.
             </p>
 
             {recoverySuccess && (
-              <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs mb-2 flex items-start gap-2">
+              <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs mb-2.5 flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <span>{recoverySuccess}</span>
               </div>
             )}
 
             {recoveryError && (
-              <div className="p-2.5 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs mb-2 flex items-start gap-2">
+              <div className="p-2.5 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs mb-2.5 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                 <span>{recoveryError}</span>
               </div>
@@ -1269,20 +1279,20 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
                 placeholder="Email used on application"
                 value={recoveryEmail}
                 onChange={(e) => setRecoveryEmail(e.target.value)}
-                className="w-full min-h-[38px] px-3 py-1.5 text-base sm:text-xs rounded-xl border border-slate-300 placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border bg-white"
+                className="flex-1 min-w-0 min-h-[42px] px-3 py-2 text-base sm:text-sm rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
               />
               <button
                 type="button"
                 onClick={handleRequestRecovery}
                 disabled={isRecovering}
-                className="w-full sm:w-auto min-h-[38px] px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs flex items-center justify-center shrink-0 transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto shrink-0 min-h-[42px] px-4 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 text-xs sm:text-sm font-semibold transition cursor-pointer disabled:opacity-50 flex items-center justify-center shadow-2xs"
               >
                 {isRecovering ? 'Requesting…' : 'Request Recovery'}
               </button>
             </div>
           </div>
 
-          <p className="text-xs text-slate-500 pt-3 mt-3 text-center border-t border-slate-100">
+          <p className="text-xs text-slate-500 pt-3.5 mt-3 text-center border-t border-slate-100">
             Haven&apos;t applied yet?{' '}
             <Link to="/join" onClick={() => { setOpen(false); onOpenChange?.(false); }} className="text-teal-700 hover:text-teal-900 font-semibold underline">
               Apply to Join ASPIER →
@@ -1290,16 +1300,25 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
           </p>
         </div>
       ) : (
-        /* TAB 2: SIGN UP (STRUCTURED 2-STEP ONBOARDING CARDS) */
-        <div className="flex flex-col w-full">
-          {/* Step 1 Card */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 sm:p-4 flex flex-col gap-2.5">
-            <div className="flex items-center gap-2.5">
-              <span className="w-6 h-6 rounded-full bg-teal-700 text-white text-xs font-bold flex items-center justify-center shrink-0">1</span>
-              <h4 className="text-sm font-bold text-slate-900 m-0">Step 1: Submit Application First</h4>
+        /* TAB 2: SIGN UP (CONNECTED 2-STEP ONBOARDING TIMELINE CARDS) */
+        <div className="flex flex-col w-full space-y-1">
+          {/* Step 1 Card: Submit Initial Application */}
+          <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/70 p-4 sm:p-4.5 shadow-xs">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-full bg-teal-700 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-xs">
+                  1
+                </span>
+                <h4 className="text-sm font-bold text-slate-900 leading-snug m-0">
+                  Step 1: Submit Application First
+                </h4>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/70 shrink-0">
+                Free Stage 1
+              </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed m-0">
-              Applicants cannot sign up directly without submitting an initial application. Apply first as a Supervisor, Young Scholar, or Research Mate.
+            <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mb-3.5 m-0">
+              Applicants cannot sign up directly without submitting an initial application. Apply first as a <strong>Research Supervisor</strong>, <strong>Young Scholar</strong>, or <strong>Research Mate</strong> before account/portal verification.
             </p>
             <Link
               to="/join"
@@ -1307,28 +1326,46 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
                 setOpen(false);
                 onOpenChange?.(false);
               }}
-              className="w-full min-h-[40px] px-3.5 rounded-lg bg-white hover:bg-teal-50 border border-teal-200 text-teal-800 text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition text-center shadow-xs"
+              className="w-full min-h-[42px] px-4 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-xs transition"
             >
               <span>Apply to Join ASPIER →</span>
             </Link>
           </div>
 
-          {/* Step 2 Card */}
-          <div className="rounded-xl border border-amber-200/80 bg-amber-50/40 p-3.5 sm:p-4 flex flex-col gap-2.5 mt-3">
-            <div className="flex items-center gap-2.5">
-              <span className="w-6 h-6 rounded-full bg-amber-600 text-white text-xs font-bold flex items-center justify-center shrink-0">2</span>
-              <h4 className="text-sm font-bold text-slate-900 m-0">Step 2: Check Application &amp; Verify</h4>
+          {/* Subtle Vertical Step Connector */}
+          <div className="flex justify-center my-1.5 relative">
+            <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center shadow-2xs">
+              <ChevronDown className="w-3.5 h-3.5" />
             </div>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed m-0">
-              Already applied? Enter your admin-issued <strong>Application ID</strong> and <strong>Private Access Code</strong> in the Check Application gate to verify your account status.
+          </div>
+
+          {/* Step 2 Card: Check Application & Verify */}
+          <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-b from-amber-50/50 to-white p-4 sm:p-4.5 shadow-xs">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-full bg-amber-600 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-xs">
+                  2
+                </span>
+                <h4 className="text-sm font-bold text-slate-900 leading-snug m-0">
+                  Step 2: Check Application &amp; Verify
+                </h4>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100/80 text-amber-800 border border-amber-200/80 shrink-0">
+                Post-Approval
+              </span>
+            </div>
+            <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mb-3.5 m-0">
+              Already applied? Enter your admin-issued <strong>Application ID</strong> and <strong>Private Access Code</strong> in the Check Application gate to complete Stage 2 profile setup, submit payment (Research Mate only), or join your project.
             </p>
             <button
               type="button"
-              onClick={() => setMode('check')}
-              className="w-full min-h-[40px] px-3.5 rounded-lg bg-amber-100 hover:bg-amber-200/80 border border-amber-300/70 text-amber-950 text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer"
+              onClick={() => {
+                setMode('check');
+                setTimeout(() => appIdInputRef.current?.focus(), 60);
+              }}
+              className="w-full min-h-[42px] px-4 rounded-xl bg-amber-100/90 hover:bg-amber-200/80 border border-amber-300/80 text-amber-950 text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer"
             >
-              <span>Go to Check Application Gate</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Go to Check Application Gate →</span>
             </button>
           </div>
 
@@ -1355,24 +1392,42 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
   // Popover Inner Content
   const popoverContent = (
     <div className="flex flex-col h-full max-h-full min-h-0 overflow-hidden box-border">
-      <div className="notification-popover-head">
-        <div className="notification-title">
-          <strong>Applicant Portal &amp; Notifications</strong>
-          {unreadCount > 0 && <span className="notification-header-count">{unreadCount}</span>}
+      {/* Executive Header */}
+      <div className="px-4 py-3.5 sm:px-5 sm:py-4 border-b border-slate-100 bg-gradient-to-r from-teal-50/70 via-white to-emerald-50/50 flex items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-teal-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <ShieldCheck className="w-4.5 h-4.5" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <strong className="text-sm sm:text-[15px] font-bold text-slate-900 leading-tight truncate">
+                Applicant Portal &amp; Notifications
+              </strong>
+              {unreadCount > 0 && (
+                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-teal-700 text-white rounded-full">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 truncate mt-0.5 m-0">
+              Track application status or begin onboarding
+            </p>
+          </div>
         </div>
-        <div className="notification-header-actions">
+        <div className="flex items-center gap-1.5 shrink-0">
           {isExpanded && (
             <button
               type="button"
-              className="notification-switch-button"
+              className="text-xs font-semibold text-teal-800 hover:text-teal-900 bg-white hover:bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
               onClick={handleCheckAnother}
             >
-              ← Check Another ID
+              ← Back
             </button>
           )}
           <button
             type="button"
             aria-label="Close notifications"
+            className="w-9 h-9 rounded-xl bg-white/80 hover:bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-800 transition cursor-pointer"
             onClick={() => {
               setOpen(false);
               onOpenChange?.(false);
@@ -1383,35 +1438,39 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
         </div>
       </div>
 
-      {/* Crisp full-width 2-column Tab Switcher */}
+      {/* Modern Segmented Pill Tab Switcher */}
       {!isExpanded && (
-        <div className="grid grid-cols-2 w-full border-b border-slate-200 bg-slate-50/70 shrink-0" role="tablist" aria-label="Applicant access">
-          <button
-            role="tab"
-            aria-selected={mode === 'check'}
-            className={`min-h-[44px] text-sm font-semibold flex items-center justify-center transition cursor-pointer box-border ${
-              mode === 'check'
-                ? 'border-b-2 border-teal-700 text-teal-800 bg-white font-bold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-            }`}
-            type="button"
-            onClick={() => setMode('check')}
-          >
-            Check Application
-          </button>
-          <button
-            role="tab"
-            aria-selected={mode === 'signup'}
-            className={`min-h-[44px] text-sm font-semibold flex items-center justify-center transition cursor-pointer box-border ${
-              mode === 'signup'
-                ? 'border-b-2 border-teal-700 text-teal-800 bg-white font-bold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-            }`}
-            type="button"
-            onClick={() => setMode('signup')}
-          >
-            Sign Up
-          </button>
+        <div className="px-4 pt-3 pb-2.5 sm:px-5 bg-white border-b border-slate-100 shrink-0">
+          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100/90 border border-slate-200/60" role="tablist" aria-label="Applicant access">
+            <button
+              role="tab"
+              aria-selected={mode === 'check'}
+              className={`min-h-[40px] px-2.5 rounded-lg text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                mode === 'check'
+                  ? 'bg-white text-teal-800 font-semibold shadow-sm ring-1 ring-slate-200/70'
+                  : 'text-slate-600 hover:text-slate-900 font-medium'
+              }`}
+              type="button"
+              onClick={() => setMode('check')}
+            >
+              <ShieldCheck className="w-4 h-4 shrink-0" />
+              <span>Check Application</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={mode === 'signup'}
+              className={`min-h-[40px] px-2.5 rounded-lg text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                mode === 'signup'
+                  ? 'bg-white text-teal-800 font-semibold shadow-sm ring-1 ring-slate-200/70'
+                  : 'text-slate-600 hover:text-slate-900 font-medium'
+              }`}
+              type="button"
+              onClick={() => setMode('signup')}
+            >
+              <UserPlus className="w-4 h-4 shrink-0" />
+              <span>Sign Up</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -1476,8 +1535,8 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
               <section
                 onWheel={(e) => e.stopPropagation()}
                 onTouchMove={(e) => e.stopPropagation()}
-                className={`notification-popover public-applicant-popover fixed inset-x-3 top-16 z-[999] mx-auto w-[calc(100vw-24px)] max-w-[410px] max-h-[85dvh] rounded-2xl bg-white border border-slate-200 shadow-2xl flex flex-col overflow-hidden box-border overscroll-contain ${
-                  isExpanded ? 'popover-expanded !max-w-[540px] !max-h-[88dvh]' : ''
+                className={`notification-popover public-applicant-popover fixed inset-x-3 top-16 z-[999] mx-auto w-[calc(100vw-24px)] max-w-[440px] max-h-[85dvh] rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-[0_20px_50px_rgba(15,23,42,0.16)] flex flex-col overflow-hidden box-border overscroll-contain ${
+                  isExpanded ? 'popover-expanded !max-w-[520px] !max-h-[88dvh]' : ''
                 }`}
                 role="dialog"
                 aria-modal="true"
@@ -1492,8 +1551,8 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
           <section
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
-            className={`notification-popover public-applicant-popover sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2.5 sm:w-[410px] sm:max-h-[calc(100vh-88px)] rounded-2xl bg-white border border-slate-200 shadow-2xl flex flex-col overflow-hidden box-border overscroll-contain ${
-              isExpanded ? 'popover-expanded sm:!w-[540px] sm:!max-h-[calc(100vh-88px)]' : ''
+            className={`notification-popover public-applicant-popover sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2.5 sm:w-[440px] sm:max-h-[calc(100vh-88px)] rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-[0_20px_50px_rgba(15,23,42,0.16)] flex flex-col overflow-hidden box-border overscroll-contain ${
+              isExpanded ? 'popover-expanded sm:!w-[520px] sm:!max-h-[calc(100vh-88px)]' : ''
             }`}
             role="dialog"
             aria-modal="true"
