@@ -9,6 +9,7 @@ import Supervisor from '../models/Supervisor.js';
 import Scholar from '../models/Scholar.js';
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
+import { recordAudit } from '../services/audit.service.js';
 import { notifyAdmins, notifyMember } from '../services/notification.service.js';
 import { sendEmail } from '../services/email.service.js';
 import { hashPassword } from '../services/password.service.js';
@@ -108,18 +109,13 @@ export async function approveAndSendOnboarding(req: AuthRequest, res: Response, 
       // ignore
     }
 
-    try {
-      await AuditLog.create({
-        actorId: req.user?._id,
-        action: 'approve-onboarding-invitation',
-        resource: 'MembershipApplication',
-        resourceId: application.id || application._id,
-        ip: req.ip,
-        userAgent: req.headers['user-agent']
-      });
-    } catch {
-      // ignore
-    }
+    await recordAudit({
+      req,
+      action: 'approve_onboarding_invitation',
+      description: `Sent onboarding invitation to ${application.name || 'applicant'} (${application.email || ''}) as ${roleLabel}`,
+      resource: 'MembershipApplication',
+      resourceId: String(application.id || application._id)
+    });
 
     res.json({
       success: true,

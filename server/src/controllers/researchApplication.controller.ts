@@ -15,6 +15,7 @@ import type { AuthRequest } from '../middleware/auth.js';
 import { notifyAdmins } from '../services/notification.service.js';
 import { sendEmail } from '../services/email.service.js';
 import AuditLog from '../models/AuditLog.js';
+import { recordAudit } from '../services/audit.service.js';
 import { getFallbackResearchApplications, getFallbackResearch } from '../utils/fallbackData.js';
 
 const cvDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../private-cvs');
@@ -478,18 +479,13 @@ export async function approveStage1ResearchApplication(req: AuthRequest, res: Re
       // ignore
     }
 
-    try {
-      await AuditLog.create({
-        actorId: req.user?._id,
-        action: 'approve-stage1-research-application',
-        resource: 'ResearchApplication',
-        resourceId: application.id || application._id,
-        ip: req.ip,
-        userAgent: req.headers['user-agent']
-      });
-    } catch {
-      // ignore
-    }
+    await recordAudit({
+      req,
+      action: 'approve_stage1_research_application',
+      description: `Approved Stage 1 Research Mate application for ${application.name} (${application.email}) - Project: ${application.projectTitle || application.wingTitle || 'Research Project'}`,
+      resource: 'ResearchApplication',
+      resourceId: String(application.id || application._id)
+    });
 
     res.json({
       success: true,
@@ -525,18 +521,13 @@ export async function rejectResearchApplication(req: AuthRequest, res: Response,
       await application.save().catch(() => {});
     }
 
-    try {
-      await AuditLog.create({
-        actorId: req.user?._id,
-        action: 'reject-research-application',
-        resource: 'ResearchApplication',
-        resourceId: application.id || application._id,
-        ip: req.ip,
-        userAgent: req.headers['user-agent']
-      });
-    } catch {
-      // ignore
-    }
+    await recordAudit({
+      req,
+      action: 'reject_research_application',
+      description: `Rejected Research Mate application for ${application.name} (${application.email})`,
+      resource: 'ResearchApplication',
+      resourceId: String(application.id || application._id)
+    });
 
     res.json({
       success: true,
@@ -624,18 +615,13 @@ export async function confirmResearchPayment(req: AuthRequest, res: Response, ne
       // ignore
     }
 
-    try {
-      await AuditLog.create({
-        actorId: req.user?._id,
-        action: 'confirm-payment-research-application',
-        resource: 'ResearchApplication',
-        resourceId: application.id || application._id,
-        ip: req.ip,
-        userAgent: req.headers['user-agent']
-      });
-    } catch {
-      // ignore
-    }
+    await recordAudit({
+      req,
+      action: 'confirm_payment_research_application',
+      description: `Verified BDT 1,000 Research Mate payment (${application.paymentMethod || 'bKash'} TrxID: ${application.trxId || 'N/A'}) for ${application.name} (${application.email})`,
+      resource: 'ResearchApplication',
+      resourceId: String(application.id || application._id)
+    });
 
     res.json({
       success: true,
@@ -742,18 +728,13 @@ export async function deleteResearchApplication(req: AuthRequest, res: Response,
     const idx = inMem.findIndex((a) => String(a._id) === id || a.id === id || a.applicationId === id);
     if (idx !== -1) inMem.splice(idx, 1);
 
-    try {
-      await AuditLog.create({
-        actorId: req.user?._id,
-        action: 'delete-research-application',
-        resource: 'ResearchApplication',
-        resourceId: id,
-        ip: req.ip,
-        userAgent: req.headers['user-agent']
-      });
-    } catch {
-      // ignore
-    }
+    await recordAudit({
+      req,
+      action: 'delete_research_application',
+      description: `Deleted Research Mate application ${id}`,
+      resource: 'ResearchApplication',
+      resourceId: id
+    });
 
     res.json({ success: true, message: 'Research application deleted' });
   } catch (error) {

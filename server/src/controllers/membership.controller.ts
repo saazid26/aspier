@@ -10,6 +10,7 @@ import Supervisor from '../models/Supervisor.js';
 import Scholar from '../models/Scholar.js';
 import Wing from '../models/Wing.js';
 import AuditLog from '../models/AuditLog.js';
+import { recordAudit } from '../services/audit.service.js';
 import { HttpError } from '../middleware/error.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { sha256 } from '../utils/crypto.js';
@@ -660,7 +661,13 @@ export async function approveApplicantSignup(req: AuthRequest, res: Response, ne
       subject: 'ASPIER Applicant Registration Approved',
       html: `<p>Hello ${application.name},</p><p>Your ASPIER fellowship/membership applicant registration has been approved.</p><p><strong>Application ID:</strong> ${assignedId}<br/><strong>Private Access Code:</strong> ${accessCode}</p><p>You can access your portal here: <a href="${loginUrl}">${loginUrl}</a></p>`
     });
-    await AuditLog.create({ actorId: req.user._id, action: 'approve-applicant-signup', resource: 'MembershipApplication', resourceId: application.id, ip: req.ip, userAgent: req.headers['user-agent'] });
+    await recordAudit({
+      req,
+      action: 'approve_applicant_signup',
+      description: `Approved applicant signup for ${application.name} (${application.email})`,
+      resource: 'MembershipApplication',
+      resourceId: String(application.id || application._id)
+    });
     res.json({
       success: true,
       data: {
@@ -703,7 +710,13 @@ export async function approveInitialApplication(req: AuthRequest, res: Response,
       subject: 'Your ASPIER Application Has Been Approved',
       html: `<p>Hello ${application.name},</p><p>${body}</p><p>Log in to your applicant portal using your Application ID and Access Code to proceed.</p>`
     });
-    await AuditLog.create({ actorId: req.user._id, action: 'approve-membership-application', resource: 'MembershipApplication', resourceId: application.id, ip: req.ip, userAgent: req.headers['user-agent'] });
+    await recordAudit({
+      req,
+      action: 'approve_membership_application',
+      description: `Approved Stage 1 ${roleTitle} application for ${application.name} (${application.email})`,
+      resource: 'MembershipApplication',
+      resourceId: String(application.id || application._id)
+    });
     res.json({ success: true, data: { applicationId: application.id, status: application.status } });
   } catch (error) {
     next(error);
@@ -821,7 +834,13 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
       );
       throw error;
     }
-    await AuditLog.create({ actorId: req.user._id, action: 'publish-membership-application', resource: 'MembershipApplication', resourceId: application.id, ip: req.ip, userAgent: req.headers['user-agent'] });
+    await recordAudit({
+      req,
+      action: 'publish_membership_application',
+      description: `Published Stage 2 ${isSupervisor ? 'Supervisor' : 'Young Scholar'} profile for ${candidate.name || application.name}`,
+      resource: 'MembershipApplication',
+      resourceId: String(application.id || application._id)
+    });
     if (application.memberUserId) await User.updateOne({ _id: application.memberUserId }, { $set: { isActive: true } });
     const publishMsg = `Your ${isSupervisor ? 'Supervisor' : 'Young Scholar'} profile is published. Joining ASPIER is completely fee-free. Use this one-time Secret Activation Code to register your account: ${activationCode}`;
     await notifyMember({
@@ -918,11 +937,13 @@ export async function deleteMembershipApplication(req: AuthRequest, res: Respons
     const inMem = getFallbackApplications();
     const idx = inMem.findIndex(a => String(a._id) === id || a.id === id);
     if (idx !== -1) inMem.splice(idx, 1);
-    try {
-      await AuditLog.create({ actorId: req.user._id, action: 'delete-membership-application', resource: 'MembershipApplication', resourceId: id, ip: req.ip, userAgent: req.headers['user-agent'] });
-    } catch {
-      // ignore
-    }
+    await recordAudit({
+      req,
+      action: 'delete_membership_application',
+      description: `Deleted membership application ${id}`,
+      resource: 'MembershipApplication',
+      resourceId: id
+    });
     res.json({ success: true, message: 'Application deleted' });
   } catch (error) {
     next(error);

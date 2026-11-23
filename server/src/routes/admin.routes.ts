@@ -497,7 +497,28 @@ router.get('/settings', getSettings);
 router.put('/settings', updateSettings);
 router.get('/audit', async (req, res) => {
   try {
-    const logs = await AuditLog.find().populate('actorId', 'name email').sort({ createdAt: -1 }).limit(200);
+    const { search, role, status, resource, limit = 200 } = req.query as any;
+    const filter: any = {};
+    if (role && role !== 'all') filter.actorRole = role;
+    if (status && status !== 'all') filter.status = status;
+    if (resource && resource !== 'all') filter.resource = resource;
+    if (search) {
+      const s = String(search).trim();
+      filter.$or = [
+        { actorName: { $regex: s, $options: 'i' } },
+        { actorEmail: { $regex: s, $options: 'i' } },
+        { action: { $regex: s, $options: 'i' } },
+        { description: { $regex: s, $options: 'i' } },
+        { ipAddress: { $regex: s, $options: 'i' } },
+        { ip: { $regex: s, $options: 'i' } },
+        { browser: { $regex: s, $options: 'i' } },
+        { os: { $regex: s, $options: 'i' } }
+      ];
+    }
+    const logs = await AuditLog.find(filter)
+      .populate('actorId', 'name email role')
+      .sort({ createdAt: -1 })
+      .limit(Math.min(500, Math.max(10, Number(limit) || 200)));
     res.json({ success: true, data: logs || [] });
   } catch {
     res.json({ success: true, data: [] });

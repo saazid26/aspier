@@ -189,6 +189,12 @@ export function AppRouter(){return <BrowserRouter><ScrollToTop/><Suspense fallba
   <Route path="academy/portal/payments" element={<Navigate to="/student/payments" replace/>}/>
   <Route path="academy/portal/profile" element={<Navigate to="/student/profile" replace/>}/>
   <Route path="academy/portal/security" element={<Navigate to="/student/security" replace/>}/>
+  <Route path="academy/student" element={<Navigate to="/student" replace/>}/>
+  <Route path="academy/student/dashboard" element={<Navigate to="/student/dashboard" replace/>}/>
+  <Route path="academy/student/courses" element={<Navigate to="/student/courses" replace/>}/>
+  <Route path="academy/student/payments" element={<Navigate to="/student/payments" replace/>}/>
+  <Route path="academy/student/profile" element={<Navigate to="/student/profile" replace/>}/>
+  <Route path="academy/student/security" element={<Navigate to="/student/security" replace/>}/>
   <Route path="academy/courses/:id" element={<CourseDetail/>}/>
   <Route path="academy/courses/:id/payment" element={<EnrollPayment/>}/>
   <Route path="academy/courses/:id/payment-status" element={<PaymentStatus/>}/>

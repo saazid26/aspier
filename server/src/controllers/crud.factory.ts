@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import mongoose, { type Model } from 'mongoose';
 import { slugify } from '../utils/slug.js';
 import AuditLog from '../models/AuditLog.js';
+import { recordAudit } from '../services/audit.service.js';
 import { hashPassword, passwordStrength } from '../services/password.service.js';
 import { FIXED_ADMIN_EMAIL } from '../config/env.js';
 import { connectDatabase } from '../config/db.js';
@@ -81,7 +82,15 @@ export function crudFactory(model: Model<any>) {
         const item = await model.create(body);
         const metadata = { ...body };
         delete metadata.passwordHash;
-        await AuditLog.create({ actorId: req.user?._id, action: 'create', resource: model.modelName, resourceId: String(item._id), ip: req.ip, userAgent: req.headers['user-agent'], metadata }).catch((err) => console.warn('[audit create]', err));
+        await recordAudit({
+          actor: req.user,
+          action: 'create',
+          description: `Created ${model.modelName} ${item.name || item.title || item._id}`,
+          resource: model.modelName,
+          resourceId: String(item._id),
+          req,
+          metadata
+        });
         if (model.modelName === 'User') item.passwordHash = undefined;
         res.status(201).json({ success: true, data: item });
       } catch (error) { next(error); }
@@ -150,7 +159,15 @@ export function crudFactory(model: Model<any>) {
         if (!item) return res.status(404).json({ success: false, message: 'Not found' });
         const metadata = { ...body };
         delete metadata.passwordHash;
-        await AuditLog.create({ actorId: req.user?._id, action: 'update', resource: model.modelName, resourceId: id, ip: req.ip, userAgent: req.headers['user-agent'], metadata }).catch((err) => console.warn('[audit update]', err));
+        await recordAudit({
+          actor: req.user,
+          action: 'update',
+          description: `Updated ${model.modelName} ${item.name || item.title || id}`,
+          resource: model.modelName,
+          resourceId: id,
+          req,
+          metadata
+        });
         res.json({ success: true, data: item });
       } catch (error) { next(error); }
     },
@@ -184,7 +201,14 @@ export function crudFactory(model: Model<any>) {
           item = await model.findOneAndDelete({ $or: [{ slug: id }, { name: id }, { title: id }] });
         }
         if (!item) return res.status(404).json({ success: false, message: 'Not found' });
-        await AuditLog.create({ actorId: req.user?._id, action: 'delete', resource: model.modelName, resourceId: id, ip: req.ip, userAgent: req.headers['user-agent'] }).catch((err) => console.warn('[audit delete]', err));
+        await recordAudit({
+          actor: req.user,
+          action: 'delete',
+          description: `Deleted ${model.modelName} ${item.name || item.title || id}`,
+          resource: model.modelName,
+          resourceId: id,
+          req
+        });
         res.json({ success: true, message: 'Deleted' });
       } catch (error) { next(error); }
     }

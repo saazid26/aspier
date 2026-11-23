@@ -14,6 +14,7 @@ import { env, FIXED_ADMIN_EMAIL } from '../config/env.js';
 import { notifyAdmins } from '../services/notification.service.js';
 import { sendEmail } from '../services/email.service.js';
 import { saveMedia } from '../services/media.service.js';
+import { recordAudit } from '../services/audit.service.js';
 import { beginWebAuthnLogin } from './webauthn.controller.js';
 
 function makeBackupCodes() {
@@ -29,6 +30,14 @@ export async function register(req: AuthRequest, res: Response, next: NextFuncti
     if (errors.length) throw new HttpError(400, errors.join('. '));
     if (await User.exists({ email })) throw new HttpError(409, 'Email is already registered');
     const user = await User.create({ name, email, passwordHash: await hashPassword(password), role: 'student' });
+    void recordAudit({
+      actor: user,
+      action: 'register',
+      description: `New Student registered: ${user.name} (${user.email})`,
+      resource: 'Auth',
+      status: 'success',
+      req
+    });
     res.status(201).json({ success: true, data: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (error) { next(error); }
 }
@@ -114,6 +123,14 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
         refreshToken = 'admin-refresh-token';
       }
       setAuthCookies(res, accessToken, refreshToken);
+      void recordAudit({
+        actor: adminPayload,
+        action: 'admin_login',
+        description: 'Administrator signed in successfully',
+        resource: 'Auth',
+        status: 'success',
+        req
+      });
       return res.json({
         success: true,
         data: {
@@ -212,6 +229,14 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
     const accessToken = signAccessToken(user);
     const refreshToken = await issueRefreshSession(String(user._id), { device: req.headers['user-agent'], ip: req.ip });
     setAuthCookies(res, accessToken, refreshToken);
+    void recordAudit({
+      actor: user,
+      action: 'login',
+      description: `${String(user.role).toUpperCase()} signed in successfully (${user.email})`,
+      resource: 'Auth',
+      status: 'success',
+      req
+    });
     res.json({
       success: true,
       data: {
@@ -227,7 +252,21 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
         }
       }
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    const rawEmail = String(req.body?.email || '').trim().toLowerCase();
+    if (rawEmail) {
+      void recordAudit({
+        actorEmail: rawEmail,
+        actorRole: req.body?.role || 'guest',
+        action: 'login_failed',
+        description: `Failed login attempt for ${rawEmail}`,
+        resource: 'Auth',
+        status: 'failure',
+        req
+      });
+    }
+    next(error);
+  }
 }
 export function logout(req: AuthRequest, res: Response): void {
   const token = req.cookies?.refreshToken;
@@ -310,6 +349,14 @@ export async function changePassword(req: AuthRequest, res: Response, next: Next
     const nextRefreshToken = await issueRefreshSession(String(user._id), { device: req.headers['user-agent'], ip: req.ip });
     const accessToken = signAccessToken(user);
     setAuthCookies(res, accessToken, nextRefreshToken);
+    void recordAudit({
+      actor: user,
+      action: 'change_password',
+      description: `Password updated for ${user.email}`,
+      resource: 'Auth',
+      status: 'success',
+      req
+    });
     res.json({ success: true, message: 'Password updated successfully' });
   } catch (error) { next(error); }
 }
@@ -494,8 +541,15 @@ export async function updateAdminCredentials(req: AuthRequest, res: Response, ne
       user.email = emailTrimmed;
     }
     await user.save();
-    const accessToken = signAccessToken(user);
-    res.json({ success: true, message: 'Administrator credentials updated successfully', data: { email: user.email, name: user.name } });
+
+    void recordAudit({
+      actor: user,
+      action: 'update_admin_credentials',
+      description: `Administrator credentials updated (${user.email})`,
+      resource: 'User',
+      status: 'success',
+      req
+    });
   } catch (error) { next(error); }
 }
 export async function me(req: AuthRequest, res: Response): Promise<void> {
@@ -580,6 +634,15 @@ export async function updateProfile(req: AuthRequest, res: Response, next: NextF
 
     await user.save();
 
+    void recordAudit({
+      actor: user,
+      action: 'update_profile',
+      description: `Student profile updated: ${user.name} (${user.email})`,
+      resource: 'User',
+      status: 'success',
+      req
+    });
+
     const sanitizedUser = {
       _id: user._id,
       id: user._id,
@@ -620,6 +683,15 @@ export async function uploadAvatar(req: AuthRequest, res: Response, next: NextFu
       user.avatar = media.url;
       user.avatarUrl = media.url;
       await user.save();
+
+      void recordAudit({
+        actor: user,
+        action: 'upload_avatar',
+        description: `Profile photo uploaded: ${media.url}`,
+        resource: 'User',
+        status: 'success',
+        req
+      });
     }
     res.status(201).json({
       success: true,

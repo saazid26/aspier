@@ -1,10 +1,26 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { NotificationBell } from '../../components/common/NotificationBell';
 import { useMe } from '../../features/auth/useMe';
 
+const studentNavLinks = [
+  { to: '/student/dashboard', label: 'Dashboard', exact: true },
+  { to: '/student/courses', label: 'My Courses' },
+  { to: '/student/payments', label: 'Payments' },
+  { to: '/student/profile', label: 'Profile' },
+  { to: '/student/security', label: 'Security' }
+];
+
 export function StudentLayout() {
   const { me } = useMe();
+  const location = useLocation();
   const avatarUrl = me?.avatarUrl || me?.avatar;
+
+  const isLinkActive = (to: string, exact?: boolean) => {
+    if (exact) {
+      return location.pathname === '/student' || location.pathname === '/student/dashboard';
+    }
+    return location.pathname.startsWith(to);
+  };
 
   return (
     <div className="member-layout">
@@ -33,13 +49,41 @@ export function StudentLayout() {
           <NotificationBell audience="member" />
         </div>
       </header>
+
+      {/* Responsive Horizontal Mobile Tabs for screens < 900px */}
+      <nav aria-label="Student Navigation" className="lg:hidden flex items-center gap-1.5 overflow-x-auto px-4 py-2.5 bg-slate-50 border-b border-slate-200 scrollbar-none">
+        {studentNavLinks.map(({ to, label, exact }) => {
+          const active = isLinkActive(to, exact);
+          return (
+            <Link
+              key={to}
+              to={to}
+              className={`shrink-0 min-h-[38px] px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center ${
+                active
+                  ? 'bg-teal-700 text-white shadow-xs'
+                  : 'bg-white text-slate-600 hover:text-teal-800 border border-slate-200'
+              }`}
+            >
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+
       <div className="layout">
         <aside className="sidebar">
-          <Link to="/student/dashboard">Dashboard</Link>
-          <Link to="/student/courses">My Courses</Link>
-          <Link to="/student/payments">Payments</Link>
-          <Link to="/student/profile">Profile</Link>
-          <Link to="/student/security">Security settings</Link>
+          {studentNavLinks.map(({ to, label, exact }) => {
+            const active = isLinkActive(to, exact);
+            return (
+              <Link
+                key={to}
+                to={to}
+                className={active ? 'active' : ''}
+              >
+                {label === 'Security' ? 'Security settings' : label}
+              </Link>
+            );
+          })}
         </aside>
         <main className="content">
           <Outlet />
