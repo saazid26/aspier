@@ -741,14 +741,14 @@ img,video,iframe,canvas,svg{max-width:100%}
 
 .research-mate-form h2,
 .research-mate-form .form-section-title {
-  font-size: 0.95rem !important;
+  font-size: 15px !important;
   font-weight: 700 !important;
   line-height: 1.35 !important;
   margin: 0 !important;
-  color: #1e293b !important;
-  letter-spacing: 0.05em !important;
+  color: #134e4a !important;
+  letter-spacing: 0.025em !important;
   text-transform: uppercase !important;
-  display: inline-block !important;
+  display: block !important;
 }
 
 @media (min-width: 640px) {

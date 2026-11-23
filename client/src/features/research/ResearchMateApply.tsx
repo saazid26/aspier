@@ -431,15 +431,15 @@ export function ResearchMateApply() {
           onSubmit={handleSubmit}
         >
           {/* Top Role Header Strip */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5 pb-4 mb-5 border-b border-slate-100">
-            <div className="flex items-center gap-2 flex-wrap">
-              <ShieldCheck className="w-5 h-5 text-teal-700 shrink-0" />
-              <span className="font-bold text-sm text-slate-900">Research Mate</span>
-              <span className="text-xs font-bold text-teal-800 bg-teal-100/90 border border-teal-300/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-3 p-3.5 sm:px-5 sm:py-3.5 rounded-xl bg-teal-50/70 border border-teal-100 mb-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-teal-700 shrink-0" />
+              <span className="text-sm sm:text-base font-bold text-slate-900">Research Mate</span>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-800 uppercase tracking-wider">
                 Locked Role
               </span>
             </div>
-            <span className="text-xs text-slate-500 font-semibold tracking-wide">
+            <span className="text-xs sm:text-sm font-medium text-teal-800">
               Project Collaborator Role
             </span>
           </div>
@@ -452,13 +452,10 @@ export function ResearchMateApply() {
           )}
 
           {/* Group 1 — Applicant Details (1-Col Mobile, 2-Col Desktop) */}
-          <div className="first:mt-0">
-            <div className="flex items-center gap-2.5 pb-3 mb-5 border-b border-slate-200">
-              <span className="w-6 h-6 rounded-full bg-teal-700 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                1
-              </span>
-              <h2 className="form-section-title text-sm sm:text-base font-bold tracking-wider uppercase text-slate-800 leading-snug m-0">
-                Applicant Details
+          <div className="mt-6 sm:mt-8 first:mt-0">
+            <div className="pb-2.5 mb-4 border-b border-slate-200">
+              <h2 className="form-section-title text-[15px] sm:text-base font-bold tracking-wide uppercase leading-snug text-[#134e4a] m-0">
+                1. APPLICANT DETAILS
               </h2>
             </div>
 
@@ -553,13 +550,10 @@ export function ResearchMateApply() {
           </div>
 
           {/* Group 2 — Wing & Target Research Project */}
-          <div className="mt-7 sm:mt-8">
-            <div className="flex items-center gap-2.5 pb-3 mb-5 border-b border-slate-200">
-              <span className="w-6 h-6 rounded-full bg-teal-700 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                2
-              </span>
-              <h2 className="form-section-title text-sm sm:text-base font-bold tracking-wider uppercase text-slate-800 leading-snug m-0">
-                Wing &amp; Target Research Project
+          <div className="mt-6 sm:mt-8">
+            <div className="pb-2.5 mb-4 border-b border-slate-200">
+              <h2 className="form-section-title text-[15px] sm:text-base font-bold tracking-wide uppercase leading-snug text-[#134e4a] m-0">
+                2. WING &amp; TARGET RESEARCH PROJECT
               </h2>
             </div>
 
@@ -569,7 +563,7 @@ export function ResearchMateApply() {
                   Preferred Academic Wing <span className="text-rose-500">*</span>
                 </label>
                 <select
-                  className="block w-full max-w-full min-w-0 box-border min-h-[44px] rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
+                  className="block w-full max-w-full min-w-0 box-border min-h-[44px] rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 truncate"
                   value={selectedWingSlug}
                   onChange={(e) => handleWingChange(e.target.value)}
                   required
@@ -588,7 +582,7 @@ export function ResearchMateApply() {
                 </label>
                 {wingProjects.length > 0 ? (
                   <select
-                    className="block w-full max-w-full min-w-0 box-border min-h-[44px] rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
+                    className="block w-full max-w-full min-w-0 box-border min-h-[44px] rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 truncate"
                     value={selectedProjectTitle}
                     onChange={(e) => setSelectedProjectTitle(e.target.value)}
                     required
@@ -618,13 +612,10 @@ export function ResearchMateApply() {
           </div>
 
           {/* Group 3 — Qualifications & Custom PDF CV Dropzone */}
-          <div className="mt-7 sm:mt-8">
-            <div className="flex items-center gap-2.5 pb-3 mb-5 border-b border-slate-200">
-              <span className="w-6 h-6 rounded-full bg-teal-700 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                3
-              </span>
-              <h2 className="form-section-title text-sm sm:text-base font-bold tracking-wider uppercase text-slate-800 leading-snug m-0">
-                Qualifications &amp; CV Upload
+          <div className="mt-6 sm:mt-8">
+            <div className="pb-2.5 mb-4 border-b border-slate-200">
+              <h2 className="form-section-title text-[15px] sm:text-base font-bold tracking-wide uppercase leading-snug text-[#134e4a] m-0">
+                3. QUALIFICATIONS &amp; CV UPLOAD
               </h2>
             </div>
 
