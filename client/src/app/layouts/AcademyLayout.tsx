@@ -110,8 +110,8 @@ export function AcademyLayout() {
               Register
             </Link>
             <Link
-              className={`nav-link ${location.pathname.startsWith('/student') || location.pathname.startsWith('/academy/portal') ? 'active' : ''}`}
-              to="/student"
+              className={`nav-link ${location.pathname.startsWith('/academy/student') || location.pathname.startsWith('/student') || location.pathname.startsWith('/academy/portal') ? 'active' : ''}`}
+              to="/academy/student"
               onClick={() => setMenuOpen(false)}
             >
               Student Portal

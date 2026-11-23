@@ -184,17 +184,20 @@ export function AppRouter(){return <BrowserRouter><ScrollToTop/><Suspense fallba
   <Route path="academy/login" element={<Login/>}/>
   <Route path="academy/forgot" element={<Forgot/>}/>
   <Route path="academy/reset" element={<Reset/>}/>
-  <Route path="academy/portal" element={<Navigate to="/student" replace/>}/>
-  <Route path="academy/portal/courses" element={<Navigate to="/student/courses" replace/>}/>
-  <Route path="academy/portal/payments" element={<Navigate to="/student/payments" replace/>}/>
-  <Route path="academy/portal/profile" element={<Navigate to="/student/profile" replace/>}/>
-  <Route path="academy/portal/security" element={<Navigate to="/student/security" replace/>}/>
-  <Route path="academy/student" element={<Navigate to="/student" replace/>}/>
-  <Route path="academy/student/dashboard" element={<Navigate to="/student/dashboard" replace/>}/>
-  <Route path="academy/student/courses" element={<Navigate to="/student/courses" replace/>}/>
-  <Route path="academy/student/payments" element={<Navigate to="/student/payments" replace/>}/>
-  <Route path="academy/student/profile" element={<Navigate to="/student/profile" replace/>}/>
-  <Route path="academy/student/security" element={<Navigate to="/student/security" replace/>}/>
+  <Route element={<Guard roles={['student','instructor','supervisor','youngScholar','admin','superadmin']}><StudentLayout/></Guard>}>
+    <Route path="academy/student" element={<StudentDashboard/>}/>
+    <Route path="academy/student/dashboard" element={<StudentDashboard/>}/>
+    <Route path="academy/student/courses" element={<MyCourses/>}/>
+    <Route path="academy/student/payments" element={<PaymentHistory/>}/>
+    <Route path="academy/student/profile" element={<Profile/>}/>
+    <Route path="academy/student/security" element={<WebAuthnSettings/>}/>
+  </Route>
+  <Route path="academy/portal" element={<Navigate to="/academy/student" replace/>}/>
+  <Route path="academy/portal/courses" element={<Navigate to="/academy/student/courses" replace/>}/>
+  <Route path="academy/portal/payments" element={<Navigate to="/academy/student/payments" replace/>}/>
+  <Route path="academy/portal/profile" element={<Navigate to="/academy/student/profile" replace/>}/>
+  <Route path="academy/portal/security" element={<Navigate to="/academy/student/security" replace/>}/>
+  <Route path="academy/portal/*" element={<Navigate to="/academy/student" replace/>}/>
   <Route path="academy/courses/:id" element={<CourseDetail/>}/>
   <Route path="academy/courses/:id/payment" element={<EnrollPayment/>}/>
   <Route path="academy/courses/:id/payment-status" element={<PaymentStatus/>}/>
@@ -202,14 +205,13 @@ export function AppRouter(){return <BrowserRouter><ScrollToTop/><Suspense fallba
   <Route path="academy/classes" element={<ClassSchedule/>}/>
   <Route path="academy/instructors/:id" element={<InstructorProfile/>}/>
 </Route>
-<Route element={<Guard roles={['student','instructor','supervisor','youngScholar','admin','superadmin']}><StudentLayout/></Guard>}>
-  <Route path="student" element={<StudentDashboard/>}/>
-  <Route path="student/dashboard" element={<StudentDashboard/>}/>
-  <Route path="student/courses" element={<MyCourses/>}/>
-  <Route path="student/payments" element={<PaymentHistory/>}/>
-  <Route path="student/profile" element={<Profile/>}/>
-  <Route path="student/security" element={<WebAuthnSettings/>}/>
-</Route>
+<Route path="student" element={<Navigate to="/academy/student" replace/>}/>
+<Route path="student/dashboard" element={<Navigate to="/academy/student/dashboard" replace/>}/>
+<Route path="student/courses" element={<Navigate to="/academy/student/courses" replace/>}/>
+<Route path="student/payments" element={<Navigate to="/academy/student/payments" replace/>}/>
+<Route path="student/profile" element={<Navigate to="/academy/student/profile" replace/>}/>
+<Route path="student/security" element={<Navigate to="/academy/student/security" replace/>}/>
+<Route path="student/*" element={<Navigate to="/academy/student" replace/>}/>
 <Route element={<Guard roles={['admin','superadmin']}><AdminLayout/></Guard>}>
   <Route path="admin" element={<AdminDashboard/>}/>
   <Route path="admin/branding" element={<BrandingSettings/>}/>

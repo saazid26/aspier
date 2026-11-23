@@ -3,11 +3,11 @@ import { NotificationBell } from '../../components/common/NotificationBell';
 import { useMe } from '../../features/auth/useMe';
 
 const studentNavLinks = [
-  { to: '/student/dashboard', label: 'Dashboard', exact: true },
-  { to: '/student/courses', label: 'My Courses' },
-  { to: '/student/payments', label: 'Payments' },
-  { to: '/student/profile', label: 'Profile' },
-  { to: '/student/security', label: 'Security' }
+  { to: '/academy/student/dashboard', label: 'Dashboard', exact: true },
+  { to: '/academy/student/courses', label: 'My Courses' },
+  { to: '/academy/student/payments', label: 'Payments' },
+  { to: '/academy/student/profile', label: 'Profile' },
+  { to: '/academy/student/security', label: 'Security' }
 ];
 
 export function StudentLayout() {
@@ -17,16 +17,22 @@ export function StudentLayout() {
 
   const isLinkActive = (to: string, exact?: boolean) => {
     if (exact) {
-      return location.pathname === '/student' || location.pathname === '/student/dashboard';
+      return (
+        location.pathname === '/academy/student' ||
+        location.pathname === '/academy/student/dashboard' ||
+        location.pathname === '/student' ||
+        location.pathname === '/student/dashboard'
+      );
     }
-    return location.pathname.startsWith(to);
+    const legacyPath = to.replace('/academy/student', '/student');
+    return location.pathname.startsWith(to) || location.pathname.startsWith(legacyPath);
   };
 
   return (
     <div className="member-layout">
       <header className="member-header flex items-center justify-between gap-3 px-4 sm:px-6 py-3 bg-white border-b border-slate-200">
         <div className="flex items-center gap-3">
-          <Link to="/student/dashboard" className="font-bold text-slate-900 text-sm sm:text-base hover:text-teal-800 transition">
+          <Link to="/academy/student/dashboard" className="font-bold text-slate-900 text-sm sm:text-base hover:text-teal-800 transition">
             Student Portal
           </Link>
           {me?.name && (
@@ -36,7 +42,7 @@ export function StudentLayout() {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <Link to="/student/profile" className="flex items-center gap-2 text-xs font-semibold text-slate-700 hover:text-teal-800 transition">
+          <Link to="/academy/student/profile" className="flex items-center gap-2 text-xs font-semibold text-slate-700 hover:text-teal-800 transition">
             {avatarUrl ? (
               <img src={avatarUrl} alt={me?.name || 'Student'} className="w-8 h-8 rounded-full object-cover border border-teal-600/30" />
             ) : (

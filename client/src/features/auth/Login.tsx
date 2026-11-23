@@ -103,9 +103,7 @@ export function Login() {
       const resolvedRole = response.data.data?.role || response.data.data?.user?.role;
       const defaultTarget = ['admin', 'superadmin'].includes(resolvedRole)
         ? '/admin'
-        : isAcademy
-        ? '/academy/portal'
-        : '/student/dashboard';
+        : '/academy/student';
       const target = redirect || defaultTarget;
       navigate(target);
     } catch (error: any) {
@@ -128,9 +126,7 @@ export function Login() {
       const resolvedBioRole = response.data.data?.role || response.data.data?.user?.role;
       const defaultTarget = ['admin', 'superadmin'].includes(resolvedBioRole)
         ? '/admin'
-        : isAcademy
-        ? '/academy/portal'
-        : '/student/dashboard';
+        : '/academy/student';
       navigate(redirect || defaultTarget);
     } catch (error: any) {
       const message = getApiErrorMessage(error, 'Biometric verification failed');
