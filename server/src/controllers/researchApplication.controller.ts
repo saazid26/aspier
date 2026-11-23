@@ -71,6 +71,20 @@ export async function submitResearchApplication(req: Request, res: Response, nex
     }
     const data = parsed.data;
 
+    // Link target research if not already found by param id
+    if (!targetResearch) {
+      if (mongoose.connection.readyState === 1) {
+        if (data.researchSlug) targetResearch = await Research.findOne({ slug: data.researchSlug });
+        if (!targetResearch && data.researchTitle) targetResearch = await Research.findOne({ title: data.researchTitle });
+      }
+      if (!targetResearch) {
+        targetResearch = getFallbackResearch().find((r) =>
+          (data.researchSlug && r.slug === data.researchSlug) ||
+          (data.researchTitle && r.title === data.researchTitle)
+        );
+      }
+    }
+
     // PDF validation
     let cvData: Buffer | undefined;
     let cvFilename: string | undefined;
@@ -126,8 +140,9 @@ export async function submitResearchApplication(req: Request, res: Response, nex
           occupation: data.occupation,
           wingName: data.wingName,
           wingSlug: data.wingSlug,
+          researchId: targetResearch?._id,
           researchTitle: data.researchTitle,
-          researchSlug: data.researchSlug,
+          researchSlug: data.researchSlug || targetResearch?.slug || '',
           skills: data.skills,
           statement: data.statement,
           cvStorageKey,
@@ -136,7 +151,7 @@ export async function submitResearchApplication(req: Request, res: Response, nex
           cvMimeType,
           status: 'pending',
           paymentAmount: 1000,
-          whatsAppGroupLink: ''
+          whatsAppGroupLink: (targetResearch as any)?.whatsappGroupUrl || ''
         });
       } catch (dbErr) {
         console.warn('[research-application] DB create failed, fallback to memory store:', dbErr);
@@ -159,8 +174,9 @@ export async function submitResearchApplication(req: Request, res: Response, nex
         occupation: data.occupation,
         wingName: data.wingName,
         wingSlug: data.wingSlug,
+        researchId: targetResearch?._id,
         researchTitle: data.researchTitle,
-        researchSlug: data.researchSlug,
+        researchSlug: data.researchSlug || targetResearch?.slug || '',
         skills: data.skills,
         statement: data.statement,
         cvFilename,
@@ -168,7 +184,7 @@ export async function submitResearchApplication(req: Request, res: Response, nex
         cvData,
         status: 'pending',
         paymentAmount: 1000,
-        whatsAppGroupLink: '',
+        whatsAppGroupLink: (targetResearch as any)?.whatsappGroupUrl || '',
         createdAt: new Date().toISOString()
       };
       getFallbackResearchApplications().unshift(application);
@@ -248,6 +264,31 @@ export async function lookupResearchApplication(req: Request, res: Response, nex
       }
     }
 
+    // If status is approved, resolve project WhatsApp group link if not stored on application
+    let activeWhatsAppLink = application.status === 'approved' ? (application.whatsAppGroupLink || '') : '';
+    if (!activeWhatsAppLink && application.status === 'approved') {
+      try {
+        let proj: any = null;
+        if (mongoose.connection.readyState === 1) {
+          if (application.researchId) proj = await Research.findById(application.researchId).lean();
+          if (!proj && application.researchSlug) proj = await Research.findOne({ slug: application.researchSlug }).lean();
+          if (!proj && application.researchTitle) proj = await Research.findOne({ title: application.researchTitle }).lean();
+        }
+        if (!proj) {
+          proj = getFallbackResearch().find((r) =>
+            (application.researchId && String(r._id) === String(application.researchId)) ||
+            (application.researchSlug && r.slug === application.researchSlug) ||
+            (application.researchTitle && r.title === application.researchTitle)
+          );
+        }
+        if (proj?.whatsappGroupUrl) {
+          activeWhatsAppLink = proj.whatsappGroupUrl;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     res.json({
       success: true,
       data: {
@@ -273,7 +314,8 @@ export async function lookupResearchApplication(req: Request, res: Response, nex
         bkashNumber: settings?.bkashNumber || '01603012448',
         nagadNumber: settings?.nagadNumber || '01603012448',
         paymentInstructions: settings?.paymentInstructions || 'Send BDT 1,000 using bKash or Nagad Personal Send Money, then enter your sender phone number and Transaction ID (TrxID) below.',
-        whatsAppGroupLink: application.status === 'approved' ? (application.whatsAppGroupLink || '') : '',
+        whatsAppGroupLink: activeWhatsAppLink,
+        whatsappGroupUrl: activeWhatsAppLink,
         createdAt: application.createdAt
       }
     });
@@ -527,6 +569,28 @@ export async function confirmResearchPayment(req: AuthRequest, res: Response, ne
 
     if (whatsAppGroupLink) {
       application.whatsAppGroupLink = String(whatsAppGroupLink).trim();
+    }
+    if (!application.whatsAppGroupLink) {
+      try {
+        let proj: any = null;
+        if (mongoose.connection.readyState === 1) {
+          if (application.researchId) proj = await Research.findById(application.researchId).lean();
+          if (!proj && application.researchSlug) proj = await Research.findOne({ slug: application.researchSlug }).lean();
+          if (!proj && application.researchTitle) proj = await Research.findOne({ title: application.researchTitle }).lean();
+        }
+        if (!proj) {
+          proj = getFallbackResearch().find((r) =>
+            (application.researchId && String(r._id) === String(application.researchId)) ||
+            (application.researchSlug && r.slug === application.researchSlug) ||
+            (application.researchTitle && r.title === application.researchTitle)
+          );
+        }
+        if (proj?.whatsappGroupUrl) {
+          application.whatsAppGroupLink = proj.whatsappGroupUrl;
+        }
+      } catch {
+        // ignore
+      }
     }
     application.status = 'approved';
     application.reviewedBy = req.user?._id;

@@ -281,6 +281,7 @@ export function WingsResearchManager() {
                   status: 'published',
                   publicationUrl: '',
                   doiUrl: '',
+                  whatsappGroupUrl: '',
                   showReadPaperButton: true,
                   coverImage: ''
                 });
@@ -291,7 +292,7 @@ export function WingsResearchManager() {
             </Button>
           </div>
 
-          <Table headers={['Cover', 'Title', 'Wing', 'Category', 'Read Paper (DOI)', 'Status', 'Actions']}>
+          <Table headers={['Cover', 'Title', 'Wing', 'Category', 'WhatsApp Group', 'Read Paper (DOI)', 'Status', 'Actions']}>
             {research.map((item) => {
               const isPast = item.category === 'past';
               const hasPaperUrl = Boolean(item.publicationUrl || item.doiUrl);
@@ -320,6 +321,15 @@ export function WingsResearchManager() {
                     </Badge>
                   </td>
                   <td>
+                    {item.whatsappGroupUrl ? (
+                      <a href={item.whatsappGroupUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                        <Badge variant="green">Linked</Badge>
+                      </a>
+                    ) : (
+                      <span className="muted" style={{ fontSize: '0.8rem' }}>None</span>
+                    )}
+                  </td>
+                  <td>
                     {isPast ? (
                       readPaperActive ? (
                         <Badge variant="green">Enabled (Visible)</Badge>
@@ -343,6 +353,7 @@ export function WingsResearchManager() {
                           setEditingResearch({
                             ...item,
                             wingId: typeof item.wingId === 'object' ? item.wingId?._id : item.wingId,
+                            whatsappGroupUrl: item.whatsappGroupUrl || '',
                             showReadPaperButton: item.showReadPaperButton !== false
                           });
                           setResearchModalOpen(true);
@@ -591,6 +602,23 @@ export function WingsResearchManager() {
                     : '⚠ "Read Paper" button is INACTIVE and hidden on the frontend.'}
                 </div>
               )}
+            </div>
+
+            <div style={{ marginTop: 12, padding: 14, background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 8 }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, color: '#0f766e' }}>
+                WhatsApp Private Group Link (Research Mate Coordination)
+                <Input
+                  value={editingResearch.whatsappGroupUrl || ''}
+                  onChange={(e) => setEditingResearch({
+                    ...editingResearch,
+                    whatsappGroupUrl: e.target.value
+                  })}
+                  placeholder="https://chat.whatsapp.com/..."
+                />
+              </label>
+              <span className="muted" style={{ fontSize: '0.8rem', color: '#115e59', display: 'block', marginTop: 4 }}>
+                Optional private WhatsApp group invite link for this project. When an applicant&apos;s Research Mate payment is confirmed, they will receive an active &quot;Join WhatsApp Group&quot; button in their Check Application portal.
+              </span>
             </div>
 
             <div style={{ marginTop: 12 }}>

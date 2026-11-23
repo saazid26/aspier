@@ -22,7 +22,7 @@ import Notification from '../models/Notification.js';
 import { notifyAdmins, notifyMember } from '../services/notification.service.js';
 import { sendEmail } from '../services/email.service.js';
 import { createTotpQr, createTotpSecret, verifyTotp } from '../services/totp.service.js';
-import { getFallbackApplications } from '../utils/fallbackData.js';
+import { getFallbackApplications, addOrUpdateFallbackSupervisor, addOrUpdateFallbackScholar } from '../utils/fallbackData.js';
 import { env } from '../config/env.js';
 
 const initialSchema = z.preprocess((value) => {
@@ -43,25 +43,24 @@ const initialSchema = z.preprocess((value) => {
 }));
 
 const profileSchema = z.object({
-  accessCode: z.string().min(20).max(100),
+  accessCode: z.string().min(16).max(100),
   name: z.string().trim().min(2).max(120),
-  presentAddress: z.string().trim().min(3).max(500),
-  permanentAddress: z.string().trim().min(3).max(500),
   designation: z.string().trim().min(2).max(160),
   institution: z.string().trim().min(2).max(200),
+  wing: z.string().trim().max(160).optional(),
   educationalBackground: z.string().trim().min(2).max(3000),
   googleScholar: z.string().trim().max(500).optional().default(''),
   researchGate: z.string().trim().max(500).optional().default(''),
   orcid: z.string().trim().max(200).optional().default(''),
   linkedin: z.string().trim().max(500).optional().default(''),
+  website: z.string().trim().max(500).optional().default(''),
+  github: z.string().trim().max(500).optional().default(''),
+  twitter: z.string().trim().max(500).optional().default(''),
+  presentAddress: z.string().trim().max(500).optional().default(''),
+  permanentAddress: z.string().trim().max(500).optional().default(''),
   bio: z.string().trim().min(20).max(5000),
-  researchDomains: z.array(z.string().trim().min(1).max(100)).min(1).max(20),
+  researchDomains: z.array(z.string().trim().min(1).max(100)).min(1).max(30),
   photo: z.string().trim().min(1).max(1000)
-});
-const paymentSchema = z.object({
-  accessCode: z.string().min(20).max(100),
-  paymentMethod: z.enum(['bKash', 'Nagad']),
-  trxId: z.string().trim().min(3).max(80)
 });
 
 function parseBody<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
@@ -281,7 +280,7 @@ export async function membershipPortal(req: Request, res: Response, next: NextFu
   try {
     const { applicationId, accessCode } = parseBody(z.object({
       applicationId: z.string().min(1),
-      accessCode: z.string().min(20).max(100)
+      accessCode: z.string().min(16).max(100)
     }), req.body);
     const application = await findWithCode(applicationId, accessCode);
     const notifications = (await Notification.find({ applicationId: application._id, audience: 'member' }).select('+secretPayloadEncrypted').sort({ createdAt: -1 }).lean()).map(({ secretPayloadEncrypted, ...notice }) => ({
@@ -294,7 +293,7 @@ export async function membershipPortal(req: Request, res: Response, next: NextFu
     res.json({
       success: true,
       data: {
-        applicationId: application.id,
+        applicationId: application.publicApplicationId || application.id,
         name: application.name,
         email: application.email,
         category: application.category,
@@ -302,6 +301,21 @@ export async function membershipPortal(req: Request, res: Response, next: NextFu
         wing: application.wing || application.wingInterest,
         wingInterest: application.wingInterest,
         status: application.status,
+        designation: application.designation,
+        institution: application.institution,
+        educationalBackground: application.educationalBackground,
+        bio: application.bio,
+        researchDomains: application.researchDomains || [],
+        photo: application.photo,
+        googleScholar: application.googleScholar,
+        researchGate: application.researchGate,
+        orcid: application.orcid,
+        linkedin: application.linkedin,
+        website: (application as any).website,
+        github: (application as any).github,
+        twitter: (application as any).twitter,
+        publishedProfileId: application.publishedProfileId,
+        publishedProfileType: application.publishedProfileType,
         activationCode,
         notifications
       }
@@ -351,42 +365,193 @@ export async function submitMembershipProfile(req: Request, res: Response, next:
   try {
     const data = parseBody(profileSchema, req.body);
     const application = await findWithCode(String(req.params.id || ''), data.accessCode);
-    if (application.status !== 'membership_pending') throw new HttpError(409, 'This application is not accepting a membership profile');
-    const isYoungScholar = application.role === 'youngScholar';
-    if (!await MediaAsset.exists({ url: data.photo, membershipApplicationId: application._id })) throw new HttpError(400, 'Upload your profile picture using the application photo field');
+    if (!['membership_pending', 'final_pending'].includes(application.status)) {
+      throw new HttpError(409, 'This application is not accepting a membership profile');
+    }
+    const isSupervisor = application.role === 'supervisor' || application.category === 'teammate' || application.category === 'supervisor';
+    const roleTitle = isSupervisor ? 'Research Supervisor' : 'Young Scholar';
+
+    const isDataUrl = data.photo.startsWith('data:image/');
+    if (!isDataUrl && !(await MediaAsset.exists({ url: data.photo, membershipApplicationId: application._id }))) {
+      throw new HttpError(400, 'Upload your profile picture using the application photo field');
+    }
+
+    const assignedWing = data.wing || application.wing || application.wingInterest;
+    let wingDoc: any = null;
+    try {
+      wingDoc = await Wing.findOne({ $or: [{ slug: assignedWing }, { name: assignedWing }] });
+    } catch {
+      // ignore
+    }
+
+    const appIdStr = String(application.id || application._id);
+    const slug = `${slugify(data.name) || 'aspier-member'}-${appIdStr.slice(-6)}`;
+
+    let profileId: any = application.publishedProfileId;
+
+    if (isSupervisor) {
+      let supervisor: any = null;
+      if (profileId) {
+        supervisor = await Supervisor.findById(profileId);
+      }
+      if (!supervisor && application.email) {
+        supervisor = await Supervisor.findOne({ email: application.email.toLowerCase() });
+      }
+      if (!supervisor) {
+        supervisor = await Supervisor.findOne({ slug });
+      }
+
+      const supervisorPayload = {
+        name: data.name,
+        slug: supervisor ? supervisor.slug : slug,
+        designation: data.designation,
+        affiliation: data.institution,
+        wingIds: wingDoc ? [wingDoc._id] : [],
+        bio: data.bio,
+        photo: data.photo,
+        email: application.email.toLowerCase(),
+        presentAddress: data.presentAddress || '',
+        permanentAddress: data.permanentAddress || '',
+        educationalBackground: data.educationalBackground,
+        googleScholar: data.googleScholar || '',
+        researchGate: data.researchGate || '',
+        orcid: data.orcid || '',
+        linkedin: data.linkedin || '',
+        twitter: data.twitter || '',
+        github: data.github || '',
+        website: data.website || '',
+        researchInterests: data.researchDomains,
+        socialLinks: {
+          googleScholar: data.googleScholar || '',
+          researchGate: data.researchGate || '',
+          orcid: data.orcid || '',
+          linkedin: data.linkedin || '',
+          twitter: data.twitter || '',
+          github: data.github || '',
+          website: data.website || ''
+        },
+        isPublished: true,
+        order: 0,
+        sampleData: false
+      };
+
+      if (supervisor) {
+        supervisor.set(supervisorPayload);
+        await supervisor.save();
+        profileId = supervisor._id;
+      } else {
+        const created = await Supervisor.create(supervisorPayload);
+        profileId = created._id;
+      }
+      addOrUpdateFallbackSupervisor({ ...supervisorPayload, _id: String(profileId), id: String(profileId) });
+    } else {
+      let scholar: any = null;
+      if (profileId) {
+        scholar = await Scholar.findById(profileId);
+      }
+      if (!scholar) {
+        scholar = await Scholar.findOne({ slug });
+      }
+
+      const scholarPayload = {
+        name: data.name,
+        slug: scholar ? scholar.slug : slug,
+        cohort: String(new Date().getFullYear()),
+        wingId: wingDoc?._id,
+        bio: data.bio,
+        photo: data.photo,
+        presentAddress: data.presentAddress || '',
+        permanentAddress: data.permanentAddress || '',
+        designation: data.designation,
+        affiliation: data.institution,
+        educationalBackground: data.educationalBackground,
+        googleScholar: data.googleScholar || '',
+        researchGate: data.researchGate || '',
+        orcid: data.orcid || '',
+        linkedin: data.linkedin || '',
+        twitter: data.twitter || '',
+        github: data.github || '',
+        website: data.website || '',
+        researchTopics: data.researchDomains,
+        socialLinks: {
+          googleScholar: data.googleScholar || '',
+          researchGate: data.researchGate || '',
+          orcid: data.orcid || '',
+          linkedin: data.linkedin || '',
+          twitter: data.twitter || '',
+          github: data.github || '',
+          website: data.website || ''
+        },
+        isPublished: true,
+        order: 0,
+        sampleData: false
+      };
+
+      if (scholar) {
+        scholar.set(scholarPayload);
+        await scholar.save();
+        profileId = scholar._id;
+      } else {
+        const created = await Scholar.create(scholarPayload);
+        profileId = created._id;
+      }
+      addOrUpdateFallbackScholar({ ...scholarPayload, _id: String(profileId), id: String(profileId) });
+    }
+
+    const activationCode = randomBytes(18).toString('base64url');
     application.set({
       name: data.name,
-      presentAddress: data.presentAddress,
-      permanentAddress: data.permanentAddress,
+      presentAddress: data.presentAddress || '',
+      permanentAddress: data.permanentAddress || '',
       designation: data.designation,
       institution: data.institution,
+      wing: assignedWing,
+      wingInterest: assignedWing,
       educationalBackground: data.educationalBackground,
-      googleScholar: data.googleScholar,
-      researchGate: data.researchGate,
-      orcid: data.orcid,
-      linkedin: data.linkedin,
+      googleScholar: data.googleScholar || '',
+      researchGate: data.researchGate || '',
+      orcid: data.orcid || '',
+      linkedin: data.linkedin || '',
+      website: data.website || '',
+      github: data.github || '',
+      twitter: data.twitter || '',
       bio: data.bio,
       researchDomains: data.researchDomains,
       photo: data.photo,
       membershipFee: 0,
-      status: 'final_pending'
+      status: 'completed',
+      publishedProfileId: profileId,
+      publishedProfileType: isSupervisor ? 'supervisor' : 'scholar',
+      activationCodeHash: sha256(activationCode),
+      activationCodeEncrypted: encrypt(activationCode)
     });
     await application.save();
-    const roleTitle = isYoungScholar ? 'Young Scholar' : 'Supervisor';
+
     await notifyAdmins({
-      title: `${roleTitle} profile submitted`,
-      body: `${application.name} submitted a ${roleTitle} academic profile for review.`,
+      title: `${roleTitle} profile auto-published to Team`,
+      body: `${application.name} submitted their Stage 2 official profile and is now live on the public Team page.`,
       category: 'final-application',
       link: '/admin/membership-applications'
     });
     await notifyMember({
       applicationId: application._id,
-      title: `${roleTitle} profile received`,
-      body: 'Your academic profile has been submitted for review. ASPIER membership is completely fee-free across all stages.',
-      category: 'final-application-received',
-      link: '/join/portal'
+      title: 'Welcome to the ASPIER Team!',
+      body: `Your official ${roleTitle} profile has been published to the ASPIER Team page. Joining ASPIER is completely fee-free across all stages.`,
+      category: 'membership-published',
+      link: '/team',
+      secretPayload: activationCode
     });
-    res.status(201).json({ success: true, data: { applicationId: application.id, status: application.status } });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        applicationId: application.id || application._id,
+        status: application.status,
+        profileId,
+        profileType: application.publishedProfileType,
+        profileSlug: slug
+      }
+    });
   } catch (error) {
     next(error);
   }
@@ -523,6 +688,30 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
     const candidate = await MembershipApplication.findById(applicationId);
     if (!candidate) throw new HttpError(404, 'Application not found');
     const isSupervisor = candidate.role === 'supervisor' || candidate.category === 'teammate';
+    if (['completed', 'active_member', 'published'].includes(candidate.status) && candidate.publishedProfileId) {
+      const activationCode = candidate.activationCodeEncrypted
+        ? decrypt(candidate.activationCodeEncrypted)
+        : randomBytes(18).toString('base64url');
+      const publishMsg = `Your ${isSupervisor ? 'Supervisor' : 'Young Scholar'} profile is published. Joining ASPIER is completely fee-free. Use this one-time Secret Activation Code to register your account: ${activationCode}`;
+      await notifyMember({
+        applicationId: candidate._id,
+        ...(candidate.memberUserId ? { userId: candidate.memberUserId } : {}),
+        title: 'Your ASPIER membership is active',
+        body: publishMsg,
+        category: 'membership-published',
+        link: '/login',
+        secretPayload: activationCode
+      });
+      return res.json({
+        success: true,
+        data: {
+          applicationId: candidate.id,
+          status: candidate.status,
+          profileId: candidate.publishedProfileId,
+          profileType: candidate.publishedProfileType
+        }
+      });
+    }
     if (!['final_pending', 'verification_pending'].includes(candidate.status)) {
       throw new HttpError(409, 'Application is not awaiting profile review');
     }
@@ -641,7 +830,7 @@ export async function activateMemberAccount(req: Request, res: Response, next: N
       const application = await MembershipApplication.findOne({
         activationCodeHash: sha256(data.activationCode),
         activationCodeUsedAt: { $exists: false },
-        status: 'published',
+        status: { $in: ['published', 'completed', 'active_member'] },
         role: data.role
       });
       if (!application) throw new HttpError(400, 'Secret activation code is invalid, already used, or does not match the selected role');

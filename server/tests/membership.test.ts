@@ -125,7 +125,12 @@ describe('membership application workflow', () => {
       photo: photo.url
     });
     expect(profile.status).toBe(201);
-    expect(profile.body.data.status).toBe('final_pending');
+    expect(profile.body.data.status).toBe('completed');
+    expect(profile.body.data.profileId).toBeTruthy();
+    const autoCreated = await Supervisor.findById(profile.body.data.profileId);
+    expect(autoCreated?.photo).toBe(photo.url);
+    expect(autoCreated?.researchInterests).toContain('Environmental Policy');
+    expect(autoCreated?.isPublished).toBe(true);
 
     const published = await admin.post(`/api/v1/admin/membership-applications/${applicationId}/publish`);
     expect(published.status).toBe(200);
@@ -133,7 +138,7 @@ describe('membership application workflow', () => {
     const publicProfile = await Supervisor.findById(published.body.data.profileId);
     expect(publicProfile?.photo).toBe(photo.url);
     expect(publicProfile?.researchInterests).toContain('Environmental Policy');
-    expect((await MembershipApplication.findById(applicationId))?.status).toBe('published');
+    expect((await MembershipApplication.findById(applicationId))?.status).toBe('completed');
     const publishedPortal = await request(app).post('/api/v1/public/membership/lookup').send({ applicationId, accessCode });
     expect(publishedPortal.body.data.membershipFee).toBeUndefined();
     expect(publishedPortal.body.data.bkashNumber).toBeUndefined();
@@ -205,7 +210,14 @@ describe('membership application workflow', () => {
 
     const profile = await request(app).post(`/api/v1/public/membership/${applicationId}/profile`).send(profileData);
     expect(profile.status).toBe(201);
-    expect(profile.body.data.status).toBe('final_pending');
+    expect(profile.body.data.status).toBe('completed');
+    expect(profile.body.data.profileId).toBeTruthy();
+    const autoCreatedScholar = await Scholar.findById(profile.body.data.profileId);
+    expect(autoCreatedScholar).toBeTruthy();
+    expect(autoCreatedScholar?.photo).toBe(uploadedPhoto.body.data.url);
+    expect(autoCreatedScholar?.researchTopics).toContain('Biotechnology');
+    expect(autoCreatedScholar?.isPublished).toBe(true);
+
     const published = await admin.post(`/api/v1/admin/membership-applications/${applicationId}/publish`);
     expect(published.status).toBe(200);
     expect(published.body.data.profileType).toBe('scholar');

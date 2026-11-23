@@ -58,6 +58,8 @@ const statusBadge = (status: string) => {
     case 'onboarding_sent':
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200"><Send className="w-3 h-3" /> Onboarding Link Dispatched</span>;
     case 'published':
+    case 'completed':
+    case 'active_member':
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-800 border border-teal-200"><ShieldCheck className="w-3 h-3" /> Published to Team</span>;
     case 'signup_pending':
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200"><Clock className="w-3 h-3" /> Sign-Up Pending</span>;

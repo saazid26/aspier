@@ -30,6 +30,8 @@ const schema = new Schema({
     facebook: String,
     website: String
   },
-  sampleData: { type: Boolean, default: false }
+  sampleData: { type: Boolean, default: false },
+  isPublished: { type: Boolean, default: true },
+  order: { type: Number, default: 0 }
 }, { timestamps: true });
 export default model('Scholar', schema);

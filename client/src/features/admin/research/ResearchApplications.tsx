@@ -46,6 +46,7 @@ export function ResearchApplications() {
     accessCode: string;
   } | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedAppId, setCopiedAppId] = useState(false);
 
   const client = useQueryClient();
 
@@ -163,8 +164,19 @@ export function ResearchApplications() {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedCode(true);
-      toast.success('Copied to clipboard!');
+      toast.success('Access code copied to clipboard!');
       setTimeout(() => setCopiedCode(false), 2000);
+    } catch {
+      toast.error('Could not access clipboard.');
+    }
+  };
+
+  const copyAppId = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedAppId(true);
+      toast.success('Application ID copied to clipboard!');
+      setTimeout(() => setCopiedAppId(false), 2000);
     } catch {
       toast.error('Could not access clipboard.');
     }
@@ -487,7 +499,17 @@ export function ResearchApplications() {
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 block mb-1">
                   Application ID
                 </label>
-                <Input readOnly value={approvalModal.applicationId} className="font-mono text-xs bg-white font-bold" />
+                <div className="flex gap-2">
+                  <Input readOnly value={approvalModal.applicationId} className="font-mono text-xs bg-white font-bold" />
+                  <Button
+                    type="button"
+                    onClick={() => copyAppId(approvalModal.applicationId)}
+                    className="shrink-0 text-xs px-3"
+                  >
+                    {copiedAppId ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedAppId ? 'Copied' : 'Copy'}
+                  </Button>
+                </div>
               </div>
 
               <div>

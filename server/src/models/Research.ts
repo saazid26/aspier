@@ -9,6 +9,7 @@ const schema = new Schema({
   objectives: String,
   publicationUrl: String,
   doiUrl: String,
+  whatsappGroupUrl: { type: String, trim: true, default: '' },
   showReadPaperButton: { type: Boolean, default: true },
   status: { type: String, enum: ['draft', 'under_review', 'published', 'ongoing', 'archived'], default: 'published', index: true },
   authors: [String],

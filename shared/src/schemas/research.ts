@@ -10,6 +10,7 @@ export const researchSchema = z.object({
   status: z.enum(['draft', 'under_review', 'published', 'ongoing', 'archived']).default('published'),
   publicationUrl: z.string().optional().or(z.literal('')),
   doiUrl: z.string().optional().or(z.literal('')),
+  whatsappGroupUrl: z.string().trim().optional().or(z.literal('')),
   showReadPaperButton: z.boolean().default(true),
   authors: z.array(z.string()).default([]),
   supervisors: z.array(z.string()).default([]),

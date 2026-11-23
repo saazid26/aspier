@@ -83,10 +83,16 @@ export function ResearchMateApply() {
   const [copiedId, setCopiedId] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const isInitializedRef = useRef(false);
+  const projectInitializedRef = useRef(false);
 
-  // Initialize selected wing from URL param
+  // Initialize selected wing from URL param or default to first wing
   useEffect(() => {
-    if (initialWingParam && wings.length > 0) {
+    if (isInitializedRef.current || wings.length === 0) return;
+    isInitializedRef.current = true;
+
+    let targetWingSlug = wings[0]?.slug || '';
+    if (initialWingParam) {
       const match = wings.find(
         (w) =>
           w.slug === initialWingParam ||
@@ -94,12 +100,11 @@ export function ResearchMateApply() {
           w.name.toLowerCase() === initialWingParam.toLowerCase()
       );
       if (match) {
-        setSelectedWingSlug(match.slug);
+        targetWingSlug = match.slug;
       }
-    } else if (wings.length > 0 && !selectedWingSlug) {
-      setSelectedWingSlug(wings[0].slug);
     }
-  }, [initialWingParam, wings, selectedWingSlug]);
+    setSelectedWingSlug(targetWingSlug);
+  }, [initialWingParam, wings]);
 
   // Compute available projects for the currently selected Wing (Present & Future only)
   const wingProjects = useMemo(() => {
@@ -112,11 +117,11 @@ export function ResearchMateApply() {
       const isPast = r.category === 'past';
       if (isPast) return false;
 
-      const wingId = typeof r.wingId === 'object' ? r.wingId?._id || r.wingId?.slug : r.wingId;
+      const wingId = typeof r.wingId === 'object' ? (r.wingId?._id || r.wingId?.slug) : r.wingId;
+      const currentWingId = currentWing._id ? String(currentWing._id) : '';
       const matchesWing =
-        r.wingSlug === currentWing.slug ||
-        wingId === currentWing._id ||
-        wingId === currentWing.slug;
+        (r.wingSlug && r.wingSlug === currentWing.slug) ||
+        (wingId && (String(wingId) === currentWingId || String(wingId) === currentWing.slug));
 
       return matchesWing;
     });
@@ -128,30 +133,51 @@ export function ResearchMateApply() {
     return matching;
   }, [selectedWingSlug, wings, allResearch]);
 
-  // Auto-select target project when wing projects change or from initialProjectParam
+  // Initial auto-select of target project from initialProjectParam or first available project
   useEffect(() => {
-    if (wingProjects.length > 0) {
-      if (initialProjectParam) {
-        const found = wingProjects.find(
-          (p) =>
-            p.slug === initialProjectParam ||
-            p.title.toLowerCase() === initialProjectParam.toLowerCase() ||
-            p._id === initialProjectParam
-        );
-        if (found) {
-          setSelectedProjectTitle(found.title);
-          return;
-        }
+    if (projectInitializedRef.current || wingProjects.length === 0) return;
+    projectInitializedRef.current = true;
+
+    if (initialProjectParam) {
+      const found = wingProjects.find(
+        (p) =>
+          p.slug === initialProjectParam ||
+          p.title.toLowerCase() === initialProjectParam.toLowerCase() ||
+          p._id === initialProjectParam
+      );
+      if (found) {
+        setSelectedProjectTitle(found.title);
+        return;
       }
-      // If current selection is not in wingProjects, pick first
-      const stillValid = wingProjects.some((p) => p.title === selectedProjectTitle);
-      if (!stillValid) {
-        setSelectedProjectTitle(wingProjects[0].title);
-      }
+    }
+    if (!selectedProjectTitle) {
+      setSelectedProjectTitle(wingProjects[0].title);
+    }
+  }, [wingProjects, initialProjectParam, selectedProjectTitle]);
+
+  // Handle explicit wing change by user: updates wing, re-filters, and auto-selects first matching project
+  const handleWingChange = (newWingSlug: string) => {
+    setSelectedWingSlug(newWingSlug);
+    const currentWing = wings.find((w) => w.slug === newWingSlug);
+    if (!currentWing) return;
+
+    const matching = allResearch.filter((r) => {
+      if (r.category === 'past') return false;
+      const wingId = typeof r.wingId === 'object' ? (r.wingId?._id || r.wingId?.slug) : r.wingId;
+      const currentWingId = currentWing._id ? String(currentWing._id) : '';
+      return (
+        (r.wingSlug && r.wingSlug === currentWing.slug) ||
+        (wingId && (String(wingId) === currentWingId || String(wingId) === currentWing.slug))
+      );
+    });
+
+    const available = matching.length > 0 ? matching : allResearch.filter((r) => r.category !== 'past');
+    if (available.length > 0) {
+      setSelectedProjectTitle(available[0].title);
     } else {
       setSelectedProjectTitle('');
     }
-  }, [wingProjects, initialProjectParam, selectedProjectTitle]);
+  };
 
   // Helper to validate and set PDF file
   const validateAndSetFile = (file: File) => {
@@ -420,7 +446,7 @@ export function ResearchMateApply() {
 
           {/* Group 1 — Applicant Details (1-Col Mobile, 2-Col Desktop) */}
           <div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3.5">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 leading-snug mb-3.5">
               1. Applicant Details
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
@@ -514,7 +540,7 @@ export function ResearchMateApply() {
 
           {/* Group 2 — Wing & Target Research Project */}
           <div className="pt-2 border-t border-slate-100 flex flex-col gap-4 w-full">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 leading-snug mb-2.5">
               2. Wing &amp; Target Research Project
             </h2>
 
@@ -525,7 +551,7 @@ export function ResearchMateApply() {
               <select
                 className="block w-full max-w-full min-w-0 box-border min-h-[44px] rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20"
                 value={selectedWingSlug}
-                onChange={(e) => setSelectedWingSlug(e.target.value)}
+                onChange={(e) => handleWingChange(e.target.value)}
                 required
               >
                 {wings.map((w) => (
@@ -571,7 +597,7 @@ export function ResearchMateApply() {
 
           {/* Group 3 — Qualifications & Custom PDF CV Dropzone */}
           <div className="pt-2 border-t border-slate-100 flex flex-col gap-4 w-full">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 leading-snug mb-2.5">
               3. Qualifications &amp; CV Upload
             </h2>
 
@@ -614,7 +640,8 @@ export function ResearchMateApply() {
                 type="file"
                 id="pdf-upload"
                 accept=".pdf,application/pdf"
-                className="hidden"
+                className="hidden !hidden"
+                style={{ display: 'none' }}
                 onChange={handleFileChange}
               />
 
@@ -690,7 +717,7 @@ export function ResearchMateApply() {
           {/* Fee Notice & Responsive Submit Button */}
           <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-xs text-slate-600 font-medium text-center sm:text-left leading-relaxed">
-              Stage 1 application is <strong>100% free</strong>. If approved, Research Mates complete Stage 2 verification (BDT 1,000 project onboarding fee) and receive their official WhatsApp coordination group link.
+              Stage 1 application is free. Once approved by Admin, a one-time BDT 1,000 onboarding fee (via bKash/Nagad) is required in Stage 2 to join the research project.
             </p>
             <button
               type="submit"
