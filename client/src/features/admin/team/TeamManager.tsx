@@ -87,6 +87,16 @@ export function TeamManager() {
   const [foundingMemberModalOpen, setFoundingMemberModalOpen] = useState(false);
   const [savingFoundingMember, setSavingFoundingMember] = useState(false);
 
+  const handlePreventEnterSubmit = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === 'Enter') {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' && (target as HTMLInputElement).type !== 'submit') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+  };
+
   const handleSaveFoundingMember = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingFoundingMember(true);
@@ -95,8 +105,9 @@ export function TeamManager() {
         ...editingFoundingMember,
         researchInterests: cleanTags(editingFoundingMember.researchInterests)
       };
-      if (editingFoundingMember._id) {
-        await api.put(`/admin/founding-members/${editingFoundingMember._id}`, payload);
+      const targetId = editingFoundingMember._id || editingFoundingMember.slug;
+      if (targetId) {
+        await api.put(`/admin/founding-members/${targetId}`, payload);
         toast.success('Founding member updated successfully.');
       } else {
         await api.post('/admin/founding-members', payload);
@@ -140,8 +151,9 @@ export function TeamManager() {
         ...editingSupervisor,
         researchInterests: cleanTags(editingSupervisor.researchInterests)
       };
-      if (editingSupervisor._id) {
-        await api.put(`/admin/supervisors/${editingSupervisor._id}`, payload);
+      const targetId = editingSupervisor._id || editingSupervisor.slug;
+      if (targetId) {
+        await api.put(`/admin/supervisors/${targetId}`, payload);
         toast.success('Supervisor updated successfully.');
       } else {
         await api.post('/admin/supervisors', payload);
@@ -184,8 +196,9 @@ export function TeamManager() {
         ...editingScholar,
         researchTopics: cleanTags(editingScholar.researchTopics)
       };
-      if (editingScholar._id) {
-        await api.put(`/admin/scholars/${editingScholar._id}`, payload);
+      const targetId = editingScholar._id || editingScholar.slug;
+      if (targetId) {
+        await api.put(`/admin/scholars/${targetId}`, payload);
         toast.success('Young Scholar updated successfully.');
       } else {
         await api.post('/admin/scholars', payload);
@@ -632,7 +645,7 @@ export function TeamManager() {
       {/* Supervisor Edit/Create Modal */}
       {supervisorModalOpen && editingSupervisor && (
         <Modal open={supervisorModalOpen} title={editingSupervisor._id ? `Edit: ${editingSupervisor.name}` : 'New Research Supervisor'} onClose={() => setSupervisorModalOpen(false)}>
-          <form className="form" onSubmit={handleSaveSupervisor} style={{ marginTop: 12 }}>
+          <form className="form" onSubmit={handleSaveSupervisor} onKeyDown={handlePreventEnterSubmit} style={{ marginTop: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <label>
                 Full Name
@@ -725,7 +738,7 @@ export function TeamManager() {
       {/* Scholar Edit/Create Modal */}
       {scholarModalOpen && editingScholar && (
         <Modal open={scholarModalOpen} title={editingScholar._id ? `Edit: ${editingScholar.name}` : 'New Young Scholar'} onClose={() => setScholarModalOpen(false)}>
-          <form className="form" onSubmit={handleSaveScholar} style={{ marginTop: 12 }}>
+          <form className="form" onSubmit={handleSaveScholar} onKeyDown={handlePreventEnterSubmit} style={{ marginTop: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <label>
                 Full Name
@@ -816,7 +829,7 @@ export function TeamManager() {
       {/* Founding Member Edit/Create Modal */}
       {foundingMemberModalOpen && editingFoundingMember && (
         <Modal open={foundingMemberModalOpen} title={editingFoundingMember._id ? `Edit: ${editingFoundingMember.name}` : 'New Founding Member'} onClose={() => setFoundingMemberModalOpen(false)}>
-          <form className="form" onSubmit={handleSaveFoundingMember} style={{ marginTop: 12 }}>
+          <form className="form" onSubmit={handleSaveFoundingMember} onKeyDown={handlePreventEnterSubmit} style={{ marginTop: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <label>
                 Full Name

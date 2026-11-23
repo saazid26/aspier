@@ -40,15 +40,21 @@ import {
   updateWhatsAppLink
 } from '../controllers/researchApplication.controller.js';
 import {
-  demoFoundingMembers,
-  demoSupervisors,
-  demoScholars,
   getFallbackWings,
   addOrUpdateFallbackWing,
   deleteFallbackWing,
   getFallbackResearch,
   addOrUpdateFallbackResearch,
-  deleteFallbackResearch
+  deleteFallbackResearch,
+  getFallbackFoundingMembers,
+  addOrUpdateFallbackFoundingMember,
+  deleteFallbackFoundingMember,
+  getFallbackSupervisors,
+  addOrUpdateFallbackSupervisor,
+  deleteFallbackSupervisor,
+  getFallbackScholars,
+  addOrUpdateFallbackScholar,
+  deleteFallbackScholar
 } from '../utils/fallbackData.js';
 
 const router = Router();
@@ -76,6 +82,7 @@ router.put('/research-applications/:id/whatsapp-link', updateWhatsAppLink);
 router.get('/research-applications/:id/cv', downloadResearchApplicationCv);
 router.delete('/research-applications/:id', deleteResearchApplication);
 
+// Founding Members CRUD
 router.get('/founding-members', audit('list', 'FoundingMember'), async (_req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -86,9 +93,73 @@ router.get('/founding-members', audit('list', 'FoundingMember'), async (_req, re
       if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
     }
   } catch {}
-  return res.json({ success: true, data: demoFoundingMembers, pagination: { page: 1, limit: 100, total: demoFoundingMembers.length, pages: 1 } });
+  const list = getFallbackFoundingMembers();
+  return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
 });
 
+router.post('/founding-members', audit('create', 'FoundingMember'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    let item: any = null;
+    const body = { ...req.body };
+    delete body._id;
+    if (mongoose.connection.readyState === 1) {
+      item = await FoundingMember.create(body);
+    }
+    const saved = addOrUpdateFallbackFoundingMember(item ? item.toObject() : req.body);
+    return res.status(201).json({ success: true, data: item || saved });
+  } catch (err: any) {
+    const saved = addOrUpdateFallbackFoundingMember(req.body);
+    return res.status(201).json({ success: true, data: saved });
+  }
+});
+
+router.put('/founding-members/:id', audit('update', 'FoundingMember'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    let item: any = null;
+    const id = String(req.params.id);
+    const body = { ...req.body };
+    delete body._id;
+    if (mongoose.connection.readyState === 1) {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        item = await FoundingMember.findByIdAndUpdate(id, body, { new: true });
+      }
+      if (!item && (body.slug || id)) {
+        item = await FoundingMember.findOneAndUpdate({ $or: [{ slug: body.slug || id }, { name: body.name }] }, body, { new: true, upsert: true });
+      }
+    }
+    const saved = addOrUpdateFallbackFoundingMember({ ...req.body, _id: item?._id ? String(item._id) : id });
+    return res.json({ success: true, data: item || saved });
+  } catch (err: any) {
+    const saved = addOrUpdateFallbackFoundingMember({ ...req.body, _id: String(req.params.id) });
+    return res.json({ success: true, data: saved });
+  }
+});
+
+router.delete('/founding-members/:id', audit('delete', 'FoundingMember'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const id = String(req.params.id);
+    if (mongoose.connection.readyState === 1) {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        await FoundingMember.findByIdAndDelete(id);
+      } else {
+        await FoundingMember.findOneAndDelete({ $or: [{ slug: id }, { name: id }] });
+      }
+    }
+  } catch {}
+  deleteFallbackFoundingMember(String(req.params.id));
+  return res.json({ success: true, message: 'Founding member deleted' });
+});
+
+// Research Supervisors CRUD
 router.get('/supervisors', audit('list', 'Supervisor'), async (_req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -99,9 +170,73 @@ router.get('/supervisors', audit('list', 'Supervisor'), async (_req, res) => {
       if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
     }
   } catch {}
-  return res.json({ success: true, data: demoSupervisors, pagination: { page: 1, limit: 100, total: demoSupervisors.length, pages: 1 } });
+  const list = getFallbackSupervisors();
+  return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
 });
 
+router.post('/supervisors', audit('create', 'Supervisor'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    let item: any = null;
+    const body = { ...req.body };
+    delete body._id;
+    if (mongoose.connection.readyState === 1) {
+      item = await Supervisor.create(body);
+    }
+    const saved = addOrUpdateFallbackSupervisor(item ? item.toObject() : req.body);
+    return res.status(201).json({ success: true, data: item || saved });
+  } catch (err: any) {
+    const saved = addOrUpdateFallbackSupervisor(req.body);
+    return res.status(201).json({ success: true, data: saved });
+  }
+});
+
+router.put('/supervisors/:id', audit('update', 'Supervisor'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    let item: any = null;
+    const id = String(req.params.id);
+    const body = { ...req.body };
+    delete body._id;
+    if (mongoose.connection.readyState === 1) {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        item = await Supervisor.findByIdAndUpdate(id, body, { new: true });
+      }
+      if (!item && (body.slug || id)) {
+        item = await Supervisor.findOneAndUpdate({ $or: [{ slug: body.slug || id }, { name: body.name }] }, body, { new: true, upsert: true });
+      }
+    }
+    const saved = addOrUpdateFallbackSupervisor({ ...req.body, _id: item?._id ? String(item._id) : id });
+    return res.json({ success: true, data: item || saved });
+  } catch (err: any) {
+    const saved = addOrUpdateFallbackSupervisor({ ...req.body, _id: String(req.params.id) });
+    return res.json({ success: true, data: saved });
+  }
+});
+
+router.delete('/supervisors/:id', audit('delete', 'Supervisor'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const id = String(req.params.id);
+    if (mongoose.connection.readyState === 1) {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        await Supervisor.findByIdAndDelete(id);
+      } else {
+        await Supervisor.findOneAndDelete({ $or: [{ slug: id }, { name: id }] });
+      }
+    }
+  } catch {}
+  deleteFallbackSupervisor(String(req.params.id));
+  return res.json({ success: true, message: 'Supervisor deleted' });
+});
+
+// Young Scholars CRUD
 router.get('/scholars', audit('list', 'Scholar'), async (_req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -112,7 +247,70 @@ router.get('/scholars', audit('list', 'Scholar'), async (_req, res) => {
       if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
     }
   } catch {}
-  return res.json({ success: true, data: demoScholars, pagination: { page: 1, limit: 100, total: demoScholars.length, pages: 1 } });
+  const list = getFallbackScholars();
+  return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
+});
+
+router.post('/scholars', audit('create', 'Scholar'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    let item: any = null;
+    const body = { ...req.body };
+    delete body._id;
+    if (mongoose.connection.readyState === 1) {
+      item = await Scholar.create(body);
+    }
+    const saved = addOrUpdateFallbackScholar(item ? item.toObject() : req.body);
+    return res.status(201).json({ success: true, data: item || saved });
+  } catch (err: any) {
+    const saved = addOrUpdateFallbackScholar(req.body);
+    return res.status(201).json({ success: true, data: saved });
+  }
+});
+
+router.put('/scholars/:id', audit('update', 'Scholar'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    let item: any = null;
+    const id = String(req.params.id);
+    const body = { ...req.body };
+    delete body._id;
+    if (mongoose.connection.readyState === 1) {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        item = await Scholar.findByIdAndUpdate(id, body, { new: true });
+      }
+      if (!item && (body.slug || id)) {
+        item = await Scholar.findOneAndUpdate({ $or: [{ slug: body.slug || id }, { name: body.name }] }, body, { new: true, upsert: true });
+      }
+    }
+    const saved = addOrUpdateFallbackScholar({ ...req.body, _id: item?._id ? String(item._id) : id });
+    return res.json({ success: true, data: item || saved });
+  } catch (err: any) {
+    const saved = addOrUpdateFallbackScholar({ ...req.body, _id: String(req.params.id) });
+    return res.json({ success: true, data: saved });
+  }
+});
+
+router.delete('/scholars/:id', audit('delete', 'Scholar'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const id = String(req.params.id);
+    if (mongoose.connection.readyState === 1) {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        await Scholar.findByIdAndDelete(id);
+      } else {
+        await Scholar.findOneAndDelete({ $or: [{ slug: id }, { name: id }] });
+      }
+    }
+  } catch {}
+  deleteFallbackScholar(String(req.params.id));
+  return res.json({ success: true, message: 'Scholar deleted' });
 });
 
 router.get('/wings', audit('list', 'Wing'), async (_req, res) => {
@@ -256,7 +454,7 @@ const mountCrud = (path: string, model: any) => {
   router.put(`/${path}/:id`, audit('update', model.modelName), crud.update);
   router.delete(`/${path}/:id`, audit('delete', model.modelName), crud.delete);
 };
-mountCrud('founding-members', FoundingMember); mountCrud('supervisors', Supervisor); mountCrud('scholars', Scholar); mountCrud('news', News); mountCrud('courses', Course); mountCrud('users', User); mountCrud('messages', Message); mountCrud('instructors', Instructor);
+mountCrud('news', News); mountCrud('courses', Course); mountCrud('users', User); mountCrud('messages', Message); mountCrud('instructors', Instructor);
 
 router.get('/payments', paymentQueue);
 router.get('/membership-applications', adminMembershipApplications);

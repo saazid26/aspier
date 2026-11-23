@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { demoResearch, demoScholars, demoSupervisors, demoFoundingMembers, makeDemoCover, makeDemoAvatar } from './seedData/demoContent.js';
 
 export const fallbackWings = [
@@ -465,5 +466,84 @@ export function deleteFallbackResearch(id: string): void {
   const idx = list.findIndex((r) => r._id === id || r.slug === id);
   if (idx >= 0) list.splice(idx, 1);
 }
+
+export function getFallbackFoundingMembers(): any[] {
+  if (!(global as any)._fallbackFoundingMembers) {
+    (global as any)._fallbackFoundingMembers = [...demoFoundingMembers];
+  }
+  return (global as any)._fallbackFoundingMembers;
+}
+
+export function addOrUpdateFallbackFoundingMember(item: any): any {
+  const list = getFallbackFoundingMembers();
+  const id = item._id || item.id || new mongoose.Types.ObjectId().toString();
+  const idx = list.findIndex((m) => m._id === id || m.slug === item.slug);
+  const updated = { ...item, _id: id };
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...updated };
+  } else {
+    list.push(updated);
+  }
+  return updated;
+}
+
+export function deleteFallbackFoundingMember(id: string): void {
+  const list = getFallbackFoundingMembers();
+  const idx = list.findIndex((m) => m._id === id || m.slug === id);
+  if (idx >= 0) list.splice(idx, 1);
+}
+
+export function getFallbackSupervisors(): any[] {
+  if (!(global as any)._fallbackSupervisors) {
+    (global as any)._fallbackSupervisors = [...demoSupervisors];
+  }
+  return (global as any)._fallbackSupervisors;
+}
+
+export function addOrUpdateFallbackSupervisor(item: any): any {
+  const list = getFallbackSupervisors();
+  const id = item._id || item.id || new mongoose.Types.ObjectId().toString();
+  const idx = list.findIndex((s) => s._id === id || s.slug === item.slug);
+  const updated = { ...item, _id: id };
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...updated };
+  } else {
+    list.push(updated);
+  }
+  return updated;
+}
+
+export function deleteFallbackSupervisor(id: string): void {
+  const list = getFallbackSupervisors();
+  const idx = list.findIndex((s) => s._id === id || s.slug === id);
+  if (idx >= 0) list.splice(idx, 1);
+}
+
+export function getFallbackScholars(): any[] {
+  if (!(global as any)._fallbackScholars) {
+    (global as any)._fallbackScholars = [...demoScholars];
+  }
+  return (global as any)._fallbackScholars;
+}
+
+export function addOrUpdateFallbackScholar(item: any): any {
+  const list = getFallbackScholars();
+  const id = item._id || item.id || new mongoose.Types.ObjectId().toString();
+  const idx = list.findIndex((sc) => sc._id === id || sc.slug === item.slug);
+  const updated = { ...item, _id: id };
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...updated };
+  } else {
+    list.push(updated);
+  }
+  return updated;
+}
+
+export function deleteFallbackScholar(id: string): void {
+  const list = getFallbackScholars();
+  const idx = list.findIndex((sc) => sc._id === id || sc.slug === id);
+  if (idx >= 0) list.splice(idx, 1);
+}
+
 
 

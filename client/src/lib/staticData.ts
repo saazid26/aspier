@@ -679,7 +679,7 @@ export const staticResearch = [
 
 export const staticFoundingMembers = [
   {
-    _id: "founding-member-1",
+    _id: "60d0fe4f5311236168a109e1",
     name: "Engr. Fahim Shahriar",
     slug: "sample-fahim-shahriar",
     role: "Co-Founder & Lead Systems Engineer",
@@ -696,7 +696,7 @@ export const staticFoundingMembers = [
     sampleData: true
   },
   {
-    _id: "founding-member-2",
+    _id: "60d0fe4f5311236168a109e2",
     name: "Dr. Samiha Anjum",
     slug: "sample-samiha-anjum",
     role: "Co-Founder & Head of Earth Observation",
@@ -713,7 +713,7 @@ export const staticFoundingMembers = [
     sampleData: true
   },
   {
-    _id: "founding-member-3",
+    _id: "60d0fe4f5311236168a109e3",
     name: "Tanvir Hossain",
     slug: "sample-tanvir-hossain",
     role: "Founding Member & Planetary Research Lead",
@@ -730,7 +730,7 @@ export const staticFoundingMembers = [
     sampleData: true
   },
   {
-    _id: "founding-member-4",
+    _id: "60d0fe4f5311236168a109e4",
     name: "Zarin Subah",
     slug: "sample-zarin-subah",
     role: "Founding Member & Academic Programs Director",

@@ -66,9 +66,20 @@ export function TagInputField({
     // Prevent accidental premature submission of modal forms on Enter
     if (e.key === 'Enter') {
       e.preventDefault();
+      e.stopPropagation();
+      if (e.nativeEvent?.stopImmediatePropagation) {
+        e.nativeEvent.stopImmediatePropagation();
+      }
       const parsed = parseTags(rawInput);
       onChange(parsed);
       setRawInput(parsed.length > 0 ? `${parsed.join(', ')}, ` : '');
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
     }
   };
 
@@ -94,6 +105,7 @@ export function TagInputField({
         onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
+        onKeyPress={handleKeyPress}
         placeholder={placeholder}
         disabled={disabled}
         autoComplete="off"

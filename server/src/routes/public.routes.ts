@@ -26,7 +26,10 @@ import {
   demoScholars,
   demoFoundingMembers,
   getFallbackWings,
-  getFallbackResearch
+  getFallbackResearch,
+  getFallbackFoundingMembers,
+  getFallbackSupervisors,
+  getFallbackScholars
 } from '../utils/fallbackData.js';
 
 const router = Router();
@@ -184,7 +187,7 @@ router.get('/founding-members', async (_req, res) => {
   } catch (err) {
     console.warn('[founding-members] fallback:', err instanceof Error ? err.message : err);
   }
-  return res.json({ success: true, data: demoFoundingMembers });
+  return res.json({ success: true, data: getFallbackFoundingMembers() });
 });
 
 router.get('/founding-members/:slug', async (req, res) => {
@@ -194,7 +197,7 @@ router.get('/founding-members/:slug', async (req, res) => {
   } catch (err) {
     console.warn('[founding-members/:slug] fallback:', err instanceof Error ? err.message : err);
   }
-  const fallback = demoFoundingMembers.find((f) => f.slug === req.params.slug);
+  const fallback = getFallbackFoundingMembers().find((f) => f.slug === req.params.slug);
   if (!fallback) return res.status(404).json({ success: false, message: 'Founding member not found' });
   return res.json({ success: true, data: fallback });
 });
@@ -206,7 +209,7 @@ router.get('/supervisors', async (_req, res) => {
   } catch (err) {
     console.warn('[supervisors] fallback:', err instanceof Error ? err.message : err);
   }
-  return res.json({ success: true, data: demoSupervisors });
+  return res.json({ success: true, data: getFallbackSupervisors() });
 });
 
 router.get('/supervisors/:slug', async (req, res) => {
@@ -216,7 +219,7 @@ router.get('/supervisors/:slug', async (req, res) => {
   } catch (err) {
     console.warn('[supervisors/:slug] fallback:', err instanceof Error ? err.message : err);
   }
-  const fallback = demoSupervisors.find((s) => s.slug === req.params.slug);
+  const fallback = getFallbackSupervisors().find((s) => s.slug === req.params.slug);
   if (!fallback) return res.status(404).json({ success: false, message: 'Supervisor not found' });
   return res.json({ success: true, data: fallback });
 });
@@ -228,7 +231,7 @@ router.get('/scholars', async (_req, res) => {
   } catch (err) {
     console.warn('[scholars] fallback:', err instanceof Error ? err.message : err);
   }
-  return res.json({ success: true, data: demoScholars });
+  return res.json({ success: true, data: getFallbackScholars() });
 });
 
 router.get('/scholars/:slug', async (req, res) => {
@@ -238,7 +241,7 @@ router.get('/scholars/:slug', async (req, res) => {
   } catch (err) {
     console.warn('[scholars/:slug] fallback:', err instanceof Error ? err.message : err);
   }
-  const fallback = demoScholars.find((s) => s.slug === req.params.slug);
+  const fallback = getFallbackScholars().find((s) => s.slug === req.params.slug);
   if (!fallback) return res.status(404).json({ success: false, message: 'Scholar not found' });
   return res.json({ success: true, data: fallback });
 });
