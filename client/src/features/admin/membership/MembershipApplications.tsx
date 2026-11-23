@@ -32,8 +32,6 @@ type Application = {
   bio?: string;
   researchDomains?: string[];
   photo?: string;
-  paymentMethod?: string;
-  trxId?: string;
   onboardingToken?: string;
   onboardingTokenExpires?: string;
   onboardingTokenUsed?: boolean;
@@ -66,7 +64,7 @@ const statusBadge = (status: string) => {
     case 'initial_pending':
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200"><Clock className="w-3 h-3" /> Stage 1 Review</span>;
     case 'final_pending':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200"><Clock className="w-3 h-3" /> Profile Review (Fee-Free)</span>;
+      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200"><Clock className="w-3 h-3" /> Profile Review</span>;
     case 'verification_pending':
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200"><Clock className="w-3 h-3" /> Profile Review</span>;
     default:
@@ -358,12 +356,6 @@ export function MembershipApplications() {
                     <div><dt className="text-xs text-slate-500 font-semibold">Institution</dt><dd>{application.institution || '—'}</dd></div>
                     <div><dt className="text-xs text-slate-500 font-semibold">Education</dt><dd>{application.educationalBackground || '—'}</dd></div>
                     <div><dt className="text-xs text-slate-500 font-semibold">Research Domains</dt><dd>{application.researchDomains?.join(', ') || '—'}</dd></div>
-                    {stage === 'verification_pending' && (
-                      <>
-                        <div><dt className="text-xs text-slate-500 font-semibold">Payment Method</dt><dd>{application.paymentMethod || 'bKash / Nagad'}</dd></div>
-                        <div><dt className="text-xs text-slate-500 font-semibold">Transaction ID (TrxID)</dt><dd className="font-mono font-bold text-teal-700">{application.trxId}</dd></div>
-                      </>
-                    )}
                   </dl>
                   {application.bio && (
                     <div className="mt-2 text-sm text-slate-600 bg-white p-3 rounded border border-slate-200">

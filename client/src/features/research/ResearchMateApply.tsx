@@ -337,7 +337,7 @@ export function ResearchMateApply() {
               </button>
             </div>
             <p className="text-xs text-slate-500 pt-1 leading-relaxed">
-              Save this ID. Joining as a Research Mate is <strong>100% free across all stages</strong>. You can check your application review progress anytime in the Check Application portal.
+              Save this ID. Stage 1 application is <strong>100% free</strong>. You can check your application review progress anytime in the Check Application portal.
             </p>
           </div>
 
@@ -345,7 +345,7 @@ export function ResearchMateApply() {
             <p className="font-bold text-teal-950 text-sm">Next Steps &amp; Review Timeline:</p>
             <p>1. <strong>Faculty Review:</strong> Our academic wing committee reviews your submitted CV, background, and research alignment.</p>
             <p>2. <strong>Private Access Code:</strong> Once approved, you will receive an acceptance notification and your official Private Access Code.</p>
-            <p>3. <strong>Collaborator Onboarding:</strong> Access your project workspace, collaboration resources, and project group — completely fee-free.</p>
+            <p>3. <strong>Stage 2 Verification:</strong> Enter your credentials in the Check Application portal to complete Stage 2 verification (BDT 1,000 project onboarding fee) and join the official project WhatsApp group.</p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 border-t border-slate-100">
@@ -371,7 +371,7 @@ export function ResearchMateApply() {
     <main className="container section py-10 sm:py-16">
       <SEO
         title="Apply as Research Mate | ASPIER Academic Wings"
-        description="Apply to join ongoing and future research projects across ASPIER Academic Wings as a Research Mate. 100% free across all stages."
+        description="Apply to join ongoing and future research projects across ASPIER Academic Wings as a Research Mate. Free initial Stage 1 application."
       />
 
       <div className="w-full max-w-3xl mx-auto box-border">
@@ -390,7 +390,7 @@ export function ResearchMateApply() {
             Apply to Join Research (Research Mate)
           </h1>
           <p className="text-sm text-slate-600 leading-relaxed max-w-2xl">
-            Collaborate directly on active research projects, co-author publications, and work alongside ASPIER Supervisors and Scholars. Joining as a Research Mate is 100% free across all stages.
+            Collaborate directly on active research projects, co-author publications, and work alongside ASPIER Supervisors and Scholars. Initial Stage 1 application is 100% free.
           </p>
         </div>
 
@@ -687,10 +687,10 @@ export function ResearchMateApply() {
             </div>
           </div>
 
-          {/* Fee-Free Notice & Responsive Submit Button */}
+          {/* Fee Notice & Responsive Submit Button */}
           <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-xs text-slate-600 font-medium text-center sm:text-left leading-relaxed">
-              Joining as a Research Mate is <strong>100% free across all stages</strong> — no payment is required.
+              Stage 1 application is <strong>100% free</strong>. If approved, Research Mates complete Stage 2 verification (BDT 1,000 project onboarding fee) and receive their official WhatsApp coordination group link.
             </p>
             <button
               type="submit"

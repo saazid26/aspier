@@ -56,9 +56,7 @@ const profileSchema = z.object({
   linkedin: z.string().trim().max(500).optional().default(''),
   bio: z.string().trim().min(20).max(5000),
   researchDomains: z.array(z.string().trim().min(1).max(100)).min(1).max(20),
-  photo: z.string().trim().min(1).max(1000),
-  paymentMethod: z.enum(['bKash', 'Nagad']).optional(),
-  trxId: z.string().trim().min(3).max(80).optional()
+  photo: z.string().trim().min(1).max(1000)
 });
 const paymentSchema = z.object({
   accessCode: z.string().min(20).max(100),
@@ -394,29 +392,8 @@ export async function submitMembershipProfile(req: Request, res: Response, next:
   }
 }
 
-export async function submitMembershipPayment(req: Request, res: Response, next: NextFunction) {
-  try {
-    const data = parseBody(paymentSchema, req.body);
-    const application = await findWithCode(String(req.params.id || ''), data.accessCode);
-    if (application.role !== 'youngScholar') throw new HttpError(403, 'Supervisor membership is free and does not accept payment');
-    if (application.status !== 'payment_pending') throw new HttpError(409, 'Payment submission is available after final application acceptance');
-    if (await MembershipApplication.exists({ trxId: data.trxId, _id: { $ne: application._id } })) throw new HttpError(409, 'This transaction ID has already been submitted');
-    application.paymentMethod = data.paymentMethod;
-    application.trxId = data.trxId;
-    application.membershipFee = 1000;
-    application.status = 'verification_pending';
-    await application.save();
-    await notifyAdmins({
-      title: 'Membership payment submitted for verification',
-      body: `${application.name} submitted a ${data.paymentMethod} TrxID for verification.`,
-      category: 'payment-verification',
-      link: '/admin/membership-applications'
-    });
-    res.status(201).json({ success: true, data: { applicationId: application.id, status: application.status } });
-  } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 11000) next(new HttpError(409, 'This transaction ID has already been submitted'));
-    else next(error);
-  }
+export async function submitMembershipPayment(_req: Request, _res: Response, next: NextFunction) {
+  return next(new HttpError(403, 'ASPIER membership (Supervisor & Young Scholar) is completely fee-free across all stages. No payment is accepted.'));
 }
 
 export async function adminMembershipApplications(req: AuthRequest, res: Response) {
