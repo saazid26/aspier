@@ -254,8 +254,29 @@ body{min-width:0;overflow-x:clip}
   .notification-header-actions .notification-switch-button{min-width:0!important}
 }
 @media(min-width:768px){
-  .notification-popover.public-applicant-popover{position:absolute;z-index:90;inset:auto 0 auto auto;top:calc(100% + 10px);width:410px;max-width:calc(100vw - 32px);max-height:min(80vh,720px)}
-  .notification-popover.public-applicant-popover.popover-expanded{width:min(540px,calc(100vw - 32px))!important;max-width:540px!important;max-height:min(85dvh,800px)!important}
+  .notification-popover.public-applicant-popover{position:absolute;z-index:90;inset:auto 0 auto auto;top:calc(100% + 10px);width:410px;max-width:calc(100vw - 32px);max-height:min(calc(100vh - 88px),760px)!important}
+  .notification-popover.public-applicant-popover.popover-expanded{width:min(540px,calc(100vw - 32px))!important;max-width:540px!important;max-height:min(calc(100vh - 88px),840px)!important}
+}
+
+/* Custom Unobtrusive Thin Scrollbar for Applicant Notification Popover */
+.public-applicant-popover .scrollable-body::-webkit-scrollbar {
+  width: 6px;
+}
+.public-applicant-popover .scrollable-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.public-applicant-popover .scrollable-body::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 999px;
+}
+.public-applicant-popover .scrollable-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.75);
+}
+.public-applicant-popover .scrollable-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .notification-detail{margin-top:12px;padding:14px;border:1px solid rgba(20,143,131,.16);border-radius:12px;background:#f7fbf9;overflow-wrap:anywhere}
 .notification-detail p{line-height:1.55}
@@ -346,7 +367,6 @@ body{min-width:0;overflow-x:clip}
 .wing-discipline-pills{margin-top:8px;margin-bottom:12px}
 .research-card .badge{margin-top:2px}
 .public-applicant-bell{flex:0 0 auto}
-.public-applicant-popover{max-height:min(80vh,680px)}
 @media(max-width:600px){.profile-photo{width:88px;height:88px}.image-card>.wing-card-media,.image-card>.course-card-media,.image-card>.news-card-media{max-height:176px}}
 .wing-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch}
 .wing-card{height:100%;min-width:0;display:flex;flex-direction:column;overflow:hidden;padding:0;border:1px solid rgba(148,163,184,.42);border-radius:16px;box-shadow:0 1px 3px rgba(15,23,42,.06);transition:box-shadow .2s ease,transform .2s ease}

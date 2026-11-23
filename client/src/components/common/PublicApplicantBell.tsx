@@ -109,6 +109,7 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
   const [open, setOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
   const bellRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<Mode>('check');
 
   // Input states always start completely empty (no hardcoded pre-filled values)
@@ -173,6 +174,13 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
 
   const unreadCount = memberData?.notifications?.filter((n) => !n.readAt).length || 0;
   const isExpanded = Boolean(memberData || researchMateData);
+
+  // Reset scroll position to top on open and whenever view/mode/data changes
+  useEffect(() => {
+    if (open && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [open, mode, isExpanded, memberData, researchMateData, extraProfileOpen, noticesOpen]);
 
   // Responsive listener
   useEffect(() => {
@@ -1165,19 +1173,19 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
         /* TAB 1: CHECK APPLICATION (APPLICATION VERIFICATION GATE) */
         <div className="flex flex-col w-full">
           {/* Inline Icon + Title Header */}
-          <div className="flex items-center gap-2.5 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-100 text-teal-700 flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100 text-teal-700 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-4 h-4" />
             </div>
-            <h3 className="text-sm sm:text-base font-bold text-slate-900 m-0">Application Verification Gate</h3>
+            <h3 className="text-sm font-bold text-slate-900 m-0">Application Verification Gate</h3>
           </div>
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+          <p className="text-xs text-slate-600 leading-relaxed mb-3">
             Enter the Application ID and Private Access Code received upon submitting your application to check your approval status or manage your profile.
           </p>
 
-          <form className="flex flex-col gap-3.5 w-full" onSubmit={handleCheckStatus}>
+          <form className="flex flex-col gap-2.5 w-full" onSubmit={handleCheckStatus}>
             {loginError && (
-              <div className="p-3 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs flex items-start gap-2" role="alert">
+              <div className="p-2.5 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs flex items-start gap-2" role="alert">
                 <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                 <span>{loginError}</span>
               </div>
@@ -1190,7 +1198,7 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
                 required
                 type="text"
                 autoComplete="username"
-                className="w-full min-h-[44px] px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border font-mono uppercase"
+                className="w-full min-h-[40px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border font-mono uppercase"
                 placeholder="e.g. ASPIER-2026-XXXX"
                 value={applicationId}
                 onChange={(e) => setApplicationId(e.target.value.toUpperCase())}
@@ -1204,7 +1212,7 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
                 required
                 type="text"
                 autoComplete="current-password"
-                className="w-full min-h-[44px] px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border font-mono"
+                className="w-full min-h-[40px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border font-mono"
                 placeholder="e.g. SEC-XXXX-XXXX"
                 value={accessCode}
                 onChange={(e) => setAccessCode(e.target.value)}
@@ -1215,7 +1223,7 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
             <button
               type="submit"
               disabled={busy}
-              className="w-full min-h-[44px] mt-1 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              className="w-full min-h-[42px] mt-0.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
             >
               {busy ? (
                 <>
@@ -1232,24 +1240,24 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
           </form>
 
           {/* Integrated 'Lost your access code?' Recovery Section */}
-          <div className="border-t border-slate-200 pt-4 mt-5">
+          <div className="border-t border-slate-200/90 pt-3 mt-3.5">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 mb-1">
               <Lock className="w-3.5 h-3.5 text-slate-500" />
               Lost your access code?
             </h4>
-            <p className="text-xs text-slate-500 mb-2.5 leading-relaxed">
+            <p className="text-xs text-slate-500 mb-2 leading-relaxed">
               Enter the email address used on your application to request an access recovery review.
             </p>
 
             {recoverySuccess && (
-              <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs mb-2 flex items-start gap-2">
+              <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs mb-2 flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <span>{recoverySuccess}</span>
               </div>
             )}
 
             {recoveryError && (
-              <div className="p-3 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs mb-2 flex items-start gap-2">
+              <div className="p-2.5 bg-red-50 text-red-700 rounded-xl border border-red-200 text-xs mb-2 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                 <span>{recoveryError}</span>
               </div>
@@ -1261,20 +1269,20 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
                 placeholder="Email used on application"
                 value={recoveryEmail}
                 onChange={(e) => setRecoveryEmail(e.target.value)}
-                className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border bg-white"
+                className="w-full min-h-[38px] px-3 py-1.5 text-base sm:text-xs rounded-xl border border-slate-300 placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border bg-white"
               />
               <button
                 type="button"
                 onClick={handleRequestRecovery}
                 disabled={isRecovering}
-                className="w-full sm:w-auto min-h-[42px] px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs flex items-center justify-center shrink-0 transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto min-h-[38px] px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs flex items-center justify-center shrink-0 transition-colors cursor-pointer disabled:opacity-50"
               >
                 {isRecovering ? 'Requesting…' : 'Request Recovery'}
               </button>
             </div>
           </div>
 
-          <p className="text-xs text-slate-500 pt-4 mt-4 text-center border-t border-slate-100">
+          <p className="text-xs text-slate-500 pt-3 mt-3 text-center border-t border-slate-100">
             Haven&apos;t applied yet?{' '}
             <Link to="/join" onClick={() => { setOpen(false); onOpenChange?.(false); }} className="text-teal-700 hover:text-teal-900 font-semibold underline">
               Apply to Join ASPIER →
@@ -1407,15 +1415,20 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
         </div>
       )}
 
-      {/* Scrollable body container with generous bottom padding */}
+      {/* Scrollable body container with smooth wheel, trackpad, and touch swipe */}
       <div
-        className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-5 sm:p-5 sm:pb-6 min-h-0 box-border overscroll-contain"
+        ref={scrollContainerRef}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        className="scrollable-body flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-4 min-h-0 box-border overscroll-contain touch-pan-y"
         style={{
           maxHeight: isMobile
-            ? 'calc(84dvh - 110px)'
+            ? 'calc(85dvh - 110px)'
             : isExpanded
-            ? 'min(76vh, 680px)'
-            : 'min(72vh, 540px)'
+            ? 'min(calc(100vh - 175px), 720px)'
+            : 'min(calc(100vh - 175px), 560px)',
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y'
         }}
       >
         {researchMateData ? (
@@ -1461,8 +1474,10 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
                 tabIndex={-1}
               />
               <section
-                className={`notification-popover public-applicant-popover fixed inset-x-3 top-16 z-[999] mx-auto w-[calc(100vw-24px)] max-w-[410px] max-h-[84dvh] rounded-2xl bg-white border border-slate-200 shadow-2xl flex flex-col overflow-hidden box-border ${
-                  isExpanded ? 'popover-expanded !max-w-[540px] !max-h-[85dvh]' : ''
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+                className={`notification-popover public-applicant-popover fixed inset-x-3 top-16 z-[999] mx-auto w-[calc(100vw-24px)] max-w-[410px] max-h-[85dvh] rounded-2xl bg-white border border-slate-200 shadow-2xl flex flex-col overflow-hidden box-border overscroll-contain ${
+                  isExpanded ? 'popover-expanded !max-w-[540px] !max-h-[88dvh]' : ''
                 }`}
                 role="dialog"
                 aria-modal="true"
@@ -1475,8 +1490,10 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
           )
         ) : (
           <section
-            className={`notification-popover public-applicant-popover sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2.5 sm:w-[410px] sm:max-h-[80vh] rounded-2xl bg-white border border-slate-200 shadow-2xl flex flex-col overflow-hidden box-border ${
-              isExpanded ? 'popover-expanded sm:!w-[540px] sm:!max-h-[85dvh]' : ''
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            className={`notification-popover public-applicant-popover sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2.5 sm:w-[410px] sm:max-h-[calc(100vh-88px)] rounded-2xl bg-white border border-slate-200 shadow-2xl flex flex-col overflow-hidden box-border overscroll-contain ${
+              isExpanded ? 'popover-expanded sm:!w-[540px] sm:!max-h-[calc(100vh-88px)]' : ''
             }`}
             role="dialog"
             aria-modal="true"
