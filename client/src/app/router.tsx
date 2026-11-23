@@ -85,7 +85,63 @@ function Home(){
     queryKey: ['public-settings'],
     queryFn: async () => (await api.get('/public/settings')).data.data
   });
-  return <><SEO title={settings?.siteTitle || "ASPIER"} exact description={settings?.seoDescription || "Aeronautical, Spatial, Planetary Institute for Environmental Research"}/><Hero/><MissionSection/><WingsGrid/><FeaturedResearch/><TeamPreview/><Announcements/><section className="section"><div className="container"><div className="stats-grid"><div className="card stat-card"><strong>{settings?.statWings || '10'}</strong><p className="muted">{settings?.statWingsLabel || 'Academic wings'}</p></div><div className="card stat-card"><strong>{settings?.statDomains || '25+'}</strong><p className="muted">{settings?.statDomainsLabel || 'Research domains'}</p></div><div className="card stat-card"><strong>{settings?.statTracks || '3'}</strong><p className="muted">{settings?.statTracksLabel || 'Academy tracks'}</p></div><div className="card stat-card"><strong>{settings?.statAccess || '24/7'}</strong><p className="muted">{settings?.statAccessLabel || 'Digital access'}</p></div></div></div></section><section className="section"><div className="container"><div className="cta-band"><div><span className="eyebrow">{settings?.bottomCtaEyebrow || 'Explore ASPIER'}</span><h2>{settings?.bottomCtaHeadline || 'Discover research that moves forward'}</h2></div><Link className="button button-primary" to={settings?.bottomCtaLink || '/research'}>{settings?.bottomCtaText || 'Explore research'}</Link></div></div></section></>;
+  return (
+    <>
+      <SEO
+        title={settings?.siteTitle || 'ASPIER'}
+        exact
+        description={settings?.seoDescription || 'Aeronautical, Spatial, Planetary Institute for Environmental Research'}
+      />
+      <Hero />
+      <MissionSection />
+      <WingsGrid />
+      <FeaturedResearch />
+      <TeamPreview />
+      <Announcements />
+      <section className="section">
+        <div className="container">
+          <div className="stats-grid">
+            <div className="card stat-card">
+              <strong>{settings?.statWings || '10'}</strong>
+              <p className="muted">{settings?.statWingsLabel || 'Academic wings'}</p>
+            </div>
+            <div className="card stat-card">
+              <strong>{settings?.statDomains || '25+'}</strong>
+              <p className="muted">{settings?.statDomainsLabel || 'Research domains'}</p>
+            </div>
+            <div className="card stat-card">
+              <strong>{settings?.statTracks || '3'}</strong>
+              <p className="muted">{settings?.statTracksLabel || 'Academy tracks'}</p>
+            </div>
+            <div className="card stat-card">
+              <strong>{settings?.statAccess || '24/7'}</strong>
+              <p className="muted">{settings?.statAccessLabel || 'Digital access'}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="section">
+        <div className="container">
+          <div className="cta-band rounded-3xl p-6 sm:p-8 lg:px-10 lg:py-9 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 w-full box-border">
+            <div className="flex flex-col justify-center gap-1.5 min-w-0">
+              <span className="eyebrow block m-0 text-xs font-bold uppercase tracking-wider text-teal-700">
+                {settings?.bottomCtaEyebrow || 'Explore ASPIER'}
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight m-0 leading-snug">
+                {settings?.bottomCtaHeadline || 'Discover research that moves forward'}
+              </h2>
+            </div>
+            <Link
+              className="button button-primary inline-flex items-center justify-center whitespace-nowrap min-h-[46px] px-6 py-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold shadow-sm transition sm:self-center shrink-0 w-full sm:w-auto text-sm sm:text-base cursor-pointer"
+              to={settings?.bottomCtaLink || '/research'}
+            >
+              {settings?.bottomCtaText || 'Explore research'}
+            </Link>
+          </div>
+        </div>
+      </section>
+    </>
+  );
 }
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
