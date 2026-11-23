@@ -13,8 +13,11 @@ type Role = 'admin' | 'supervisor' | 'youngScholar' | 'learner';
 
 export function Login() {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get('redirect');
   const isAcademy = location.pathname.startsWith('/academy');
-  const [role, setRole] = useState<Role>(() => location.pathname.startsWith('/academy') ? 'learner' : 'admin');
+  const isStudentRedirect = Boolean(redirect && (redirect.includes('student') || redirect.includes('academy')));
+  const [role, setRole] = useState<Role>(() => (isAcademy || isStudentRedirect) ? 'learner' : 'admin');
   const [mode, setMode] = useState<'login' | 'activate'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,8 +36,6 @@ export function Login() {
   const [formError, setFormError] = useState('');
   useCsrf();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const redirect = searchParams.get('redirect');
 
   const changeRole = (value: Role) => {
     setRole(value);
@@ -153,6 +154,27 @@ export function Login() {
     <main className="auth-card">
       <h1>{mode === 'activate' ? 'Activate member account' : 'Welcome back'}</h1>
       <p className="muted">Sign in to the ASPIER platform.</p>
+      {isStudentRedirect && (
+        <div
+          className="student-login-notice"
+          style={{
+            margin: '12px 0 16px',
+            padding: '12px 14px',
+            borderRadius: 10,
+            background: 'rgba(20, 143, 131, 0.08)',
+            border: '1px solid rgba(20, 143, 131, 0.25)',
+            color: '#148f83',
+            fontSize: '0.9rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8
+          }}
+        >
+          <span>🎓</span>
+          <span>Please sign in with your student credentials to access the Student Portal.</span>
+        </div>
+      )}
       {!setupComplete && <form className="form" onSubmit={submit}>
         {formError && <p className="applicant-error-message" role="alert">{formError}</p>}
         {!setupToken && <label>Role

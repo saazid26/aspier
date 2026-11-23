@@ -28,17 +28,23 @@ export function PublicLayout() {
   }, [location.pathname]);
   useEffect(() => {
     const closeOutside = (event: MouseEvent | TouchEvent) => {
+      if (!menuOpen) return;
       const target = event.target as Node;
-      const outsideControls = navControlsRef.current && !navControlsRef.current.contains(target);
-      const outsideLinks = navLinksRef.current && !navLinksRef.current.contains(target);
-      const inNotification = (target as Element).closest?.('.notification-popover');
-      if (menuOpen && outsideLinks && (outsideControls || inNotification)) setMenuOpen(false);
+      if (
+        (navControlsRef.current && navControlsRef.current.contains(target)) ||
+        (navLinksRef.current && navLinksRef.current.contains(target)) ||
+        (target as Element)?.closest?.('.nav-links') ||
+        (target as Element)?.closest?.('.menu-toggle')
+      ) {
+        return;
+      }
+      setMenuOpen(false);
     };
     const closeEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setMenuOpen(false);
     };
     document.addEventListener('mousedown', closeOutside);
-    document.addEventListener('touchstart', closeOutside);
+    document.addEventListener('touchstart', closeOutside, { passive: true });
     document.addEventListener('keydown', closeEscape);
     return () => {
       document.removeEventListener('mousedown', closeOutside);
