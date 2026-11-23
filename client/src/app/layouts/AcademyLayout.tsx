@@ -89,28 +89,28 @@ export function AcademyLayout() {
             style={menuOpen ? { pointerEvents: 'auto', zIndex: 100 } : undefined}
           >
             <Link
-              className="nav-link"
+              className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
               to="/"
               onClick={() => setMenuOpen(false)}
             >
               ASPIER
             </Link>
             <Link
-              className="nav-link"
+              className={`nav-link ${location.pathname === '/academy' ? 'active' : ''}`}
               to="/academy"
               onClick={() => setMenuOpen(false)}
             >
               Home
             </Link>
             <Link
-              className="nav-link"
-              to="/register"
+              className={`nav-link ${location.pathname === '/academy/register' ? 'active' : ''}`}
+              to="/academy/register"
               onClick={() => setMenuOpen(false)}
             >
               Register
             </Link>
             <Link
-              className="nav-link"
+              className={`nav-link ${location.pathname.startsWith('/student') || location.pathname.startsWith('/academy/portal') ? 'active' : ''}`}
               to="/student"
               onClick={() => setMenuOpen(false)}
             >

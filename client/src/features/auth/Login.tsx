@@ -226,9 +226,7 @@ export function Login() {
           <Link className="muted" to={isAcademy ? '/academy/forgot' : '/forgot'}>Forgot password?</Link>
           <Link
             className="muted"
-            to={isAcademy
-              ? (redirect ? `/academy/register?redirect=${encodeURIComponent(redirect)}` : '/academy/register')
-              : (redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : '/register')}
+            to={redirect ? `/academy/register?redirect=${encodeURIComponent(redirect)}` : '/academy/register'}
             style={{ textDecoration: 'underline' }}
           >
             Create Student Account

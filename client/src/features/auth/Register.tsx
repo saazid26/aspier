@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api, getApiErrorMessage } from '../../lib/api';
 import { Input } from '../../components/ui/Input';
@@ -12,17 +12,51 @@ export function Register() {
   const [formError, setFormError] = useState('');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const location = useLocation();
-  const isAcademy = location.pathname.startsWith('/academy');
   const redirect = searchParams.get('redirect');
   const passwordHint = 'Use 8+ characters with uppercase, lowercase, and a number.';
 
   return (
     <>
-      <SEO title="Student Registration" />
-      <main className="auth-card">
-        <h1>Create Student Account</h1>
-        <p className="muted">Join ASPIER Academy to enroll in courses and access learning modules.</p>
+      <SEO title="Student Registration | ASPIER Academy" />
+      <main className="auth-card" style={{ maxWidth: 480, margin: '6vh auto 10vh' }}>
+        <Link
+          to="/academy"
+          className="back-link"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: '0.86rem',
+            color: '#148f83',
+            marginBottom: 16,
+            fontWeight: 600,
+            textDecoration: 'none'
+          }}
+        >
+          ← Back to ASPIER Academy
+        </Link>
+
+        <div
+          className="badge badge-green"
+          style={{
+            display: 'inline-flex',
+            marginBottom: 12,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            fontSize: '0.74rem',
+            fontWeight: 800,
+            padding: '5px 10px',
+            borderRadius: 999
+          }}
+        >
+          ASPIER ACADEMY • STUDENT REGISTRATION
+        </div>
+
+        <h1 style={{ margin: '4px 0 8px', fontSize: '1.75rem', color: '#173e4a' }}>Create Student Account</h1>
+        <p className="muted" style={{ marginBottom: 22, fontSize: '0.94rem', lineHeight: 1.5 }}>
+          Join ASPIER Academy to enroll in courses, join live class sessions, and access research learning modules.
+        </p>
+
         <form
           className="form"
           onSubmit={async (e) => {
@@ -44,9 +78,10 @@ export function Register() {
                 email: form.email,
                 password: form.password
               });
-              toast.success('Account created! Please sign in.');
-              const defaultLogin = isAcademy ? '/academy/login' : '/login';
-              const loginTarget = redirect ? `${defaultLogin}?redirect=${encodeURIComponent(redirect)}` : defaultLogin;
+              toast.success('Student account created! Please sign in to continue.');
+              const defaultLogin = '/academy/login';
+              const targetRedirect = redirect || '/student';
+              const loginTarget = `${defaultLogin}?redirect=${encodeURIComponent(targetRedirect)}`;
               navigate(loginTarget);
             } catch (error: any) {
               const msg = getApiErrorMessage(error, 'Registration failed');
@@ -60,11 +95,11 @@ export function Register() {
           {formError && <p className="applicant-error-message" role="alert">{formError}</p>}
           <label>
             Full Name
-            <Input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input required minLength={2} placeholder="e.g. Nusrat Jahan" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </label>
           <label>
             Email Address
-            <Input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <Input required type="email" placeholder="e.g. student@gmail.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </label>
           <label>
             Password
@@ -72,6 +107,7 @@ export function Register() {
               required
               type="password"
               minLength={8}
+              placeholder="••••••••"
               autoComplete="new-password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -84,20 +120,22 @@ export function Register() {
               required
               type="password"
               minLength={8}
+              placeholder="••••••••"
               autoComplete="new-password"
               value={form.confirmPassword}
               onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
             />
           </label>
-          <Button disabled={busy}>{busy ? 'Creating account…' : 'Create Student Account'}</Button>
+          <Button disabled={busy} style={{ width: '100%', marginTop: 8 }}>{busy ? 'Creating account…' : 'Create Student Account'}</Button>
         </form>
-        <p className="muted" style={{ marginTop: 16, fontSize: '0.88rem', textAlign: 'center' }}>
+
+        <p className="muted" style={{ marginTop: 20, fontSize: '0.88rem', textAlign: 'center' }}>
           Already have an account?{' '}
           <Link
             to={redirect
-              ? (isAcademy ? `/academy/login?redirect=${encodeURIComponent(redirect)}` : `/login?redirect=${encodeURIComponent(redirect)}`)
-              : (isAcademy ? '/academy/login' : '/login')}
-            style={{ textDecoration: 'underline' }}
+              ? `/academy/login?redirect=${encodeURIComponent(redirect)}`
+              : `/academy/login?redirect=${encodeURIComponent('/student')}`}
+            style={{ textDecoration: 'underline', color: '#148f83', fontWeight: 600 }}
           >
             Sign in here
           </Link>
