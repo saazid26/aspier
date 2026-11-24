@@ -28,11 +28,15 @@ export function isCsrfExempt(req: Request): boolean {
     return true;
   }
 
-  // Exempt public applications and membership signup/lookup/recovery endpoints
+  // Exempt public applications, inquiries, contact form and membership signup/lookup/recovery endpoints
   if (
     cleanPath.includes('/membership/') ||
     cleanPath.includes('/research-applications') ||
-    cleanPath.includes('/onboarding')
+    cleanPath.includes('/onboarding') ||
+    cleanPath.includes('/inquiries') ||
+    cleanPath.includes('/contact') ||
+    cleanPath.includes('/join') ||
+    cleanPath.includes('/applications')
   ) {
     return true;
   }
