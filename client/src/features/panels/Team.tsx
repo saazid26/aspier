@@ -197,9 +197,9 @@ export function Team() {
                 {founder.founderTitle || founder.founderDescription || 'Founder & Executive Director, ASPIER'}
               </h4>
               {founder.founderBio ? (
-                <RichTextContent content={founder.founderBio} className="muted founder-bio text-left leading-relaxed text-sm sm:text-base text-slate-600 space-y-3" />
+                <RichTextContent content={founder.founderBio} className="muted founder-bio text-justify leading-relaxed text-sm sm:text-base text-slate-600 space-y-3" />
               ) : (
-                <p className="muted founder-bio text-left leading-relaxed text-sm sm:text-base text-slate-600">
+                <p className="muted founder-bio text-justify leading-relaxed text-sm sm:text-base text-slate-600">
                   Founder of the Aeronautical, Spatial, Planetary Institute for Environmental Research (ASPIER), advancing collaborative inquiry, open data practices, and research education.
                 </p>
               )}

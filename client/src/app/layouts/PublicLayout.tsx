@@ -57,16 +57,22 @@ export function PublicLayout() {
   return <div className="app-shell">
     <nav className="nav">
       <div className="container nav-inner">
-        <Link className="brand" to="/" aria-label="ASPIER home" onClick={() => setMenuOpen(false)}>
+        <Link className="brand inline-flex items-center gap-2.5 sm:gap-3 shrink-0" to="/" aria-label="ASPIER home" onClick={() => setMenuOpen(false)}>
           <img
             className="brand-logo"
             src={settings?.aspierLogoUrl || '/aspier-logo.png'}
             alt="ASPIER — Aeronautical, Spatial, Planetary Institution for Environmental Research"
-            width="160"
-            height="48"
+            width="42"
+            height="42"
             decoding="async"
             fetchPriority="high"
           />
+          <span
+            className="brand-wordmark brand-wordmark-aspier normal-case font-extrabold tracking-tight"
+            style={{ color: '#0F5132', textTransform: 'none', letterSpacing: '-0.025em', fontWeight: 800 }}
+          >
+            ASPIER
+          </span>
         </Link>
         <div className="header-right-controls" ref={navControlsRef}>
           <PublicApplicantBell onOpenChange={(open) => { if (open) setMenuOpen(false); }}/>
@@ -115,6 +121,24 @@ export function PublicLayout() {
     <main key={location.pathname}><Outlet/></main>
     <footer className="footer">
       <div className="container">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 mb-6">
+          <Link to="/" className="brand inline-flex items-center gap-2.5 sm:gap-3 shrink-0 group" aria-label="ASPIER home">
+            <img
+              className="brand-logo"
+              src={settings?.aspierLogoUrl || '/aspier-logo.png'}
+              alt="ASPIER logo"
+              width="38"
+              height="38"
+              style={{ width: 38, height: 38, minWidth: 38, minHeight: 38 }}
+            />
+            <span
+              className="brand-wordmark brand-wordmark-aspier normal-case font-extrabold tracking-tight text-xl"
+              style={{ color: '#0F5132', textTransform: 'none', letterSpacing: '-0.025em', fontWeight: 800 }}
+            >
+              ASPIER
+            </span>
+          </Link>
+        </div>
         <SocialConnectFooter variant="light" showBorder={false} className="mb-6" />
         <div className="border-t border-slate-200/80 pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div>

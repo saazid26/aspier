@@ -60,7 +60,7 @@ export function AcademyLayout() {
       <nav className="nav" ref={navContainerRef}>
         <div className="container nav-inner">
           <Link
-            className="brand"
+            className="brand inline-flex items-center gap-2.5 sm:gap-3 shrink-0"
             to="/academy"
             aria-label="ASPIER Academy home"
             onClick={() => setMenuOpen(false)}
@@ -69,11 +69,22 @@ export function AcademyLayout() {
               className="brand-logo academy-brand-logo"
               src={settings?.academyLogoUrl || '/aspier-academy-logo.png'}
               alt="ASPIER Academy — Research Training & Technical Courses"
-              width="160"
-              height="48"
+              width="42"
+              height="42"
               decoding="async"
               fetchPriority="high"
             />
+            <span
+              className="brand-wordmark brand-wordmark-academy normal-case font-bold tracking-tight text-lg sm:text-xl inline-flex items-center gap-1.5"
+              style={{
+                letterSpacing: '-0.025em',
+                fontWeight: 800,
+                textTransform: 'none'
+              }}
+            >
+              <span style={{ color: '#0F5132', textTransform: 'uppercase', fontWeight: 800 }}>ASPIER</span>
+              <span className="word-academy" style={{ color: '#135D3B', textTransform: 'none', fontWeight: 600 }}>Academy</span>
+            </span>
           </Link>
 
           <div className="header-right-controls">
@@ -152,6 +163,29 @@ export function AcademyLayout() {
       <Outlet />
       <footer className="footer bg-slate-900 text-slate-400 py-8 border-t border-slate-800 text-sm">
         <div className="container mx-auto px-4 space-y-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
+            <Link
+              to="/academy"
+              className="brand inline-flex items-center gap-2.5 sm:gap-3 shrink-0 group"
+              aria-label="ASPIER Academy home"
+            >
+              <img
+                className="brand-logo academy-brand-logo"
+                src={settings?.academyLogoUrl || '/aspier-academy-logo.png'}
+                alt="ASPIER Academy logo"
+                width="38"
+                height="38"
+                style={{ width: 38, height: 38, minWidth: 38, minHeight: 38 }}
+              />
+              <span
+                className="brand-wordmark brand-wordmark-academy normal-case font-bold tracking-tight text-xl inline-flex items-center gap-1.5"
+                style={{ letterSpacing: '-0.025em', fontWeight: 800, textTransform: 'none' }}
+              >
+                <span style={{ color: '#34d399', textTransform: 'uppercase', fontWeight: 800 }}>ASPIER</span>
+                <span className="word-academy" style={{ color: '#6ee7b7', textTransform: 'none', fontWeight: 600 }}>Academy</span>
+              </span>
+            </Link>
+          </div>
           <SocialConnectFooter variant="dark" showBorder={false} />
           <div className="border-t border-slate-800/80 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm font-medium">

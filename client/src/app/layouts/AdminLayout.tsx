@@ -31,8 +31,11 @@ export function AdminLayout(){
     <div className="admin-shell">
       <header className="admin-mobile-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Link to="/admin" aria-label="Admin dashboard"><img src="/aspier-logo.png" alt="ASPIER"/></Link>
-          <strong>Control Panel</strong>
+          <Link to="/admin" aria-label="Admin dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+            <img src="/aspier-logo.png" alt="ASPIER" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover' }}/>
+            <span style={{ color: '#0F5132', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em', textTransform: 'none' }}>ASPIER</span>
+          </Link>
+          <strong style={{ color: '#475569', fontSize: '0.85rem' }}>Control Panel</strong>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <NotificationBell audience="admin"/>
@@ -58,8 +61,9 @@ export function AdminLayout(){
 
       <div className="layout">
         <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
-          <Link to="/" style={{ display: 'block', padding: '8px 12px 18px' }} onClick={() => setMenuOpen(false)}>
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '8px 12px 18px', textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>
             <img src="/aspier-logo.png" alt="ASPIER" style={{ height: 42, width: 42, objectFit: 'cover', borderRadius: '50%' }}/>
+            <span style={{ color: '#0F5132', fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.02em', textTransform: 'none' }}>ASPIER</span>
           </Link>
           {adminLinks.map(([to, label]) => (
             <Link key={to} to={to} onClick={() => setMenuOpen(false)}>{label}</Link>
