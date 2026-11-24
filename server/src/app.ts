@@ -67,13 +67,11 @@ app.use((req, _res, next) => {
 app.use('/uploads', express.static(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../uploads'), { fallthrough: false }));
 app.use(globalLimiter);
 app.use(requireCsrf);
-app.use(async (_req, _res, next) => {
+app.use((_req, _res, next) => {
   if (mongoose.connection.readyState !== 1) {
-    try {
-      await connectDatabase();
-    } catch (err) {
+    connectDatabase().catch((err) => {
       console.warn('[app] Background DB connect error:', err instanceof Error ? err.message : err);
-    }
+    });
   }
   next();
 });

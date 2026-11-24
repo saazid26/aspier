@@ -1,5 +1,6 @@
 import type { Response, NextFunction } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
+import mongoose from 'mongoose';
 import Course from '../models/Course.js';
 import Enrollment from '../models/Enrollment.js';
 import ClassModel from '../models/Class.js';
@@ -14,10 +15,12 @@ export async function catalog(_req: AuthRequest, res: Response) {
   if (cached) return res.json({ success: true, data: cached });
 
   try {
-    const courses = await Course.find({ status: 'published' }).populate('instructorId', 'name title photo').sort({ createdAt: -1 }).lean();
-    if (courses && courses.length > 0) {
-      fastCache.set('academy:catalog', courses, 60);
-      return res.json({ success: true, data: courses });
+    if (mongoose.connection.readyState === 1) {
+      const courses = await Course.find({ status: 'published' }).populate('instructorId', 'name title photo').sort({ createdAt: -1 }).lean().maxTimeMS(2000);
+      if (courses && courses.length > 0) {
+        fastCache.set('academy:catalog', courses, 60);
+        return res.json({ success: true, data: courses });
+      }
     }
   } catch (err) {
     console.warn('[academy/catalog] fallback:', err instanceof Error ? err.message : err);

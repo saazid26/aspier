@@ -20,20 +20,19 @@ if (!global.__mongooseCache) {
   global.__mongooseCache = { conn: null, promise: null };
 }
 
-async function connectWithRetry(uri: string, maxAttempts = 3): Promise<typeof mongoose> {
+async function connectWithRetry(uri: string, maxAttempts = 2): Promise<typeof mongoose> {
   let attempt = 0;
-  let delay = 1000;
+  let delay = 500;
   while (attempt < maxAttempts) {
     try {
       attempt++;
       return await mongoose.connect(uri, {
-        bufferCommands: true,
-        serverSelectionTimeoutMS: 5000,
-        maxPoolSize: 20,
-        minPoolSize: 2,
-        socketTimeoutMS: 20000,
-        connectTimeoutMS: 10000,
-        family: 4
+        bufferCommands: false,
+        serverSelectionTimeoutMS: 3000,
+        maxPoolSize: 10,
+        minPoolSize: 1,
+        socketTimeoutMS: 10000,
+        connectTimeoutMS: 3000
       });
     } catch (error) {
       console.warn(`[db] MongoDB connection attempt ${attempt}/${maxAttempts} failed: ${error instanceof Error ? error.message : error}`);

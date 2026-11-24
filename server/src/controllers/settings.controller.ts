@@ -12,14 +12,13 @@ export async function getSettings(_req: Request, res: Response) {
   }
 
   try {
-    if (mongoose.connection.readyState !== 1) {
-      await connectDatabase();
-    }
-    const setting = await Setting.findOne({ singleton: 'main' }).lean();
-    if (setting) {
-      const data = { ...fallbackSettings, ...setting };
-      fastCache.set('settings:main', data, 60);
-      return res.json({ success: true, data });
+    if (mongoose.connection.readyState === 1) {
+      const setting = await Setting.findOne({ singleton: 'main' }).lean().maxTimeMS(1500);
+      if (setting) {
+        const data = { ...fallbackSettings, ...setting };
+        fastCache.set('settings:main', data, 60);
+        return res.json({ success: true, data });
+      }
     }
   } catch (err) {
     console.warn('[getSettings] fallback:', err instanceof Error ? err.message : err);

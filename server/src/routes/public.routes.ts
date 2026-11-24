@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
+import mongoose from 'mongoose';
 import { z } from 'zod';
 import Wing from '../models/Wing.js';
 import Research from '../models/Research.js';
@@ -134,10 +135,12 @@ router.get('/wings', async (_req, res) => {
   const cached = fastCache.get('public:wings');
   if (cached) return res.json({ success: true, data: cached });
   try {
-    const list = await Wing.find({ isActive: true }).sort({ order: 1 }).lean();
-    if (list && list.length > 0) {
-      fastCache.set('public:wings', list, 60);
-      return res.json({ success: true, data: list });
+    if (mongoose.connection.readyState === 1) {
+      const list = await Wing.find({ isActive: true }).sort({ order: 1 }).lean().maxTimeMS(2000);
+      if (list && list.length > 0) {
+        fastCache.set('public:wings', list, 60);
+        return res.json({ success: true, data: list });
+      }
     }
   } catch (err) {
     console.warn('[wings] fallback:', err instanceof Error ? err.message : err);
@@ -251,10 +254,12 @@ router.get('/supervisors', async (_req, res) => {
   const cached = fastCache.get('public:supervisors');
   if (cached) return res.json({ success: true, data: cached });
   try {
-    const list = await Supervisor.find().sort({ name: 1 }).lean();
-    if (list && list.length > 0) {
-      fastCache.set('public:supervisors', list, 60);
-      return res.json({ success: true, data: list });
+    if (mongoose.connection.readyState === 1) {
+      const list = await Supervisor.find().sort({ name: 1 }).lean().maxTimeMS(2000);
+      if (list && list.length > 0) {
+        fastCache.set('public:supervisors', list, 60);
+        return res.json({ success: true, data: list });
+      }
     }
   } catch (err) {
     console.warn('[supervisors] fallback:', err instanceof Error ? err.message : err);
@@ -264,8 +269,10 @@ router.get('/supervisors', async (_req, res) => {
 
 router.get('/supervisors/:slug', async (req, res) => {
   try {
-    const item = await Supervisor.findOne({ slug: req.params.slug }).lean();
-    if (item) return res.json({ success: true, data: item });
+    if (mongoose.connection.readyState === 1) {
+      const item = await Supervisor.findOne({ slug: req.params.slug }).lean().maxTimeMS(2000);
+      if (item) return res.json({ success: true, data: item });
+    }
   } catch (err) {
     console.warn('[supervisors/:slug] fallback:', err instanceof Error ? err.message : err);
   }
@@ -278,10 +285,12 @@ router.get('/scholars', async (_req, res) => {
   const cached = fastCache.get('public:scholars');
   if (cached) return res.json({ success: true, data: cached });
   try {
-    const list = await Scholar.find().sort({ name: 1 }).lean();
-    if (list && list.length > 0) {
-      fastCache.set('public:scholars', list, 60);
-      return res.json({ success: true, data: list });
+    if (mongoose.connection.readyState === 1) {
+      const list = await Scholar.find().sort({ name: 1 }).lean().maxTimeMS(2000);
+      if (list && list.length > 0) {
+        fastCache.set('public:scholars', list, 60);
+        return res.json({ success: true, data: list });
+      }
     }
   } catch (err) {
     console.warn('[scholars] fallback:', err instanceof Error ? err.message : err);
@@ -291,8 +300,10 @@ router.get('/scholars', async (_req, res) => {
 
 router.get('/scholars/:slug', async (req, res) => {
   try {
-    const item = await Scholar.findOne({ slug: req.params.slug }).lean();
-    if (item) return res.json({ success: true, data: item });
+    if (mongoose.connection.readyState === 1) {
+      const item = await Scholar.findOne({ slug: req.params.slug }).lean().maxTimeMS(2000);
+      if (item) return res.json({ success: true, data: item });
+    }
   } catch (err) {
     console.warn('[scholars/:slug] fallback:', err instanceof Error ? err.message : err);
   }
@@ -306,11 +317,13 @@ router.get('/news', async (req, res) => {
   const cached = fastCache.get(cacheKey);
   if (cached) return res.json({ success: true, data: cached });
   try {
-    const filter = req.query.announcements === 'true' ? { isAnnouncement: true } : {};
-    const list = await News.find(filter).sort({ publishedAt: -1 }).lean();
-    if (list && list.length > 0) {
-      fastCache.set(cacheKey, list, 60);
-      return res.json({ success: true, data: list });
+    if (mongoose.connection.readyState === 1) {
+      const filter = req.query.announcements === 'true' ? { isAnnouncement: true } : {};
+      const list = await News.find(filter).sort({ publishedAt: -1 }).lean().maxTimeMS(2000);
+      if (list && list.length > 0) {
+        fastCache.set(cacheKey, list, 60);
+        return res.json({ success: true, data: list });
+      }
     }
   } catch (err) {
     console.warn('[news] fallback:', err instanceof Error ? err.message : err);
