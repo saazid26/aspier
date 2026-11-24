@@ -7,6 +7,7 @@ import payment from './payment.routes.js';
 import me from './me.routes.js';
 import admin from './admin.routes.js';
 import enrollments from './enrollment.routes.js';
+import certificateRoutes from './certificate.routes.js';
 import { catalog } from '../controllers/academy.controller.js';
 import { getSettings } from '../controllers/settings.controller.js';
 import { getMongoUri } from '../config/db.js';
@@ -31,6 +32,7 @@ router.use('/payments', payment);
 router.use('/me', me);
 router.use('/admin', admin);
 router.use('/enrollments', enrollments);
+router.use('/certificates', certificateRoutes);
 router.get('/courses', catalog);
 
 // Resilient direct aliases for public form submissions & Academy registration

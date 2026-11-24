@@ -6,6 +6,11 @@ const schema = new Schema({
   status: { type: String, enum: ['pending', 'active', 'rejected', 'expired'], default: 'pending', index: true },
   completedLessonIds: [{ type: Schema.Types.ObjectId }],
   progressPercent: { type: Number, default: 0 },
+  certificateStatus: { type: String, enum: ['not_claimed', 'claimed', 'issued'], default: 'not_claimed', index: true },
+  certificateClaimedAt: { type: Date, default: null },
+  credentialId: { type: String, default: null, index: true },
+  certificateImage: { type: String, default: null },
+  certificateIssuedAt: { type: Date, default: null },
   enrolledAt: { type: Date, default: Date.now },
   expiresAt: Date
 }, { timestamps: true });

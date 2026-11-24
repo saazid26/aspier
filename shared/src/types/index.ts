@@ -1,6 +1,7 @@
 export type Role = 'student' | 'instructor' | 'admin' | 'superadmin';
 export type ResearchStatus = 'draft' | 'under_review' | 'published';
 export type EnrollmentStatus = 'pending' | 'active' | 'rejected' | 'expired';
+export type CertificateStatus = 'not_claimed' | 'claimed' | 'issued';
 export type PaymentStatus = 'pending' | 'approved' | 'rejected';
 export type ClassStatus = 'scheduled' | 'live' | 'completed';
 export type MessageStatus = 'unread' | 'read' | 'archived';

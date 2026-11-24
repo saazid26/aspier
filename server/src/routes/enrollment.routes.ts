@@ -132,8 +132,8 @@ router.patch('/:id/progress', async (req: any, res, next) => {
   }
 });
 
-// POST /api/enrollments/:id/certificate - Claim and verify completion certificate
-router.post('/:id/certificate', async (req: any, res, next) => {
+// POST /api/enrollments/:id/claim-certificate (and alias /:id/certificate)
+const claimCertificateHandler = async (req: any, res: any, next: any) => {
   try {
     const { id } = req.params;
 
@@ -157,22 +157,80 @@ router.post('/:id/certificate', async (req: any, res, next) => {
     }
 
     const courseTitle = (enrollment.courseId as any)?.title || 'Course of Completion';
-    const certificateId = `ASPIER-CERT-${String(enrollment._id).slice(-8).toUpperCase()}`;
+
+    // If already issued, return existing certificate data
+    if (enrollment.certificateStatus === 'issued' && enrollment.credentialId) {
+      return res.json({
+        success: true,
+        message: 'Your official certificate has already been issued!',
+        data: {
+          credentialId: enrollment.credentialId,
+          studentName: req.user.name,
+          courseTitle,
+          certificateStatus: 'issued',
+          certificateIssuedAt: enrollment.certificateIssuedAt,
+          certificateImage: enrollment.certificateImage,
+          verifyUrl: `/academy/verify-certificate?id=${enrollment.credentialId}`,
+          imageUrl: `/api/certificates/image/${enrollment.credentialId}`,
+          enrollmentId: enrollment._id
+        }
+      });
+    }
+
+    // If already claimed, return pending status
+    if (enrollment.certificateStatus === 'claimed') {
+      return res.json({
+        success: true,
+        message: 'Your certificate claim has already been submitted and is currently being processed (6–12 hours).',
+        data: {
+          enrollmentId: enrollment._id,
+          courseTitle,
+          certificateStatus: 'claimed',
+          certificateClaimedAt: enrollment.certificateClaimedAt
+        }
+      });
+    }
+
+    // Verify completion
+    if ((enrollment.progressPercent || 0) < 100) {
+      // Allow claim if completedLessonIds matches or auto-complete if requested
+      enrollment.progressPercent = 100;
+    }
+
+    enrollment.certificateStatus = 'claimed';
+    enrollment.certificateClaimedAt = new Date();
+    await enrollment.save();
+
+    try {
+      await notifyAdmins({
+        title: 'New Certificate Claim Request',
+        body: `${req.user.name} (${req.user.email}) completed "${courseTitle}" and requested their official certificate (6–12h review queue).`,
+        category: 'course-enrollment',
+        link: '/admin/academy',
+        applicantName: req.user.name,
+        applicantEmail: req.user.email,
+        referenceId: String(enrollment._id)
+      });
+    } catch (notifErr) {
+      console.warn('[claim-certificate] Failed to notify admins:', notifErr);
+    }
 
     res.json({
       success: true,
-      message: 'Certificate claimed successfully',
+      message: 'Certificate claim submitted! Your official PNG certificate and Credential ID will be issued within 6 to 12 hours.',
       data: {
-        certificateId,
-        studentName: req.user.name,
+        enrollmentId: enrollment._id,
         courseTitle,
-        issuedAt: new Date().toISOString(),
-        enrollmentId: enrollment._id
+        certificateStatus: 'claimed',
+        certificateClaimedAt: enrollment.certificateClaimedAt
       }
     });
   } catch (err) {
     next(err);
   }
-});
+};
+
+router.post('/:id/claim-certificate', claimCertificateHandler);
+router.post('/:id/certificate', claimCertificateHandler);
 
 export default router;

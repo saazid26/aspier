@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
   Award,
@@ -59,6 +59,11 @@ export interface Enrollment {
   status: 'active' | 'pending' | 'rejected' | 'expired';
   completedLessonIds: string[];
   progressPercent?: number;
+  certificateStatus?: 'not_claimed' | 'claimed' | 'issued';
+  certificateClaimedAt?: string;
+  credentialId?: string;
+  certificateImage?: string;
+  certificateIssuedAt?: string;
   enrolledAt?: string;
 }
 
@@ -98,9 +103,35 @@ function calculateProgress(enrollment: Enrollment) {
 
 export function Dashboard() {
   const { me } = useMe();
+  const queryClient = useQueryClient();
   const [selectedCertificateCourse, setSelectedCertificateCourse] = useState<EnrolledCourse | null>(null);
   const [activeRecordingUrl, setActiveRecordingUrl] = useState<string | null>(null);
   const [deliveryFilter, setDeliveryFilter] = useState<'all' | 'live' | 'offline' | 'recorded'>('all');
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [claimMessage, setClaimMessage] = useState<{ id: string; text: string; success: boolean } | null>(null);
+
+  const handleClaimCertificate = async (enrollmentId: string) => {
+    setClaimingId(enrollmentId);
+    setClaimMessage(null);
+    try {
+      const res = await api.post(`/enrollments/${enrollmentId}/claim-certificate`);
+      setClaimMessage({
+        id: enrollmentId,
+        text: res.data?.message || 'Certificate claim submitted! Your official PNG certificate and Credential ID will be issued within 6 to 12 hours.',
+        success: true
+      });
+      queryClient.invalidateQueries({ queryKey: ['student-enrollments'] });
+      queryClient.invalidateQueries({ queryKey: ['my-courses'] });
+    } catch (err: any) {
+      setClaimMessage({
+        id: enrollmentId,
+        text: err?.response?.data?.message || 'Failed to submit certificate claim. Please try again.',
+        success: false
+      });
+    } finally {
+      setClaimingId(null);
+    }
+  };
 
   const { data: enrollmentsData, isLoading: isLoadingEnrollments } = useQuery<Enrollment[]>({
     queryKey: ['student-enrollments'],
@@ -356,14 +387,39 @@ export function Dashboard() {
                     </Link>
 
                     {isFinished ? (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCertificateCourse(course)}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-sm hover:from-amber-700 hover:to-amber-800 transition ml-auto"
-                      >
-                        <Award size={15} />
-                        Claim Certificate
-                      </button>
+                      enr.certificateStatus === 'issued' ? (
+                        <div className="ml-auto flex flex-wrap items-center gap-2">
+                          <Link
+                            to={`/academy/verify-certificate?id=${enr.credentialId || ''}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-800 hover:bg-teal-700 text-white shadow-sm transition"
+                          >
+                            <Award size={14} className="text-amber-300" />
+                            Verify Credential ({enr.credentialId})
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCertificateCourse(course)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-teal-300 text-teal-800 hover:bg-teal-50 transition"
+                          >
+                            View Modal
+                          </button>
+                        </div>
+                      ) : enr.certificateStatus === 'claimed' ? (
+                        <div className="ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-900">
+                          <Clock size={14} className="text-amber-600 animate-pulse" />
+                          <span>Processing Certificate (6–12 Hours)</span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={claimingId === enr._id}
+                          onClick={() => handleClaimCertificate(enr._id)}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-sm hover:from-amber-700 hover:to-amber-800 transition ml-auto disabled:opacity-50 cursor-pointer"
+                        >
+                          <Award size={15} />
+                          {claimingId === enr._id ? 'Submitting Claim...' : 'Claim Certificate (6–12h Review)'}
+                        </button>
+                      )
                     ) : (
                       <div className="ml-auto flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
                         <Lock size={12} />
@@ -371,6 +427,18 @@ export function Dashboard() {
                       </div>
                     )}
                   </div>
+
+                  {claimMessage && claimMessage.id === enr._id && (
+                    <div
+                      className={`mt-3 p-3 rounded-xl text-xs ${
+                        claimMessage.success
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                          : 'bg-red-50 text-red-800 border border-red-200'
+                      }`}
+                    >
+                      {claimMessage.text}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -760,146 +828,164 @@ export function Dashboard() {
       </section>
 
       {/* 5. OFFICIAL PRINTABLE / DOWNLOADABLE CERTIFICATE OF COMPLETION MODAL */}
-      {selectedCertificateCourse && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto"
-          onClick={() => setSelectedCertificateCourse(null)}
-        >
+      {selectedCertificateCourse && (() => {
+        const matchedEnrollment = enrollments.find(
+          (e) => (typeof e.courseId === 'object' ? e.courseId?._id : e.courseId) === selectedCertificateCourse._id
+        );
+        const modalCertId =
+          matchedEnrollment?.credentialId ||
+          `ASP-ACAD-${selectedCertificateCourse._id?.slice(-6).toUpperCase() || 'ACAD'}-${me?._id?.slice(-4).toUpperCase() || 'STU'}`;
+
+        return (
           <div
-            className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border-4 border-amber-600/40 p-6 sm:p-10 my-8 text-center"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto"
+            onClick={() => setSelectedCertificateCourse(null)}
           >
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={() => setSelectedCertificateCourse(null)}
-              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition print:hidden"
-              aria-label="Close modal"
+            <div
+              className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border-4 border-amber-600/40 p-6 sm:p-10 my-8 text-center"
+              onClick={(e) => e.stopPropagation()}
             >
-              <X size={20} />
-            </button>
-
-            {/* Certificate Canvas / Inner Frame */}
-            <div className="border-2 border-double border-amber-500/40 rounded-2xl p-6 sm:p-8 bg-gradient-to-b from-amber-50/50 via-white to-amber-50/30 relative">
-              {/* ASPIER Crest & Branding */}
-              <div className="flex flex-col items-center justify-center gap-1 mb-4">
-                <div className="w-14 h-14 rounded-full bg-teal-900 text-amber-300 flex items-center justify-center font-extrabold text-xl shadow-md border-2 border-amber-400/60">
-                  <Award size={30} />
-                </div>
-                <span className="text-xs font-extrabold uppercase tracking-widest text-teal-950 mt-1">
-                  ASPIER ACADEMY
-                </span>
-                <span className="text-[10px] tracking-wider text-slate-500 font-semibold uppercase">
-                  Aeronautical, Spatial, Planetary Institute for Environmental Research
-                </span>
-              </div>
-
-              {/* Title */}
-              <div className="my-5">
-                <h3 className="text-2xl sm:text-3xl font-serif font-bold text-amber-900 tracking-wide uppercase">
-                  Certificate of Completion
-                </h3>
-                <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-amber-600 to-transparent mx-auto mt-2" />
-              </div>
-
-              {/* Recipient Statement */}
-              <p className="text-xs sm:text-sm text-slate-600 italic">
-                This official credential certifies that
-              </p>
-
-              {/* Student Name */}
-              <div className="my-3 py-1">
-                <h4 className="text-2xl sm:text-3xl font-serif font-extrabold text-slate-900 tracking-tight">
-                  {me?.name || 'Student Name'}
-                </h4>
-                <div className="w-48 h-px bg-slate-300 mx-auto mt-1" />
-              </div>
-
-              {/* Course Title Statement */}
-              <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto">
-                has successfully fulfilled all academic curriculum requirements, interactive sessions, practical modules, and evaluations for
-              </p>
-              <h5 className="text-lg sm:text-xl font-bold text-teal-950 mt-2 mb-4 font-serif">
-                "{selectedCertificateCourse.title}"
-              </h5>
-
-              {/* Metadata & Verification */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-amber-500/20 text-left text-xs max-w-lg mx-auto">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Issue Date</span>
-                  <span className="font-semibold text-slate-800">
-                    {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Certificate ID</span>
-                  <span className="font-mono font-bold text-teal-900 text-[11px]">
-                    ASPIER-CERT-{selectedCertificateCourse._id?.slice(-6).toUpperCase() || 'ACAD'}-{me?._id?.slice(-4).toUpperCase() || 'STU'}
-                  </span>
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Status</span>
-                  <span className="inline-flex items-center gap-1 font-bold text-emerald-700">
-                    <CheckCircle2 size={12} /> Verified
-                  </span>
-                </div>
-              </div>
-
-              {/* Signatures */}
-              <div className="flex items-center justify-between pt-8 mt-6 border-t border-slate-200/80 px-4">
-                <div className="text-center">
-                  <div className="font-serif italic font-bold text-teal-900 text-sm">
-                    Prof. Dr. M. Rahman
-                  </div>
-                  <div className="w-32 h-px bg-slate-400 mx-auto my-1" />
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">
-                    Academic Dean, ASPIER
-                  </span>
-                </div>
-
-                {/* Golden Seal */}
-                <div className="hidden sm:flex flex-col items-center">
-                  <div className="w-12 h-12 rounded-full border-2 border-amber-500 bg-amber-100 flex items-center justify-center text-amber-800 shadow-inner">
-                    <Sparkles size={22} />
-                  </div>
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-amber-800 mt-1">
-                    Official Seal
-                  </span>
-                </div>
-
-                <div className="text-center">
-                  <div className="font-serif italic font-bold text-teal-900 text-sm">
-                    Dr. Sarah Jenkins
-                  </div>
-                  <div className="w-32 h-px bg-slate-400 mx-auto my-1" />
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">
-                    Director of Curriculum
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex items-center justify-center gap-3 mt-6 print:hidden">
-              <button
-                type="button"
-                onClick={handlePrintCertificate}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-teal-800 text-white hover:bg-teal-700 transition shadow-sm"
-              >
-                <Printer size={16} />
-                Print Certificate / Save PDF
-              </button>
+              {/* Close Button */}
               <button
                 type="button"
                 onClick={() => setSelectedCertificateCourse(null)}
-                className="px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm border border-slate-300 text-slate-700 hover:bg-slate-100 transition"
+                className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition print:hidden"
+                aria-label="Close modal"
               >
-                Close
+                <X size={20} />
               </button>
+
+              {/* Certificate Canvas / Inner Frame */}
+              <div className="border-2 border-double border-amber-500/40 rounded-2xl p-6 sm:p-8 bg-gradient-to-b from-amber-50/50 via-white to-amber-50/30 relative">
+                {/* ASPIER Crest & Branding */}
+                <div className="flex flex-col items-center justify-center gap-1 mb-4">
+                  <div className="w-14 h-14 rounded-full bg-teal-900 text-amber-300 flex items-center justify-center font-extrabold text-xl shadow-md border-2 border-amber-400/60">
+                    <Award size={30} />
+                  </div>
+                  <span className="text-xs font-extrabold uppercase tracking-widest text-teal-950 mt-1">
+                    ASPIER ACADEMY
+                  </span>
+                  <span className="text-[10px] tracking-wider text-slate-500 font-semibold uppercase">
+                    Aeronautical, Spatial, Planetary Institute for Environmental Research
+                  </span>
+                </div>
+
+                {/* Title */}
+                <div className="my-5">
+                  <h3 className="text-2xl sm:text-3xl font-serif font-bold text-amber-900 tracking-wide uppercase">
+                    Certificate of Completion
+                  </h3>
+                  <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-amber-600 to-transparent mx-auto mt-2" />
+                </div>
+
+                {/* Recipient Statement */}
+                <p className="text-xs sm:text-sm text-slate-600 italic">
+                  This official credential certifies that
+                </p>
+
+                {/* Student Name */}
+                <div className="my-3 py-1">
+                  <h4 className="text-2xl sm:text-3xl font-serif font-extrabold text-slate-900 tracking-tight">
+                    {me?.name || 'Student Name'}
+                  </h4>
+                  <div className="w-48 h-px bg-slate-300 mx-auto mt-1" />
+                </div>
+
+                {/* Course Title Statement */}
+                <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto">
+                  has successfully fulfilled all academic curriculum requirements, interactive sessions, practical modules, and evaluations for
+                </p>
+                <h5 className="text-lg sm:text-xl font-bold text-teal-950 mt-2 mb-4 font-serif">
+                  "{selectedCertificateCourse.title}"
+                </h5>
+
+                {/* Metadata & Verification */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-amber-500/20 text-left text-xs max-w-lg mx-auto">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Issue Date</span>
+                    <span className="font-semibold text-slate-800">
+                      {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Certificate ID</span>
+                    <span className="font-mono font-bold text-teal-900 text-[11px]">
+                      {modalCertId}
+                    </span>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Status</span>
+                    <span className="inline-flex items-center gap-1 font-bold text-emerald-700">
+                      <CheckCircle2 size={12} /> Verified
+                    </span>
+                  </div>
+                </div>
+
+                {/* Signatures */}
+                <div className="flex items-center justify-between pt-8 mt-6 border-t border-slate-200/80 px-4">
+                  <div className="text-center">
+                    <div className="font-serif italic font-bold text-teal-900 text-sm">
+                      Prof. Dr. M. Rahman
+                    </div>
+                    <div className="w-32 h-px bg-slate-400 mx-auto my-1" />
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">
+                      Academic Dean, ASPIER
+                    </span>
+                  </div>
+
+                  {/* Golden Seal */}
+                  <div className="hidden sm:flex flex-col items-center">
+                    <div className="w-12 h-12 rounded-full border-2 border-amber-500 bg-amber-100 flex items-center justify-center text-amber-800 shadow-inner">
+                      <Sparkles size={22} />
+                    </div>
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-amber-800 mt-1">
+                      Official Seal
+                    </span>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="font-serif italic font-bold text-teal-900 text-sm">
+                      Dr. Sarah Jenkins
+                    </div>
+                    <div className="w-32 h-px bg-slate-400 mx-auto my-1" />
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">
+                      Director of Curriculum
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-6 print:hidden">
+                <button
+                  type="button"
+                  onClick={handlePrintCertificate}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-teal-800 text-white hover:bg-teal-700 transition shadow-sm"
+                >
+                  <Printer size={16} />
+                  Print Certificate / Save PDF
+                </button>
+                {matchedEnrollment?.credentialId && (
+                  <Link
+                    to={`/academy/verify-certificate?id=${matchedEnrollment.credentialId}`}
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-amber-600 text-white hover:bg-amber-700 transition shadow-sm"
+                  >
+                    <ExternalLink size={16} />
+                    Public Verification Page
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedCertificateCourse(null)}
+                  className="px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm border border-slate-300 text-slate-700 hover:bg-slate-100 transition"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 6. VIDEO RECORDING MODAL */}
       {activeRecordingUrl && (

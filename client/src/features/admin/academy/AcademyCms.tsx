@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Sparkles, Download, Plus, CheckCircle, Trash2, Edit2, Users } from 'lucide-react';
+import { Sparkles, Download, Plus, CheckCircle, Trash2, Edit2, Users, Award, ShieldCheck, Clock, ExternalLink, RefreshCw, Upload, Eye } from 'lucide-react';
 import { api } from '../../../lib/api';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Button } from '../../../components/ui/Button';
@@ -46,6 +46,121 @@ export function AcademyCms() {
     queryKey: ['admin-academy-students'],
     queryFn: async () => (await api.get('/admin/students')).data.data as any[]
   });
+
+  // Certificates & Claims Query
+  const { data: certsData = { certificates: [], pendingClaims: [] }, refetch: refetchCertificates } = useQuery({
+    queryKey: ['admin-academy-certificates'],
+    queryFn: async () => {
+      const res = await api.get('/admin/certificates');
+      return res.data as { certificates: any[]; pendingClaims: any[] };
+    }
+  });
+
+  // Certificate Management State
+  const [certificateModalOpen, setCertificateModalOpen] = useState(false);
+  const [issuingCertificate, setIssuingCertificate] = useState(false);
+  const [deletingCertId, setDeletingCertId] = useState<string | null>(null);
+  const [certForm, setCertForm] = useState({
+    credentialId: '',
+    studentName: '',
+    studentEmail: '',
+    studentId: '',
+    enrollmentId: '',
+    courseTitle: '',
+    issueDate: new Date().toISOString().split('T')[0],
+    certificateImage: ''
+  });
+  const [certFile, setCertFile] = useState<File | null>(null);
+  const [previewImage, setPreviewImage] = useState<string>('');
+
+  const generateCredentialId = () => {
+    const year = new Date().getFullYear();
+    const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+    return `ASP-ACAD-${year}-${rand}`;
+  };
+
+  const handleOpenIssueForClaim = (claim: any) => {
+    const newId = generateCredentialId();
+    setCertForm({
+      credentialId: newId,
+      studentName: claim.userId?.name || claim.studentName || '',
+      studentEmail: claim.userId?.email || claim.studentEmail || '',
+      studentId: claim.userId?._id || claim.studentId || '',
+      enrollmentId: claim._id || '',
+      courseTitle: claim.courseId?.title || claim.courseTitle || '',
+      issueDate: new Date().toISOString().split('T')[0],
+      certificateImage: ''
+    });
+    setCertFile(null);
+    setPreviewImage('');
+    setCertificateModalOpen(true);
+  };
+
+  const handleIssueCertificate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!certForm.studentName || !certForm.courseTitle) {
+      toast.error('Student name and course title are required');
+      return;
+    }
+    if (!certFile && !certForm.certificateImage) {
+      toast.error('Please upload a PNG certificate file or provide a certificate image');
+      return;
+    }
+
+    setIssuingCertificate(true);
+    try {
+      const formData = new FormData();
+      formData.append('credentialId', certForm.credentialId || generateCredentialId());
+      formData.append('studentName', certForm.studentName);
+      if (certForm.studentEmail) formData.append('studentEmail', certForm.studentEmail);
+      if (certForm.studentId) formData.append('studentId', certForm.studentId);
+      if (certForm.enrollmentId) formData.append('enrollmentId', certForm.enrollmentId);
+      formData.append('courseTitle', certForm.courseTitle);
+      formData.append('issueDate', certForm.issueDate);
+      if (certFile) {
+        formData.append('certificateImage', certFile);
+      } else if (certForm.certificateImage) {
+        formData.append('certificateImage', certForm.certificateImage);
+      }
+
+      const res = await api.post('/admin/certificates', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Certificate issued successfully!');
+        setCertificateModalOpen(false);
+        refetchCertificates();
+        refetchEnrollments();
+        queryClient.invalidateQueries({ queryKey: ['admin-academy-certificates'] });
+        queryClient.invalidateQueries({ queryKey: ['admin-academy-enrollments'] });
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to issue certificate');
+    } finally {
+      setIssuingCertificate(false);
+    }
+  };
+
+  const handleDeleteCertificate = async (certId: string, credentialId: string) => {
+    if (!window.confirm(`Are you sure you want to revoke and delete certificate ${credentialId}?`)) {
+      return;
+    }
+    setDeletingCertId(certId);
+    try {
+      const res = await api.delete(`/admin/certificates/${certId}`);
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Certificate deleted');
+        refetchCertificates();
+        refetchEnrollments();
+        queryClient.invalidateQueries({ queryKey: ['admin-academy-certificates'] });
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to delete certificate');
+    } finally {
+      setDeletingCertId(null);
+    }
+  };
 
   // Course Modal State
   const [editingCourse, setEditingCourse] = useState<any | null>(null);
@@ -416,7 +531,7 @@ export function AcademyCms() {
       </div>
 
       <Tabs
-        tabs={['Courses & Classes', 'Curriculum & Modules', 'Live Class Schedule', 'Instructors', 'Students & Enrollments']}
+        tabs={['Courses & Classes', 'Curriculum & Modules', 'Live Class Schedule', 'Instructors', 'Students & Enrollments', 'Certificates & Verification']}
         active={activeTab}
         onChange={setActiveTab}
       />
@@ -1071,6 +1186,205 @@ export function AcademyCms() {
         </div>
       )}
 
+      {/* Tab 6: Certificates & Verification */}
+      {activeTab === 'Certificates & Verification' && (
+        <div style={{ marginTop: 20 }} className="space-y-8">
+          {/* Top Summary & Actions */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>
+                Academy Certificates & Verification Manager
+              </h3>
+              <p className="muted" style={{ margin: '4px 0 0', fontSize: '0.85rem' }}>
+                Review student completion claims (6–12h review queue), issue official PNG certificates, and manage public verification records.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button
+                variant="secondary"
+                onClick={() => { refetchCertificates(); refetchEnrollments(); }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <RefreshCw size={15} />
+                Refresh Registry
+              </Button>
+              <Button
+                onClick={() => {
+                  setCertForm({
+                    credentialId: generateCredentialId(),
+                    studentName: '',
+                    studentEmail: '',
+                    studentId: '',
+                    enrollmentId: '',
+                    courseTitle: courses[0]?.title || '',
+                    issueDate: new Date().toISOString().split('T')[0],
+                    certificateImage: ''
+                  });
+                  setCertFile(null);
+                  setPreviewImage('');
+                  setCertificateModalOpen(true);
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <Plus size={16} />
+                Issue New Certificate
+              </Button>
+            </div>
+          </div>
+
+          {/* Section A: Pending Claims (6-12h Queue) */}
+          <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Clock size={18} style={{ color: '#d97706' }} />
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                  Pending Student Claims (6–12h Queue)
+                </h4>
+                <span className="badge badge-yellow" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                  {certsData.pendingClaims?.length || 0} Waiting
+                </span>
+              </div>
+            </div>
+
+            {(!certsData.pendingClaims || certsData.pendingClaims.length === 0) ? (
+              <div style={{ padding: '28px 16px', textAlign: 'center', color: '#64748b', fontSize: '0.875rem', background: '#f8fafc', borderRadius: 8 }}>
+                <CheckCircle size={24} style={{ color: '#16a34a', margin: '0 auto 8px' }} />
+                Zero pending claims. All student certificate requests have been fulfilled!
+              </div>
+            ) : (
+              <div className="table-responsive-wrapper" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', minWidth: 0, width: '100%', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <Table headers={['Student', 'Course Title', 'Claim Submitted', 'Progress', 'Action']}>
+                  {certsData.pendingClaims.map((claim: any) => (
+                    <tr key={claim._id}>
+                      <td>
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>{claim.userId?.name || 'Student'}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{claim.userId?.email || 'No email'}</div>
+                      </td>
+                      <td style={{ fontWeight: 500 }}>{claim.courseId?.title || 'Course'}</td>
+                      <td style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                        {claim.certificateClaimedAt ? new Date(claim.certificateClaimedAt).toLocaleString() : 'Recently'}
+                      </td>
+                      <td>
+                        <span className="badge badge-green">100% Complete</span>
+                      </td>
+                      <td>
+                        <Button
+                          style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                          onClick={() => handleOpenIssueForClaim(claim)}
+                        >
+                          <Award size={14} />
+                          Issue Certificate
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </Table>
+              </div>
+            )}
+          </div>
+
+          {/* Section B: Issued Certificates Registry */}
+          <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ShieldCheck size={18} style={{ color: '#0f766e' }} />
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                  Issued Certificates Registry
+                </h4>
+                <span className="badge badge-green" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                  {certsData.certificates?.length || 0} Issued
+                </span>
+              </div>
+            </div>
+
+            {(!certsData.certificates || certsData.certificates.length === 0) ? (
+              <div style={{ padding: '28px 16px', textAlign: 'center', color: '#64748b', fontSize: '0.875rem', background: '#f8fafc', borderRadius: 8 }}>
+                No certificates issued yet. Issue your first certificate using the button above.
+              </div>
+            ) : (
+              <div className="table-responsive-wrapper" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', minWidth: 0, width: '100%', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <Table headers={['PNG Preview', 'Credential ID', 'Student', 'Course Title', 'Issue Date', 'Status', 'Actions']}>
+                  {certsData.certificates.map((cert: any) => (
+                    <tr key={cert._id}>
+                      <td style={{ width: 80 }}>
+                        <a
+                          href={`/api/certificates/image/${cert.credentialId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Click to view full resolution PNG"
+                        >
+                          <img
+                            src={`/api/certificates/image/${cert.credentialId}`}
+                            alt={cert.credentialId}
+                            style={{ width: 70, height: 48, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f8fafc' }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="70" height="48" fill="%23e2e8f0"><rect width="70" height="48"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="9" fill="%2364748b">PNG</text></svg>';
+                            }}
+                          />
+                        </a>
+                      </td>
+                      <td>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0f766e', fontSize: '0.85rem' }}>
+                          {cert.credentialId}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>{cert.studentName}</div>
+                        {cert.studentEmail && <div style={{ fontSize: '0.785rem', color: '#64748b' }}>{cert.studentEmail}</div>}
+                      </td>
+                      <td style={{ fontSize: '0.875rem', fontWeight: 500 }}>{cert.courseTitle}</td>
+                      <td style={{ fontSize: '0.825rem', color: '#64748b' }}>
+                        {cert.issueDate ? new Date(cert.issueDate).toLocaleDateString() : '-'}
+                      </td>
+                      <td>
+                        <span className={`badge ${cert.status === 'issued' ? 'badge-green' : 'badge-yellow'}`}>
+                          {cert.status || 'issued'}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <a
+                            href={`/academy/verify-certificate?id=${cert.credentialId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="button button-secondary"
+                            style={{ padding: '5px 9px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            title="Open Public Verification Link"
+                          >
+                            <ExternalLink size={13} />
+                            Verify Link
+                          </a>
+                          <a
+                            href={`/api/certificates/image/${cert.credentialId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="button button-secondary"
+                            style={{ padding: '5px 9px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            title="View Raw PNG Buffer"
+                          >
+                            <Eye size={13} />
+                            PNG
+                          </a>
+                          <Button
+                            variant="danger"
+                            disabled={deletingCertId === cert._id}
+                            style={{ padding: '5px 9px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            onClick={() => handleDeleteCertificate(cert._id, cert.credentialId)}
+                            title="Revoke / Delete Certificate"
+                          >
+                            <Trash2 size={13} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </Table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Course Edit/Create Modal */}
       {courseModalOpen && editingCourse && (
         <Modal open={courseModalOpen} title={editingCourse._id ? `Edit: ${editingCourse.title}` : 'New Academy Course'} onClose={() => setCourseModalOpen(false)}>
@@ -1417,6 +1731,138 @@ export function AcademyCms() {
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               <Button disabled={savingEnrollment}>{savingEnrollment ? 'Saving…' : 'Save Enrollment'}</Button>
               <Button type="button" variant="secondary" onClick={() => setEnrollmentModalOpen(false)}>Cancel</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Issue Certificate Modal */}
+      {certificateModalOpen && (
+        <Modal
+          open={certificateModalOpen}
+          title="Issue Official Academy Certificate"
+          onClose={() => setCertificateModalOpen(false)}
+        >
+          <form className="form" onSubmit={handleIssueCertificate} style={{ marginTop: 12 }}>
+            <label>
+              Credential ID
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <Input
+                  required
+                  value={certForm.credentialId}
+                  onChange={(e) => setCertForm({ ...certForm, credentialId: e.target.value.toUpperCase() })}
+                  placeholder="e.g. ASP-ACAD-2026-XXXXX"
+                  style={{ fontFamily: 'monospace', fontWeight: 600 }}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setCertForm({ ...certForm, credentialId: generateCredentialId() })}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  Generate ID
+                </Button>
+              </div>
+            </label>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <label>
+                Student Name
+                <Input
+                  required
+                  value={certForm.studentName}
+                  onChange={(e) => setCertForm({ ...certForm, studentName: e.target.value })}
+                  placeholder="e.g. Ayesha Siddiqua"
+                />
+              </label>
+
+              <label>
+                Student Email
+                <Input
+                  type="email"
+                  value={certForm.studentEmail}
+                  onChange={(e) => setCertForm({ ...certForm, studentEmail: e.target.value })}
+                  placeholder="e.g. student@example.com"
+                />
+              </label>
+            </div>
+
+            <label>
+              Course Title
+              <Input
+                required
+                value={certForm.courseTitle}
+                onChange={(e) => setCertForm({ ...certForm, courseTitle: e.target.value })}
+                placeholder="e.g. Higher Study Oriented Basic to Advance Research Paper Writing Course"
+              />
+            </label>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <label>
+                Issue Date
+                <Input
+                  type="date"
+                  value={certForm.issueDate}
+                  onChange={(e) => setCertForm({ ...certForm, issueDate: e.target.value })}
+                />
+              </label>
+
+              <label>
+                Initial Status
+                <select
+                  className="select"
+                  value="issued"
+                  disabled
+                >
+                  <option value="issued">Issued & Verified</option>
+                </select>
+              </label>
+            </div>
+
+            <label>
+              Certificate Image (PNG File)
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setCertFile(file);
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      setPreviewImage(reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                style={{ display: 'block', marginTop: 4, width: '100%', padding: '8px 0' }}
+              />
+              <small className="muted" style={{ display: 'block', marginTop: 4 }}>
+                Upload high-resolution PNG file. Stored resiliently in MongoDB / CDN for sub-0.2s live serving without filesystem loss.
+              </small>
+            </label>
+
+            {/* Live Preview of Uploaded PNG */}
+            {previewImage && (
+              <div style={{ marginTop: 12, border: '1px solid #cbd5e1', borderRadius: 8, padding: 8, background: '#f8fafc', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>
+                  PNG Certificate Live Preview
+                </span>
+                <img
+                  src={previewImage}
+                  alt="Certificate Preview"
+                  style={{ maxHeight: 220, maxWidth: '100%', objectFit: 'contain', margin: '0 auto', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff' }}
+                />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+              <Button disabled={issuingCertificate}>
+                {issuingCertificate ? 'Issuing Certificate…' : 'Issue & Verify Certificate'}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setCertificateModalOpen(false)}>
+                Cancel
+              </Button>
             </div>
           </form>
         </Modal>

@@ -44,6 +44,7 @@ const PaymentStatus = lazy(() => import('../features/academy/PaymentStatus').the
 const Player = lazy(() => import('../features/academy/Player').then(m => ({ default: m.Player })));
 const ClassSchedule = lazy(() => import('../features/academy/ClassSchedule').then(m => ({ default: m.ClassSchedule })));
 const InstructorProfile = lazy(() => import('../features/academy/InstructorProfile').then(m => ({ default: m.InstructorProfile })));
+const VerifyCertificate = lazy(() => import('../features/academy/VerifyCertificate').then(m => ({ default: m.VerifyCertificate })));
 
 // Code-split Student Portal pages
 const StudentDashboard = lazy(() => import('../features/student/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -214,7 +215,7 @@ function LegacyAcademyPortalRedirect() {
 }
 
 export function AppRouter(){return <BrowserRouter><ScrollToTop/><Suspense fallback={<main className="container section"><div className="skeleton" style={{height:80}}/></main>}><Routes>
-<Route element={<PublicLayout/>}><Route index element={<Home/>}/><Route path="wings" element={<WingsGrid/>}/><Route path="wings/:slug" element={<WingPage/>}/><Route path="wings/:wingSlug/research/:slug" element={<ResearchDetail/>}/><Route path="wings/apply-research" element={<ResearchMateApply/>}/><Route path="research-mate-apply" element={<ResearchMateApply/>}/><Route path="research" element={<Navigate to="/wings" replace/>}/><Route path="research/:slug" element={<ResearchDetail/>}/><Route path="team" element={<Team/>}/><Route path="supervisors" element={<SupervisorList/>}/><Route path="supervisors/:slug" element={<SupervisorProfile/>}/><Route path="scholars" element={<ScholarList/>}/><Route path="scholars/:slug" element={<ScholarProfile/>}/><Route path="news" element={<NewsList/>}/><Route path="news/:slug" element={<NewsDetail/>}/><Route path="announcements" element={<NewsList/>}/><Route path="announcements/:slug" element={<NewsDetail/>}/><Route path="contact" element={<ContactForm/>}/><Route path="apply" element={<Navigate to="/join" replace/>}/><Route path="join" element={<JoinForm/>}/><Route path="join/portal" element={<LegacyCheckApplicationRedirect/>}/><Route path="check-application" element={<LegacyCheckApplicationRedirect/>}/><Route path="login" element={<Login/>}/><Route path="register" element={<LegacyRegisterRedirect/>}/><Route path="forgot" element={<Forgot/>}/><Route path="reset" element={<Reset/>}/><Route path="onboarding" element={<Onboarding/>}/></Route>
+<Route element={<PublicLayout/>}><Route index element={<Home/>}/><Route path="wings" element={<WingsGrid/>}/><Route path="wings/:slug" element={<WingPage/>}/><Route path="wings/:wingSlug/research/:slug" element={<ResearchDetail/>}/><Route path="wings/apply-research" element={<ResearchMateApply/>}/><Route path="research-mate-apply" element={<ResearchMateApply/>}/><Route path="research" element={<Navigate to="/wings" replace/>}/><Route path="research/:slug" element={<ResearchDetail/>}/><Route path="team" element={<Team/>}/><Route path="supervisors" element={<SupervisorList/>}/><Route path="supervisors/:slug" element={<SupervisorProfile/>}/><Route path="scholars" element={<ScholarList/>}/><Route path="scholars/:slug" element={<ScholarProfile/>}/><Route path="news" element={<NewsList/>}/><Route path="news/:slug" element={<NewsDetail/>}/><Route path="announcements" element={<NewsList/>}/><Route path="announcements/:slug" element={<NewsDetail/>}/><Route path="contact" element={<ContactForm/>}/><Route path="apply" element={<Navigate to="/join" replace/>}/><Route path="join" element={<JoinForm/>}/><Route path="join/portal" element={<LegacyCheckApplicationRedirect/>}/><Route path="check-application" element={<LegacyCheckApplicationRedirect/>}/><Route path="login" element={<Login/>}/><Route path="register" element={<LegacyRegisterRedirect/>}/><Route path="forgot" element={<Forgot/>}/><Route path="reset" element={<Reset/>}/><Route path="onboarding" element={<Onboarding/>}/><Route path="verify-certificate" element={<VerifyCertificate/>}/></Route>
 <Route element={<AcademyLayout/>}>
   <Route path="academy" element={<Catalog/>}/>
   <Route path="academy/register" element={<Register/>}/>
@@ -239,6 +240,7 @@ export function AppRouter(){return <BrowserRouter><ScrollToTop/><Suspense fallba
   <Route path="academy/courses/:courseId/learn/:lessonId" element={<Guard roles={['student','instructor','admin','superadmin']}><Player/></Guard>}/>
   <Route path="academy/classes" element={<ClassSchedule/>}/>
   <Route path="academy/instructors/:id" element={<InstructorProfile/>}/>
+  <Route path="academy/verify-certificate" element={<VerifyCertificate/>}/>
 </Route>
 <Route path="student" element={<LegacyStudentRedirect/>}/>
 <Route path="student/*" element={<LegacyStudentRedirect/>}/>

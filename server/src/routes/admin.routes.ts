@@ -60,6 +60,7 @@ import {
 import { recordAudit } from '../services/audit.service.js';
 import { seedAcademyData } from '../utils/seed.js';
 import { fastCache } from '../utils/fastCache.js';
+import { listAdminCertificates, issueAdminCertificate, deleteAdminCertificate } from '../controllers/certificate.controller.js';
 
 const router = Router();
 router.use(authenticate, authorize('admin', 'superadmin'), noStore);
@@ -737,4 +738,13 @@ router.get('/inbox/all', async (_req, res) => {
     res.json({ success: true, data: { messages: [], notifications: [], researchApps: [], membershipApps: [] } });
   }
 });
+// Certificates & Verification Admin Management
+const uploadCertMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
+router.get('/certificates', listAdminCertificates);
+router.post('/certificates', uploadCertMemory.single('certificateImage'), issueAdminCertificate);
+router.delete('/certificates/:id', deleteAdminCertificate);
+
 export default router;

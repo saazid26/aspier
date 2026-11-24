@@ -136,10 +136,32 @@ export function AcademyLayout() {
             >
               Student Portal
             </Link>
+            <Link
+              className={`nav-link ${location.pathname === '/academy/verify-certificate' ? 'active' : ''}`}
+              to="/academy/verify-certificate"
+              onClick={() => setMenuOpen(false)}
+              onMouseEnter={() => prefetchRoute('/academy/verify-certificate')}
+              onFocus={() => prefetchRoute('/academy/verify-certificate')}
+            >
+              Verify Certificate
+            </Link>
           </div>
         </div>
       </nav>
       <Outlet />
+      <footer className="footer bg-slate-900 text-slate-400 py-8 border-t border-slate-800 text-sm">
+        <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm font-medium">
+            <Link to="/academy" className="hover:text-white transition">Courses</Link>
+            <Link to="/academy/student" className="hover:text-white transition">Student Portal</Link>
+            <Link to="/academy/verify-certificate" className="hover:text-white transition text-teal-400">Verify Certificate</Link>
+            <Link to="/" className="hover:text-white transition">ASPIER Main</Link>
+          </div>
+          <div className="text-xs text-slate-500 text-center sm:text-right">
+            © {new Date().getFullYear()} ASPIER Academy — Aeronautical, Spatial, Planetary Institution for Environmental Research
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

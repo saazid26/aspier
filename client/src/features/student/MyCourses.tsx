@@ -62,6 +62,23 @@ export function MyCourses() {
               <p className="muted" style={{ fontSize: '0.85rem' }}>
                 {total > 0 ? `${completed} of ${total} lessons completed` : 'Access course modules'}
               </p>
+              {x.certificateStatus === 'issued' && x.credentialId && (
+                <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2ece8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                  <span className="badge badge-green" style={{ fontSize: '0.75rem' }}>
+                    Certificate: {x.credentialId}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#148f83', fontWeight: 600 }}>
+                    Verify Certificate →
+                  </span>
+                </div>
+              )}
+              {x.certificateStatus === 'claimed' && (
+                <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2ece8' }}>
+                  <span className="badge badge-yellow" style={{ fontSize: '0.75rem' }}>
+                    Certificate Claim Pending (6–12 Hours)
+                  </span>
+                </div>
+              )}
             </Link>
           );
         })}
