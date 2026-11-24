@@ -10,7 +10,7 @@ import hpp from 'hpp';
 import mongoose from 'mongoose';
 import routes from './routes/index.js';
 import { env } from './config/env.js';
-import { connectDatabase } from './config/db.js';
+import { connectDatabase, connectDB, DatabaseError, getMongoUri } from './config/db.js';
 import { globalLimiter } from './middleware/rateLimit.js';
 import { requireCsrf } from './middleware/csrf.js';
 import { notFound, errorHandler } from './middleware/error.js';
@@ -67,13 +67,67 @@ app.use((req, _res, next) => {
 app.use('/uploads', express.static(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../uploads'), { fallthrough: false }));
 app.use(globalLimiter);
 app.use(requireCsrf);
-app.use((_req, _res, next) => {
-  if (mongoose.connection.readyState !== 1) {
-    connectDatabase().catch((err) => {
-      console.warn('[app] Background DB connect error:', err instanceof Error ? err.message : err);
+export function healthHandler(_req: express.Request, res: express.Response): void {
+  const hasMongoUri = Boolean(getMongoUri());
+  res.json({
+    ok: true,
+    success: true,
+    status: 'ok',
+    dbState: mongoose.connection.readyState,
+    hasMongoUri,
+    timestamp: new Date().toISOString()
+  });
+}
+
+app.get(['/health', '/api/health', '/api/v1/health'], healthHandler);
+
+app.use(['/api', '/api/v1'], async (req, res, next) => {
+  const pathWithoutQuery = ((req.path || '').split('?')[0] || '').toLowerCase();
+  if (pathWithoutQuery === '/health' || pathWithoutQuery === '/v1/health' || pathWithoutQuery.endsWith('/health')) {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB().catch(() => {});
+    }
+    return next();
+  }
+
+  const isPublicGet = req.method === 'GET' && (
+    pathWithoutQuery.startsWith('/public/') ||
+    pathWithoutQuery === '/courses' ||
+    pathWithoutQuery === '/settings' ||
+    pathWithoutQuery.startsWith('/wings') ||
+    pathWithoutQuery.startsWith('/research') ||
+    pathWithoutQuery.startsWith('/supervisors') ||
+    pathWithoutQuery.startsWith('/scholars') ||
+    pathWithoutQuery.startsWith('/news')
+  );
+
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+    next();
+  } catch (err: any) {
+    if (isPublicGet) {
+      return next();
+    }
+    if (err instanceof DatabaseError) {
+      return res.status(err.status).json({
+        success: false,
+        message: err.message,
+        ...(err.detail ? { detail: err.detail } : {})
+      });
+    }
+    const hasUri = Boolean(getMongoUri());
+    const status = 503;
+    const message = hasUri
+      ? 'Database connection failed. Verify MongoDB Atlas Network Access (0.0.0.0/0) and credentials.'
+      : 'Database configuration missing: set MONGO_URI in Vercel Environment Variables.';
+    return res.status(status).json({
+      success: false,
+      message,
+      detail: err instanceof Error ? err.message : String(err)
     });
   }
-  next();
 });
 
 app.get('/sitemap.xml', (req, res, next) => {

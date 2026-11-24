@@ -13,11 +13,16 @@ export async function saveMedia(file: Express.Multer.File, uploadedBy?: string, 
   } else if (process.env.VERCEL === '1') {
     url = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
   } else {
-    const uploadDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../uploads');
-    await fs.mkdir(uploadDir, { recursive: true });
-    const filename = `${randomUUID()}-${file.originalname.replace(/[^a-z0-9.-]/gi, '_')}`;
-    await fs.writeFile(path.join(uploadDir, filename), file.buffer);
-    url = `/uploads/${filename}`;
+    try {
+      const uploadDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../uploads');
+      await fs.mkdir(uploadDir, { recursive: true });
+      const filename = `${randomUUID()}-${file.originalname.replace(/[^a-z0-9.-]/gi, '_')}`;
+      await fs.writeFile(path.join(uploadDir, filename), file.buffer);
+      url = `/uploads/${filename}`;
+    } catch (fsErr) {
+      console.warn('[media.service] Local storage write failed (e.g. read-only filesystem), falling back to base64 data URL:', fsErr);
+      url = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+    }
   }
   try {
     return await MediaAsset.create({ url, publicId, filename: file.originalname, mimeType: file.mimetype, size: file.size, ...(uploadedBy ? { uploadedBy } : {}), ...(membershipApplicationId ? { membershipApplicationId } : {}) });

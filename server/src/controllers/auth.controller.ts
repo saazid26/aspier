@@ -24,6 +24,9 @@ function makeBackupCodes() {
 
 export async function register(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     const { name, email: rawEmail, password, role: requestedRole } = req.body;
     const email = String(rawEmail || '').trim().toLowerCase();
     if (email === FIXED_ADMIN_EMAIL || email === 'admin@gmail.com') {
@@ -94,6 +97,9 @@ export async function register(req: AuthRequest, res: Response, next: NextFuncti
 
 export async function login(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     // Reliably guarantee database connection and seeded admin on cold starts
     await ensureSeeded();
 
@@ -104,9 +110,6 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
     const isAdminPassword = password === 'admin123' || (Boolean(env.ADMIN_PASSWORD) && password === env.ADMIN_PASSWORD);
 
     if (requestedRole && requestedRole.toLowerCase() === 'admin' && !isAdminEmail) {
-      throw new HttpError(401, 'Invalid email or password');
-    }
-    if (['supervisor', 'youngScholar'].includes(requestedRole) && !normalizedEmail.endsWith('@gmail.com')) {
       throw new HttpError(401, 'Invalid email or password');
     }
 

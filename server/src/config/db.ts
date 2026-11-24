@@ -3,13 +3,13 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import { env } from './env.js';
 
 mongoose.set('strictQuery', true);
-mongoose.set('bufferCommands', true);
+mongoose.set('bufferCommands', false);
 
 let memoryServer: MongoMemoryServer | undefined;
 
-interface MongooseCache {
+export interface MongooseCache {
   conn: typeof mongoose | null;
-  promise: Promise<typeof mongoose | undefined> | null;
+  promise: Promise<typeof mongoose> | null;
 }
 
 declare global {
@@ -20,42 +20,42 @@ if (!global.__mongooseCache) {
   global.__mongooseCache = { conn: null, promise: null };
 }
 
-async function connectWithRetry(uri: string, maxAttempts = 2): Promise<typeof mongoose> {
-  let attempt = 0;
-  let delay = 500;
-  while (attempt < maxAttempts) {
-    try {
-      attempt++;
-      return await mongoose.connect(uri, {
-        bufferCommands: false,
-        serverSelectionTimeoutMS: 3000,
-        maxPoolSize: 10,
-        minPoolSize: 1,
-        socketTimeoutMS: 10000,
-        connectTimeoutMS: 3000
-      });
-    } catch (error) {
-      console.warn(`[db] MongoDB connection attempt ${attempt}/${maxAttempts} failed: ${error instanceof Error ? error.message : error}`);
-      if (attempt >= maxAttempts) {
-        throw error;
-      }
-      await new Promise((res) => setTimeout(res, delay));
-      delay *= 2;
-    }
-  }
-  throw new Error('Failed to connect to MongoDB after maximum retry attempts');
+export function getMongoUri(): string {
+  return (
+    process.env.MONGO_URI ||
+    process.env.MONGODB_URI ||
+    process.env.DATABASE_URL ||
+    env.MONGO_URI ||
+    ''
+  ).trim();
 }
 
-export async function connectDatabase(): Promise<typeof mongoose | undefined> {
+export class DatabaseError extends Error {
+  status: number;
+  detail?: string;
+  constructor(status: number, message: string, detail?: string) {
+    super(message);
+    this.status = status;
+    this.detail = detail;
+    Object.setPrototypeOf(this, DatabaseError.prototype);
+  }
+}
+
+export async function connectDB(): Promise<typeof mongoose> {
+  // If already connected, return cached mongoose instance immediately
   if (mongoose.connection.readyState === 1) {
+    if (global.__mongooseCache) {
+      global.__mongooseCache.conn = mongoose;
+    }
     return mongoose;
   }
 
+  // If a connection promise is already in flight, await it
   if (global.__mongooseCache?.promise) {
     try {
-      await global.__mongooseCache.promise;
+      const conn = await global.__mongooseCache.promise;
       if ((mongoose.connection.readyState as number) === 1) {
-        return mongoose;
+        return conn;
       }
     } catch {
       if (global.__mongooseCache) {
@@ -65,69 +65,94 @@ export async function connectDatabase(): Promise<typeof mongoose | undefined> {
     }
   }
 
-  const uri = env.MONGO_URI ? env.MONGO_URI.trim() : '';
+  const uri = getMongoUri();
 
-  if (!uri && process.env.VERCEL === '1') {
-    console.warn('[db] MONGO_URI is not configured in Vercel environment. Public endpoints will serve resilient fallback catalog.');
-    return;
+  // Handle missing URI in environment variables
+  if (!uri) {
+    if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
+      if (!memoryServer) memoryServer = await MongoMemoryServer.create();
+      const memUri = memoryServer.getUri();
+      const promise = mongoose.connect(memUri, {
+        bufferCommands: false,
+        serverSelectionTimeoutMS: 8000,
+        maxPoolSize: 10,
+        family: 4
+      });
+      if (global.__mongooseCache) {
+        global.__mongooseCache.promise = promise;
+      }
+      const conn = await promise;
+      if (global.__mongooseCache) {
+        global.__mongooseCache.conn = conn;
+      }
+      console.log(`[db] in-memory database connected (${mongoose.connection.host})`);
+      return conn;
+    }
+
+    throw new DatabaseError(
+      503,
+      'Database configuration missing: set MONGO_URI in Vercel Environment Variables.'
+    );
   }
 
-  if (!uri && env.NODE_ENV === 'development') {
-    if (!memoryServer) memoryServer = await MongoMemoryServer.create();
-    const memUri = memoryServer.getUri();
-    const promise = mongoose.connect(memUri, {
-      bufferCommands: true,
-      serverSelectionTimeoutMS: 10000
-    });
-    if (global.__mongooseCache) {
-      global.__mongooseCache.promise = promise as any;
+  // Connect to configured MongoDB URI
+  const connectPromise = (async () => {
+    try {
+      const conn = await mongoose.connect(uri, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 8000,
+        socketTimeoutMS: 20000,
+        connectTimeoutMS: 8000,
+        family: 4,
+        bufferCommands: false
+      });
+      console.log(`[db] connected (${mongoose.connection.host})`);
+      return conn;
+    } catch (err: any) {
+      if (global.__mongooseCache) {
+        global.__mongooseCache.promise = null;
+        global.__mongooseCache.conn = null;
+      }
+      if (env.NODE_ENV === 'development') {
+        console.warn('[db] MONGO_URI unreachable; falling back to in-memory MongoDB');
+        await mongoose.disconnect().catch(() => {});
+        if (!memoryServer) memoryServer = await MongoMemoryServer.create();
+        const memConn = await mongoose.connect(memoryServer.getUri(), {
+          bufferCommands: false,
+          serverSelectionTimeoutMS: 8000,
+          maxPoolSize: 10,
+          family: 4
+        });
+        if (global.__mongooseCache) {
+          global.__mongooseCache.conn = memConn;
+        }
+        return memConn;
+      }
+      throw new DatabaseError(
+        503,
+        'Database connection failed. Verify MongoDB Atlas Network Access (0.0.0.0/0) and credentials.',
+        err instanceof Error ? err.message : String(err)
+      );
     }
-    await promise;
-    if (global.__mongooseCache) {
-      global.__mongooseCache.conn = mongoose;
-    }
-    console.log(`[db] in-memory database connected (${mongoose.connection.host})`);
-    return mongoose;
-  }
+  })();
 
-  if (!uri) return;
+  if (global.__mongooseCache) {
+    global.__mongooseCache.promise = connectPromise;
+  }
 
   try {
-    const promise = connectWithRetry(uri, 3);
-    if (global.__mongooseCache) {
-      global.__mongooseCache.promise = promise as any;
-    }
-    const conn = await promise;
+    const conn = await connectPromise;
     if (global.__mongooseCache) {
       global.__mongooseCache.conn = conn;
     }
-    console.log(`[db] connected (${mongoose.connection.host})`);
-    return mongoose;
-  } catch (error) {
+    return conn;
+  } catch (err) {
     if (global.__mongooseCache) {
       global.__mongooseCache.promise = null;
       global.__mongooseCache.conn = null;
     }
-    if (env.NODE_ENV === 'development') {
-      console.warn('[db] MONGO_URI unreachable; falling back to in-memory MongoDB');
-      await mongoose.disconnect().catch(() => {});
-      if (!memoryServer) memoryServer = await MongoMemoryServer.create();
-      const memPromise = mongoose.connect(memoryServer.getUri(), {
-        bufferCommands: true,
-        serverSelectionTimeoutMS: 10000
-      });
-      if (global.__mongooseCache) {
-        global.__mongooseCache.promise = memPromise as any;
-      }
-      await memPromise;
-      if (global.__mongooseCache) {
-        global.__mongooseCache.conn = mongoose;
-      }
-      return mongoose;
-    } else {
-      console.warn('[db] Database connection warning:', error instanceof Error ? error.message : error);
-    }
+    throw err;
   }
 }
 
-export const connectDB = connectDatabase;
+export const connectDatabase = connectDB;

@@ -45,6 +45,13 @@ export function requireCsrf(req: Request, _res: Response, next: NextFunction): v
   const enforceInTest = Boolean(req.headers['x-enforce-csrf']);
   if (env.NODE_ENV === 'test' && !enforceInTest) return next();
   if (!enforceInTest && isCsrfExempt(req)) return next();
+
+  // Requests authenticated with explicit Bearer tokens are safe from browser cross-site CSRF attacks
+  const authHeader = req.headers.authorization;
+  if (!enforceInTest && typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer ')) {
+    return next();
+  }
+
   const cookieToken = req.cookies?.csrfToken;
   const headerToken = req.headers['x-csrf-token'];
   if (!cookieToken || !headerToken || cookieToken !== headerToken) return next(new HttpError(403, 'CSRF validation failed'));

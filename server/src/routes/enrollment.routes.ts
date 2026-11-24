@@ -4,9 +4,57 @@ import { noStore } from '../middleware/noStore.js';
 import { HttpError } from '../middleware/error.js';
 import Enrollment from '../models/Enrollment.js';
 import Course from '../models/Course.js';
+import { notifyAdmins } from '../services/notification.service.js';
 
 const router = Router();
 router.use(authenticate, noStore);
+
+// POST /api/enrollments - Enroll authenticated student in a course
+router.post('/', async (req: any, res, next) => {
+  try {
+    const { courseId } = req.body;
+    if (!courseId) throw new HttpError(400, 'Course ID or slug is required');
+
+    const course = /^[0-9a-f]{24}$/i.test(String(courseId))
+      ? await Course.findById(courseId)
+      : await Course.findOne({ slug: courseId });
+    if (!course) throw new HttpError(404, 'Course not found');
+
+    let existing = await Enrollment.findOne({ userId: req.user._id, courseId: course._id });
+    if (existing) {
+      return res.status(200).json({ success: true, message: 'Already enrolled', data: existing });
+    }
+
+    const enrollment = await Enrollment.create({
+      userId: req.user._id,
+      courseId: course._id,
+      status: 'active',
+      enrolledAt: new Date(),
+      progressPercent: 0,
+      completedLessonIds: []
+    });
+
+    try {
+      await notifyAdmins({
+        title: 'New Student Enrollment',
+        body: `${req.user.name} (${req.user.email}) enrolled in "${course.title}".`,
+        category: 'course-enrollment',
+        link: '/admin/academy',
+        applicantName: req.user.name,
+        applicantEmail: req.user.email,
+        referenceId: String(enrollment._id)
+      });
+    } catch {}
+
+    res.status(201).json({
+      success: true,
+      message: 'Enrolled successfully',
+      data: enrollment
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // GET /api/enrollments/my - Return authenticated student's enrollments
 router.get('/my', async (req: any, res, next) => {

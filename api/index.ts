@@ -28,7 +28,7 @@ export default async function handler(req: Request, res: Response): Promise<void
     if (connectDatabase) {
       await Promise.race([
         connectDatabase(),
-        new Promise((resolve) => setTimeout(resolve, 3000))
+        new Promise((resolve) => setTimeout(resolve, 8000))
       ]).catch((err: unknown) => {
         console.warn('[api] connectDatabase error:', err instanceof Error ? err.message : err);
       });
