@@ -364,7 +364,7 @@ export function SmoothImageUploader({
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs sm:text-sm font-semibold shadow-md transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
                 >
                   <Plus className="w-4 h-4 stroke-[2.5]" />
-                  <span>+ Upload Image</span>
+                  <span>Upload Image</span>
                 </button>
 
                 {showRemove && (
@@ -469,7 +469,7 @@ export function SmoothImageUploader({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200/90 text-xs font-semibold shadow-xs transition active:scale-95 cursor-pointer disabled:opacity-50"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>+ Upload Image</span>
+              <span>Upload Image</span>
             </button>
 
             {preview && !previewFailed && showRemove && (
