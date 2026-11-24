@@ -60,7 +60,7 @@ import {
 import { recordAudit } from '../services/audit.service.js';
 import { seedAcademyData } from '../utils/seed.js';
 import { fastCache } from '../utils/fastCache.js';
-import { listAdminCertificates, issueAdminCertificate, deleteAdminCertificate } from '../controllers/certificate.controller.js';
+import { listAdminCertificates, issueAdminCertificate, updateAdminCertificate, deleteAdminCertificate } from '../controllers/certificate.controller.js';
 
 const router = Router();
 router.use(authenticate, authorize('admin', 'superadmin'), noStore);
@@ -746,6 +746,8 @@ const uploadCertMemory = multer({
 });
 router.get('/certificates', listAdminCertificates);
 router.post('/certificates', uploadCertMemory.single('certificateImage'), issueAdminCertificate);
+router.put('/certificates/:id', uploadCertMemory.single('certificateImage'), updateAdminCertificate);
+router.patch('/certificates/:id', uploadCertMemory.single('certificateImage'), updateAdminCertificate);
 router.delete('/certificates/:id', deleteAdminCertificate);
 
 export default router;

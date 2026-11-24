@@ -163,6 +163,71 @@ export function AcademyCms() {
     }
   };
 
+  // Edit Certificate State
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingCert, setEditingCert] = useState<any | null>(null);
+  const [savingEditCert, setSavingEditCert] = useState(false);
+
+  const handleOpenEditCertificate = (cert: any) => {
+    setEditingCert({
+      _id: cert._id,
+      credentialId: cert.credentialId || '',
+      studentName: cert.studentName || '',
+      studentEmail: cert.studentEmail || '',
+      studentId: cert.studentId || '',
+      enrollmentId: cert.enrollmentId || '',
+      courseTitle: cert.courseTitle || '',
+      issueDate: cert.issueDate ? new Date(cert.issueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      status: cert.status || 'issued',
+      certificateImage: cert.certificateImage || ''
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateCertificate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCert) return;
+    if (!editingCert.studentName || !editingCert.courseTitle) {
+      toast.error('Student name and course title are required');
+      return;
+    }
+    if (!editingCert.credentialId) {
+      toast.error('Credential ID is required');
+      return;
+    }
+    if (!editingCert.certificateImage) {
+      toast.error('Certificate image is required');
+      return;
+    }
+
+    setSavingEditCert(true);
+    try {
+      const res = await api.put(`/admin/certificates/${editingCert._id}`, {
+        credentialId: editingCert.credentialId.trim().toUpperCase(),
+        studentName: editingCert.studentName.trim(),
+        studentEmail: editingCert.studentEmail ? editingCert.studentEmail.trim() : undefined,
+        courseTitle: editingCert.courseTitle.trim(),
+        issueDate: editingCert.issueDate,
+        status: editingCert.status,
+        certificateImage: editingCert.certificateImage
+      });
+
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Certificate updated successfully!');
+        setEditModalOpen(false);
+        setEditingCert(null);
+        refetchCertificates();
+        refetchEnrollments();
+        queryClient.invalidateQueries({ queryKey: ['admin-academy-certificates'] });
+        queryClient.invalidateQueries({ queryKey: ['admin-academy-enrollments'] });
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to update certificate');
+    } finally {
+      setSavingEditCert(false);
+    }
+  };
+
   // Course Modal State
   const [editingCourse, setEditingCourse] = useState<any | null>(null);
   const [courseModalOpen, setCourseModalOpen] = useState(false);
@@ -1344,6 +1409,15 @@ export function AcademyCms() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <Button
+                            variant="secondary"
+                            style={{ padding: '5px 9px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            onClick={() => handleOpenEditCertificate(cert)}
+                            title="Edit Certificate"
+                          >
+                            <Edit2 size={13} />
+                            Edit
+                          </Button>
                           <a
                             href={`/academy/verify-certificate?id=${cert.credentialId}`}
                             target="_blank"
@@ -1847,6 +1921,117 @@ export function AcademyCms() {
                 {issuingCertificate ? 'Issuing Certificate…' : 'Issue & Verify Certificate'}
               </Button>
               <Button type="button" variant="secondary" onClick={() => setCertificateModalOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Edit Issued Certificate Modal */}
+      {editModalOpen && editingCert && (
+        <Modal
+          open={editModalOpen}
+          title={`Edit Issued Certificate: ${editingCert.credentialId}`}
+          onClose={() => {
+            setEditModalOpen(false);
+            setEditingCert(null);
+          }}
+        >
+          <form className="form" onSubmit={handleUpdateCertificate} style={{ marginTop: 12 }}>
+            <label>
+              Credential ID
+              <Input
+                required
+                value={editingCert.credentialId}
+                onChange={(e) => setEditingCert({ ...editingCert, credentialId: e.target.value.toUpperCase() })}
+                placeholder="e.g. ASP-ACAD-2026-XXXXX"
+                style={{ fontFamily: 'monospace', fontWeight: 600, marginTop: 4 }}
+              />
+            </label>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <label>
+                Student Name
+                <Input
+                  required
+                  value={editingCert.studentName}
+                  onChange={(e) => setEditingCert({ ...editingCert, studentName: e.target.value })}
+                  placeholder="e.g. Ayesha Siddiqua"
+                />
+              </label>
+
+              <label>
+                Student Email
+                <Input
+                  type="email"
+                  value={editingCert.studentEmail}
+                  onChange={(e) => setEditingCert({ ...editingCert, studentEmail: e.target.value })}
+                  placeholder="e.g. student@example.com"
+                />
+              </label>
+            </div>
+
+            <label>
+              Course Title
+              <Input
+                required
+                value={editingCert.courseTitle}
+                onChange={(e) => setEditingCert({ ...editingCert, courseTitle: e.target.value })}
+                placeholder="e.g. Higher Study Oriented Basic to Advance Research Paper Writing Course"
+              />
+            </label>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <label>
+                Issue Date
+                <Input
+                  type="date"
+                  value={editingCert.issueDate}
+                  onChange={(e) => setEditingCert({ ...editingCert, issueDate: e.target.value })}
+                />
+              </label>
+
+              <label>
+                Status
+                <select
+                  className="select"
+                  value={editingCert.status || 'issued'}
+                  onChange={(e) => setEditingCert({ ...editingCert, status: e.target.value })}
+                >
+                  <option value="issued">Issued & Verified</option>
+                  <option value="revoked">Revoked</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="settings-image-field" style={{ marginTop: 16 }}>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                Certificate Image (PNG / JPG / WebP)
+              </label>
+              <SmoothImageUploader
+                value={editingCert.certificateImage || ''}
+                onChange={(url) => setEditingCert((prev: any) => ({ ...prev, certificateImage: url }))}
+                onRemove={() => setEditingCert((prev: any) => ({ ...prev, certificateImage: '' }))}
+                shape="banner"
+                aspectRatio="16/9"
+                helperText="Click + to Upload Image or Drag & Drop certificate photo here (Max 10MB)"
+                maxSizeMB={10}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+              <Button disabled={savingEditCert}>
+                {savingEditCert ? 'Saving Changes…' : 'Save Changes'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setEditingCert(null);
+                }}
+              >
                 Cancel
               </Button>
             </div>

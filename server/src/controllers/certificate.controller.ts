@@ -4,6 +4,7 @@ import Enrollment from '../models/Enrollment.js';
 import User from '../models/User.js';
 import { recordAudit } from '../services/audit.service.js';
 import { HttpError } from '../middleware/error.js';
+import { fastCache } from '../utils/fastCache.js';
 
 // Cache for high-performance sub-0.2s raw image delivery
 const imageCache = new Map<string, { buffer: Buffer; contentType: string; cachedAt: number }>();
@@ -209,6 +210,9 @@ export async function issueAdminCertificate(req: any, res: Response, next: NextF
       await linkedEnrollment.save();
     }
 
+    // Purge server fastCache
+    fastCache.clear();
+
     // Record audit log
     await recordAudit({
       req,
@@ -221,6 +225,110 @@ export async function issueAdminCertificate(req: any, res: Response, next: NextF
     return res.status(201).json({
       success: true,
       message: `Certificate ${finalCredentialId} successfully issued.`,
+      certificate: cert
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Admin: PUT /api/admin/certificates/:id - Update an existing certificate
+ */
+export async function updateAdminCertificate(req: any, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const cert = await Certificate.findOne({
+      $or: [
+        { _id: /^[0-9a-f]{24}$/i.test(id) ? id : null },
+        { credentialId: String(id).toUpperCase() }
+      ]
+    });
+
+    if (!cert) {
+      throw new HttpError(404, 'Certificate record not found.');
+    }
+
+    const {
+      credentialId: inputId,
+      studentName,
+      studentEmail,
+      studentId,
+      enrollmentId,
+      courseTitle,
+      issueDate,
+      status
+    } = req.body;
+
+    let certificateImage = req.body.certificateImage;
+    if (req.file) {
+      certificateImage = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    }
+
+    const oldCredentialId = cert.credentialId;
+
+    if (inputId) {
+      const cleanId = String(inputId).trim().toUpperCase();
+      if (cleanId !== cert.credentialId) {
+        const existing = await Certificate.findOne({ credentialId: cleanId, _id: { $ne: cert._id } });
+        if (existing) {
+          throw new HttpError(400, `Credential ID "${cleanId}" is already assigned to another certificate.`);
+        }
+        imageCache.delete(cert.credentialId);
+        cert.credentialId = cleanId;
+      }
+    }
+
+    // Invalidate memory buffer cache
+    imageCache.delete(cert.credentialId);
+    if (oldCredentialId !== cert.credentialId) {
+      imageCache.delete(oldCredentialId);
+    }
+
+    if (studentName) cert.studentName = String(studentName).trim();
+    if (studentEmail !== undefined) cert.studentEmail = studentEmail ? String(studentEmail).trim().toLowerCase() : undefined;
+    if (studentId) cert.studentId = studentId;
+    if (enrollmentId) cert.enrollmentId = enrollmentId;
+    if (courseTitle) cert.courseTitle = String(courseTitle).trim();
+    if (issueDate) cert.issueDate = new Date(issueDate);
+    if (status && ['issued', 'revoked'].includes(status)) cert.status = status;
+    if (certificateImage) cert.certificateImage = certificateImage;
+
+    await cert.save();
+
+    // Clear server cache
+    fastCache.clear();
+
+    // Sync linked enrollment if exists
+    await Enrollment.updateMany(
+      {
+        $or: [
+          { credentialId: oldCredentialId },
+          { credentialId: cert.credentialId },
+          { _id: cert.enrollmentId || null }
+        ]
+      },
+      {
+        $set: {
+          credentialId: cert.credentialId,
+          certificateImage: cert.certificateImage,
+          certificateStatus: cert.status === 'revoked' ? 'revoked' : 'issued'
+        }
+      }
+    );
+
+    // Record audit log
+    await recordAudit({
+      req,
+      action: 'UPDATE_CERTIFICATE',
+      resource: 'Certificate',
+      resourceId: String(cert._id),
+      description: `Updated certificate ${cert.credentialId} for "${cert.studentName}".`
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Certificate ${cert.credentialId} updated successfully.`,
       certificate: cert
     });
   } catch (error) {
@@ -266,6 +374,9 @@ export async function deleteAdminCertificate(req: any, res: Response, next: Next
     );
 
     await Certificate.findByIdAndDelete(cert._id);
+
+    // Clear server cache
+    fastCache.clear();
 
     await recordAudit({
       req,
