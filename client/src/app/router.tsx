@@ -105,7 +105,7 @@ function Home(){
         title={settings?.siteTitle || 'ASPIER | Aeronautical, Spatial, Planetary Institution for Environmental Research'}
         exact
         description={settings?.seoDescription || 'ASPIER (Aeronautical, Spatial, Planetary Institution for Environmental Research) advances multidisciplinary science across aerospace systems, satellite remote sensing, planetary exploration, and environmental modeling.'}
-        keywords="ASPIER, ASPIER Global, ASPIER Academy, Aeronautical Spatial Planetary Institution for Environmental Research, Aeronautical Engineering Research, Spatial Data and Remote Sensing, Planetary Science Research, Environmental Research Institute, Research Paper Writing Course, Academic Research Wings, Research Mates, Young Scholars"
+        keywords="ASPIER, ASPIER Global, ASPIER Academy, Aeronautical, Spatial, Planetary Institution for Environmental Research, Aeronautical Spatial Planetary Institution for Environmental Research, ASPIER Research Institute, aspierglobal, ASPIER Academy courses, ASPIER Academy student portal, Higher Study Oriented Basic to Advance Research Paper Writing Course, Responsible AI Foundations, Climate Data Modeling, Research Training Bangladesh, ASPIER Academic Wings, ASPIER Research Mate, ASPIER Young Scholars, ASPIER Research Supervisors, Aeronautical Engineering and UAV Systems, Spatial Data and Remote Sensing, Planetary Science, Environmental Research Institute"
         canonicalPath="/"
       />
       <Hero />

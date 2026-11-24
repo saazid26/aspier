@@ -17,7 +17,16 @@ export function NewsList() {
   const data = remoteData && remoteData.length > 0 ? remoteData : (staticNews as NewsItem[]);
 
   return <section className="section">
-    <SEO title="News & Announcements | ASPIER" description="Latest news, publications, fellowship calls, and announcements from ASPIER." />
+    <SEO
+      title="News & Announcements | ASPIER"
+      description="Latest scientific news, research publications, fellowship calls, and academic announcements from ASPIER."
+      keywords="ASPIER news, ASPIER publications, ASPIER announcements, scientific calls for papers, research fellowships, ASPIER Academy news"
+      canonicalPath="/news"
+      breadcrumbs={[
+        { name: 'Home', path: '/' },
+        { name: 'News & Announcements', path: '/news' }
+      ]}
+    />
     <div className="container">
       <h1>News & announcements</h1>
       {isError && data.length === 0 && <p role="alert">Could not load news. Please try again later.</p>}

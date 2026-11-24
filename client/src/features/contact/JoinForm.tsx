@@ -63,7 +63,16 @@ export function JoinForm() {
   </main>;
 
   return <main className="container section" style={{ maxWidth: 720 }}>
-    <SEO title="Apply for ASPIER Fellowship" description="Apply to join ASPIER as a supervisor, young scholar, or research fellow." />
+    <SEO
+      title="Join the ASPIER Team | Supervisors & Young Scholars Application"
+      description="Apply to join ASPIER as a Research Supervisor or Young Scholar. Membership application is 100% free across all stages."
+      keywords="Join ASPIER, ASPIER fellowship, ASPIER Young Scholars, ASPIER Research Supervisors, research application, free academic fellowship"
+      canonicalPath="/join"
+      breadcrumbs={[
+        { name: 'Home', path: '/' },
+        { name: 'Join ASPIER', path: '/join' }
+      ]}
+    />
     <span className="eyebrow">Membership application</span>
     <h1>Join the ASPIER Team</h1>
     <p className="muted">Joining ASPIER is completely free for all applicants across all stages. Submit your initial application in Stage 1, and if approved, complete your academic profile in Stage 2 at no cost.</p>

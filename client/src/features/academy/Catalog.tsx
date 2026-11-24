@@ -48,8 +48,15 @@ export function Catalog() {
         title="ASPIER Academy | Research Training, Scientific Writing & Technical Courses"
         exact
         description="Master scientific paper writing, geospatial data modeling, and machine learning research with ASPIER Academy courses taught by active researchers."
-        keywords="ASPIER Academy, scientific writing course, research training, academic courses, remote sensing training, Python for research, academic writing Bangladesh, scientific research academy"
+        keywords="ASPIER Academy, ASPIER Academy courses, ASPIER Academy student portal, Higher Study Oriented Basic to Advance Research Paper Writing Course, Responsible AI Foundations, Climate Data Modeling, Research Training Bangladesh, scientific writing course, research training, academic writing Bangladesh, scientific research academy"
         canonicalPath="/academy"
+        coursesList={data.map((c) => ({
+          name: c.title,
+          description: c.description ? c.description.replace(/<[^>]+>/g, '').slice(0, 300) : c.title,
+          price: c.price,
+          currency: 'BDT',
+          category: c.mode
+        }))}
         breadcrumbs={[
           { name: 'Home', path: '/' },
           { name: 'ASPIER Academy', path: '/academy' }

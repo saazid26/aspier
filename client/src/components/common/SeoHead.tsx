@@ -12,6 +12,12 @@ export type CourseSchemaProps = {
   currency?: string;
   instructor?: string;
   category?: string;
+  url?: string;
+};
+
+export type FaqItem = {
+  question: string;
+  answer: string;
 };
 
 export type SeoHeadProps = {
@@ -24,16 +30,41 @@ export type SeoHeadProps = {
   ogType?: 'website' | 'article';
   ogImage?: string;
   courseSchema?: CourseSchemaProps;
+  coursesList?: CourseSchemaProps[];
   breadcrumbs?: BreadcrumbItem[];
+  faqItems?: FaqItem[];
+  googleSiteVerification?: string;
 };
 
 const DEFAULT_TITLE = 'ASPIER | Aeronautical, Spatial, Planetary Institution for Environmental Research';
 const DEFAULT_DESCRIPTION =
-  'ASPIER (Aeronautical, Spatial, Planetary Institution for Environmental Research) is a multidisciplinary research institution and academy advancing aeronautical engineering, satellite remote sensing, planetary exploration, and environmental data science.';
+  'ASPIER (Aeronautical, Spatial, Planetary Institution for Environmental Research) is an autonomous research institution and academy advancing aeronautical engineering, spatial remote sensing, planetary science, environmental data science, and higher-study research training.';
 const DEFAULT_KEYWORDS =
-  'ASPIER, ASPIER Global, ASPIER Academy, Aeronautical Spatial Planetary Institution for Environmental Research, Aeronautical Engineering Research, Spatial Data and Remote Sensing, Planetary Science Research, Environmental Research Institute, Research Paper Writing Course, Academic Research Wings, Research Mates, Young Scholars';
-const DEFAULT_IMAGE = 'https://aspier.org/aspier-logo.png';
-const BASE_URL = 'https://aspier.org';
+  'ASPIER, ASPIER Global, ASPIER Academy, Aeronautical, Spatial, Planetary Institution for Environmental Research, Aeronautical Spatial Planetary Institution for Environmental Research, ASPIER Research Institute, aspierglobal, ASPIER Academy courses, ASPIER Academy student portal, Higher Study Oriented Basic to Advance Research Paper Writing Course, Responsible AI Foundations, Climate Data Modeling, Research Training Bangladesh, ASPIER Academic Wings, ASPIER Research Mate, ASPIER Young Scholars, ASPIER Research Supervisors, Aeronautical Engineering and UAV Systems, Spatial Data and Remote Sensing, Planetary Science, Environmental Research Institute';
+
+const DEFAULT_IMAGE = 'https://aspierglobal.vercel.app/aspier-logo.png';
+const BASE_URL =
+  typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost')
+    ? window.location.origin
+    : 'https://aspierglobal.vercel.app';
+
+const DEFAULT_FAQS: FaqItem[] = [
+  {
+    question: 'What is ASPIER (Aeronautical, Spatial, Planetary Institution for Environmental Research)?',
+    answer:
+      'ASPIER (Aeronautical, Spatial, Planetary Institution for Environmental Research) is an autonomous scientific research institution advancing multidisciplinary science across aerospace systems, satellite remote sensing, planetary exploration, and environmental ecosystems.'
+  },
+  {
+    question: 'What is ASPIER Academy?',
+    answer:
+      'ASPIER Academy is the educational division of ASPIER, providing specialized training programs including the Higher Study Oriented Basic to Advance Research Paper Writing Course, Responsible AI Foundations, Climate Data Modeling, and live mentor-led research masterclasses.'
+  },
+  {
+    question: 'How to join ASPIER as a Research Mate, Young Scholar, or Supervisor?',
+    answer:
+      'Prospective researchers, students, and academics can apply directly through the ASPIER portal at /wings/apply-research or /join to collaborate as Research Mates, Young Scholars, or Research Supervisors across our 10 Academic Wings.'
+  }
+];
 
 function setMetaTag(attrName: 'name' | 'property', attrValue: string, content: string): void {
   let el = document.querySelector(`meta[${attrName}="${attrValue}"]`);
@@ -76,7 +107,10 @@ export function SeoHead({
   ogType = 'website',
   ogImage = DEFAULT_IMAGE,
   courseSchema,
-  breadcrumbs
+  coursesList,
+  breadcrumbs,
+  faqItems,
+  googleSiteVerification
 }: SeoHeadProps) {
   useEffect(() => {
     // 1. Compute Full Page Title
@@ -99,12 +133,24 @@ export function SeoHead({
     setMetaTag('name', 'keywords', finalKeywords);
     setMetaTag('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
 
+    // Google Search Console Verification (only rendered when set)
+    const verificationCode =
+      googleSiteVerification ||
+      (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GOOGLE_SITE_VERIFICATION);
+    if (verificationCode) {
+      setMetaTag('name', 'google-site-verification', verificationCode);
+    }
+
     // Open Graph
     setMetaTag('property', 'og:title', finalTitle);
     setMetaTag('property', 'og:description', finalDesc);
     setMetaTag('property', 'og:type', ogType);
     setMetaTag('property', 'og:url', finalUrl);
-    setMetaTag('property', 'og:site_name', 'ASPIER — Aeronautical, Spatial, Planetary Institution for Environmental Research');
+    setMetaTag(
+      'property',
+      'og:site_name',
+      'ASPIER — Aeronautical, Spatial, Planetary Institution for Environmental Research'
+    );
     setMetaTag('property', 'og:image', ogImage);
 
     // Twitter Card
@@ -125,26 +171,43 @@ export function SeoHead({
         alternateName: [
           'ASPIER',
           'ASPIER Global',
-          'Aeronautical, Spatial, Planetary Institution for Environmental Research'
+          'ASPIER Academy',
+          'Aeronautical, Spatial, Planetary Institution for Environmental Research',
+          'Aeronautical Spatial Planetary Institution for Environmental Research',
+          'ASPIER Research Institute',
+          'aspierglobal'
         ],
         url: BASE_URL,
         logo: `${BASE_URL}/aspier-logo.png`,
         description: DEFAULT_DESCRIPTION,
         knowsAbout: [
-          'Aeronautical Engineering',
-          'Spatial Science & Remote Sensing',
-          'Planetary Science',
-          'Environmental Research',
+          'Aeronautical Engineering & UAV Systems',
+          'Planetary Science & Astrobiology',
+          'Hydrology & Atmospheric Physics',
+          'Geospatial Intelligence & Remote Sensing',
+          'Geomicrobiology & Biogeology',
+          'Environmental Chemistry & Toxicology',
+          'Applied Biotechnology',
+          'Agricultural Sciences & Food Security',
+          'Economic Geography & Resource Management',
+          'Environmental Policy & Governance',
+          'Higher Study Oriented Basic to Advance Research Paper Writing Course',
+          'Responsible AI Foundations',
           'Climate Data Modeling',
-          'Responsible AI',
-          'Scientific Research & Publications'
+          'Research Training Bangladesh',
+          'ASPIER Academic Wings',
+          'ASPIER Research Mate',
+          'ASPIER Young Scholars',
+          'ASPIER Research Supervisors'
         ],
         subOrganization: {
           '@type': 'EducationalOrganization',
           '@id': `${BASE_URL}/#academy`,
           name: 'ASPIER Academy',
-          alternateName: 'ASPIER Academy LMS',
-          url: `${BASE_URL}/academy`
+          alternateName: ['ASPIER Academy LMS', 'ASPIER Academy Student Portal'],
+          url: `${BASE_URL}/academy`,
+          description:
+            'Educational wing of ASPIER providing higher-study oriented research paper writing courses, responsible AI foundations, and scientific research training.'
         }
       },
       {
@@ -152,12 +215,25 @@ export function SeoHead({
         '@id': `${BASE_URL}/#website`,
         url: BASE_URL,
         name: 'ASPIER',
+        alternateName: 'ASPIER Global',
         publisher: { '@id': `${BASE_URL}/#organization` },
         potentialAction: {
           '@type': 'SearchAction',
           target: `${BASE_URL}/research?q={search_term_string}`,
           'query-input': 'required name=search_term_string'
         }
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${BASE_URL}/#faq`,
+        mainEntity: (faqItems && faqItems.length > 0 ? faqItems : DEFAULT_FAQS).map((faq) => ({
+          '@type': 'Question',
+          name: faq.question,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: faq.answer
+          }
+        }))
       }
     ];
 
@@ -191,6 +267,38 @@ export function SeoHead({
       });
     }
 
+    if (coursesList && coursesList.length > 0) {
+      coursesList.forEach((course) => {
+        graphObjects.push({
+          '@type': 'Course',
+          name: course.name,
+          description: course.description,
+          provider: {
+            '@type': 'EducationalOrganization',
+            name: 'ASPIER Academy',
+            sameAs: `${BASE_URL}/academy`
+          },
+          offers: {
+            '@type': 'Offer',
+            price: course.price ?? 0,
+            priceCurrency: course.currency || 'BDT',
+            availability: 'https://schema.org/InStock',
+            validFrom: '2026-01-01'
+          },
+          hasCourseInstance: {
+            '@type': 'CourseInstance',
+            courseMode: 'Online',
+            instructor: course.instructor
+              ? {
+                  '@type': 'Person',
+                  name: course.instructor
+                }
+              : undefined
+          }
+        });
+      });
+    }
+
     if (breadcrumbs && breadcrumbs.length > 0) {
       graphObjects.push({
         '@type': 'BreadcrumbList',
@@ -217,7 +325,10 @@ export function SeoHead({
     ogType,
     ogImage,
     courseSchema,
-    breadcrumbs
+    coursesList,
+    breadcrumbs,
+    faqItems,
+    googleSiteVerification
   ]);
 
   return null;

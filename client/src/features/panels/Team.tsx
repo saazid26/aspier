@@ -152,7 +152,7 @@ export function Team() {
         title="Research Supervisors, Young Scholars & Research Mates | ASPIER"
         exact
         description="Meet the multidisciplinary research leadership, university supervisors, young scholars, and research mates driving discovery at ASPIER."
-        keywords="ASPIER team, research supervisors, young scholars, research mates, aerospace researchers, planetary scientists, environmental scientists, ASPIER faculty"
+        keywords="ASPIER team, ASPIER Research Supervisors, ASPIER Young Scholars, ASPIER Research Mate, aerospace researchers, planetary scientists, environmental scientists, ASPIER faculty mentors"
         canonicalPath="/team"
         breadcrumbs={[
           { name: 'Home', path: '/' },

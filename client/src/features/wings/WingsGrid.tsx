@@ -33,7 +33,7 @@ export function WingsGrid() {
         title="Academic Wings & Research Programs | ASPIER"
         exact
         description="Explore ASPIER's 10 Academic Wings spanning aeronautics, planetary science, spatial analytics, climate modeling, and autonomous research initiatives."
-        keywords="ASPIER academic wings, aeronautical engineering wing, planetary science wing, remote sensing wing, climate modeling, environmental research wings"
+        keywords="ASPIER Academic Wings, ASPIER wings, Aeronautical Engineering and UAV Systems, Spatial Data and Remote Sensing, Planetary Science and Astrobiology, Hydrology and Atmospheric Physics, Environmental Research Institute, ASPIER research wings, ASPIER Young Scholars, ASPIER Research Mate"
         canonicalPath="/wings"
         breadcrumbs={[
           { name: 'Home', path: '/' },

@@ -27,7 +27,16 @@ export function ContactForm() {
     }
   };
   return <main className="container section" style={{maxWidth:680}}>
-    <SEO title="Contact ASPIER" description="Get in touch with the Aeronautical, Spatial, Planetary Institute for Environmental Research." />
+    <SEO
+      title="Contact ASPIER | Aeronautical, Spatial, Planetary Institution for Environmental Research"
+      description="Get in touch with ASPIER for research inquiries, academic partnerships, and academy program details."
+      keywords="Contact ASPIER, ASPIER email, research collaboration, academic inquiry, ASPIER location, ASPIER support"
+      canonicalPath="/contact"
+      breadcrumbs={[
+        { name: 'Home', path: '/' },
+        { name: 'Contact', path: '/contact' }
+      ]}
+    />
     <h1>Contact ASPIER</h1>
     <form className="form" onSubmit={submit}>
       {error && <p className="applicant-error-message" role="alert">{error}</p>}

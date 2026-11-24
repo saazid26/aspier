@@ -404,7 +404,7 @@ export function ResearchMateApply() {
         title="Apply as Research Mate | ASPIER Academic Wings"
         exact
         description="Apply to join active and emerging research projects across ASPIER's 10 Academic Wings as a Research Mate. Collaborate with leading supervisors and co-author scientific publications."
-        keywords="ASPIER Research Mate, apply research mate, academic wings research, undergraduate researcher, scientific research collaboration"
+        keywords="ASPIER Research Mate, apply research mate, ASPIER Academic Wings, ASPIER Young Scholars, ASPIER Research Supervisors, undergraduate research collaboration, scientific research co-author, Aeronautical Engineering and UAV Systems, Spatial Data and Remote Sensing, Planetary Science"
         canonicalPath="/wings/apply-research"
         breadcrumbs={[
           { name: 'Home', path: '/' },

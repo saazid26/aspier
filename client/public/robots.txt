@@ -5,4 +5,4 @@ Disallow: /student/
 Disallow: /academy/student/
 Disallow: /api/
 
-Sitemap: https://aspier.org/sitemap.xml
+Sitemap: https://aspierglobal.vercel.app/sitemap.xml
