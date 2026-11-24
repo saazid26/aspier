@@ -554,10 +554,17 @@ router.get('/enrollments', async (_req, res) => {
     if (mongoose.connection.readyState !== 1) {
       await connectDatabase();
     }
-    const enrollments = await Enrollment.find()
-      .populate('userId', 'name email phone university department')
-      .populate('courseId', 'title slug price thumbnail bannerUrl modules')
-      .sort({ createdAt: -1 });
+    const [enrollments, allStudents] = await Promise.all([
+      Enrollment.find()
+        .populate('userId', 'name email phone university department isActive createdAt')
+        .populate('courseId', 'title slug price thumbnail bannerUrl modules')
+        .sort({ createdAt: -1 }),
+      User.find({ role: 'student' }).sort({ createdAt: -1 })
+    ]);
+
+    const enrolledUserIds = new Set(
+      enrollments.map((e: any) => String(e.userId?._id || e.userId || '')).filter(Boolean)
+    );
 
     const userIds = enrollments.map((e: any) => e.userId?._id).filter(Boolean);
     const payments = await Payment.find({ userId: { $in: userIds } });
@@ -567,7 +574,7 @@ router.get('/enrollments', async (_req, res) => {
       if (p.trxId) paymentMap.set(p.trxId, p);
     });
 
-    const data = enrollments.map((enr: any) => {
+    const enrollmentRows = enrollments.map((enr: any) => {
       const user = enr.userId || {};
       const course = enr.courseId || {};
       const payment = paymentMap.get(`${user._id}_${course._id}`);
@@ -600,10 +607,36 @@ router.get('/enrollments', async (_req, res) => {
         rawStatus: enr.status,
         progressPercent: progress,
         enrolledAt: enr.enrolledAt || enr.createdAt,
-        paymentId: payment?._id
+        paymentId: payment?._id,
+        recordType: 'enrollment'
       };
     });
 
+    // Auto-sync all registered student users who have not yet enrolled
+    const directStudentRows = allStudents
+      .filter((st: any) => !enrolledUserIds.has(String(st._id)))
+      .map((st: any) => ({
+        _id: st._id,
+        enrollmentId: null,
+        userId: st._id,
+        studentName: st.name || 'Student',
+        studentEmail: st.email || 'N/A',
+        studentPhone: st.phone || '',
+        university: st.university || '',
+        courseId: null,
+        courseTitle: 'Direct User Account',
+        paymentMethod: '—',
+        trxId: '—',
+        feePaid: 0,
+        status: st.isActive !== false ? 'Active' : 'Suspended',
+        rawStatus: st.isActive !== false ? 'active' : 'inactive',
+        progressPercent: 0,
+        enrolledAt: st.createdAt,
+        recordType: 'student',
+        isDirectUser: true
+      }));
+
+    const data = [...enrollmentRows, ...directStudentRows];
     res.json({ success: true, data });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err?.message || 'Failed to list enrollments' });

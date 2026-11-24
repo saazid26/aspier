@@ -17,6 +17,7 @@ import { sendEmail } from '../services/email.service.js';
 import { saveMedia } from '../services/media.service.js';
 import { recordAudit } from '../services/audit.service.js';
 import { beginWebAuthnLogin } from './webauthn.controller.js';
+import { fastCache } from '../utils/fastCache.js';
 
 function makeBackupCodes() {
   return Array.from({ length: 8 }, () => randomBytes(8).toString('hex'));
@@ -40,7 +41,8 @@ export async function register(req: AuthRequest, res: Response, next: NextFuncti
     if (await User.exists({ email })) {
       throw new HttpError(409, 'An account with this email already exists. Please sign in.');
     }
-    const user = await User.create({ name: String(name).trim(), email, passwordHash: await hashPassword(password), role: 'student' });
+    const user = await User.create({ name: String(name).trim(), email, passwordHash: await hashPassword(password), role: 'student', isActive: true });
+    fastCache.clear();
     
     try {
       await notifyAdmins({

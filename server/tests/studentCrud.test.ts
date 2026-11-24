@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import request from 'supertest';
 import { app } from '../src/app.js';
 import User from '../src/models/User.js';
 import Course from '../src/models/Course.js';
@@ -23,6 +24,32 @@ describe('Admin Student & Enrollment CRUD API', () => {
         status: 'published'
       });
     }
+  });
+
+  it('auto-syncs newly registered students immediately into GET /admin/enrollments as Direct User Account', async () => {
+    const uniqueEmail = `newstudent-${Date.now()}@aspier-test.org`;
+    const regRes = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        name: 'Auto Synced Student',
+        email: uniqueEmail,
+        password: 'AspierAcademic#2026!'
+      });
+
+    expect(regRes.status).toBe(201);
+    expect(regRes.body.success).toBe(true);
+
+    // Call GET /admin/enrollments
+    const enrollmentsRes = await adminAgent.get('/api/v1/admin/enrollments');
+    expect(enrollmentsRes.status).toBe(200);
+    expect(enrollmentsRes.body.success).toBe(true);
+
+    const directUserRow = enrollmentsRes.body.data.find((row: any) => row.studentEmail === uniqueEmail);
+    expect(directUserRow).toBeDefined();
+    expect(directUserRow.studentName).toBe('Auto Synced Student');
+    expect(directUserRow.recordType).toBe('student');
+    expect(directUserRow.courseTitle).toBe('Direct User Account');
+    expect(directUserRow.isDirectUser).toBe(true);
   });
 
   it('updates a direct student user details and status', async () => {

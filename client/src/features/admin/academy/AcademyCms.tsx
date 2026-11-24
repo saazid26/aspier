@@ -531,7 +531,7 @@ export function AcademyCms() {
       studentPhone: st.phone || '',
       university: st.university || '',
       courseId: '',
-      courseTitle: 'Direct User Account / None',
+      courseTitle: 'Direct User Account (No Course Yet)',
       paymentMethod: 'Free / None',
       paymentStatus: 'Free / Scholarship',
       trxId: '',
@@ -1261,56 +1261,57 @@ export function AcademyCms() {
 
       {/* Tab 5: Students & Enrollments */}
       {activeTab === 'Students & Enrollments' && (() => {
-        const enrolledUserIds = new Set(enrollments.map((e: any) => String(e.userId?._id || e.userId || '')));
-        const directStudents = students.filter((s: any) => !enrolledUserIds.has(String(s._id)));
+        // Build unified roster ensuring every student and enrollment is included without duplication
+        const directStudentIdsFromEnrollments = new Set(
+          enrollments.filter((e: any) => e.recordType === 'student' || e.isDirectUser).map((e: any) => String(e._id || e.userId))
+        );
+        const enrolledUserIds = new Set(
+          enrollments.filter((e: any) => e.recordType === 'enrollment' || (e.courseId && e.courseTitle !== 'Direct User Account')).map((e: any) => String(e.userId?._id || e.userId || ''))
+        );
+
+        const directStudentsFromUsers = students
+          .filter((s: any) => !enrolledUserIds.has(String(s._id)) && !directStudentIdsFromEnrollments.has(String(s._id)))
+          .map((s: any) => ({
+            _id: s._id,
+            recordType: 'student',
+            studentName: s.name,
+            studentEmail: s.email,
+            studentPhone: s.phone || '',
+            university: s.university || '',
+            courseTitle: 'Direct User Account',
+            courseId: '',
+            paymentMethod: '—',
+            trxId: '—',
+            feePaid: 0,
+            progressPercent: 0,
+            status: s.isActive !== false ? 'Active' : 'Inactive',
+            rawStatus: s.isActive !== false ? 'active' : 'inactive',
+            isActive: s.isActive !== false
+          }));
+
+        const unifiedRoster = [
+          ...enrollments.map((e: any) => ({
+            ...e,
+            recordType: e.recordType || (e.courseTitle === 'Direct User Account' || !e.courseId ? 'student' : 'enrollment')
+          })),
+          ...directStudentsFromUsers
+        ];
+
+        const activeEnrollmentsCount = unifiedRoster.filter((r: any) => r.recordType === 'enrollment').length;
+        const totalRegisteredStudentsCount = Math.max(students.length, unifiedRoster.length);
 
         const displayList = rosterFilter === 'enrollments'
-          ? enrollments.map((e: any) => ({ ...e, recordType: 'enrollment' }))
+          ? unifiedRoster.filter((r: any) => r.recordType === 'enrollment')
           : rosterFilter === 'students'
-          ? students.map((s: any) => ({
-              _id: s._id,
-              recordType: 'student',
-              studentName: s.name,
-              studentEmail: s.email,
-              studentPhone: s.phone || '',
-              university: s.university || '',
-              courseTitle: 'Direct User Account',
-              courseId: '',
-              paymentMethod: '—',
-              trxId: '—',
-              feePaid: 0,
-              progressPercent: 0,
-              status: s.isActive !== false ? 'Active' : 'Inactive',
-              rawStatus: s.isActive !== false ? 'active' : 'inactive',
-              isActive: s.isActive !== false
-            }))
-          : [
-              ...enrollments.map((e: any) => ({ ...e, recordType: 'enrollment' })),
-              ...directStudents.map((s: any) => ({
-                _id: s._id,
-                recordType: 'student',
-                studentName: s.name,
-                studentEmail: s.email,
-                studentPhone: s.phone || '',
-                university: s.university || '',
-                courseTitle: 'Direct User Account',
-                courseId: '',
-                paymentMethod: '—',
-                trxId: '—',
-                feePaid: 0,
-                progressPercent: 0,
-                status: s.isActive !== false ? 'Active' : 'Inactive',
-                rawStatus: s.isActive !== false ? 'active' : 'inactive',
-                isActive: s.isActive !== false
-              }))
-            ];
+          ? unifiedRoster.filter((r: any) => r.recordType === 'student')
+          : unifiedRoster;
 
         return (
           <div style={{ marginTop: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
                 <p className="muted" style={{ margin: 0, fontSize: '0.875rem' }}>
-                  Active Enrollments: <strong>{enrollments.length}</strong> | Total Registered Student Users: <strong>{students.length}</strong>
+                  Active Enrollments: <strong>{activeEnrollmentsCount}</strong> | Total Registered Student Users: <strong>{totalRegisteredStudentsCount}</strong>
                 </p>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button
@@ -1328,7 +1329,7 @@ export function AcademyCms() {
                       cursor: 'pointer'
                     }}
                   >
-                    All ({enrollments.length + directStudents.length})
+                    All ({unifiedRoster.length})
                   </button>
                   <button
                     type="button"
@@ -1345,7 +1346,7 @@ export function AcademyCms() {
                       cursor: 'pointer'
                     }}
                   >
-                    Course Enrollments ({enrollments.length})
+                    Course Enrollments ({activeEnrollmentsCount})
                   </button>
                   <button
                     type="button"
@@ -1362,7 +1363,7 @@ export function AcademyCms() {
                       cursor: 'pointer'
                     }}
                   >
-                    Direct Student Accounts ({students.length})
+                    Direct Student Accounts ({unifiedRoster.filter((r: any) => r.recordType === 'student').length})
                   </button>
                 </div>
               </div>
@@ -2100,7 +2101,7 @@ export function AcademyCms() {
                   });
                 }}
               >
-                <option value="">Direct User Account / None</option>
+                <option value="">Direct User Account (No Course Yet)</option>
                 {courses.map((c: any) => (
                   <option key={c._id} value={c._id}>
                     {c.title} {c.price ? `(৳${c.price} BDT)` : '(Free)'}
