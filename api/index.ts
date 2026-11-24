@@ -26,15 +26,25 @@ export default async function handler(req: Request, res: Response): Promise<void
 
     // Guarantee database connection and seeded admin on cold starts
     if (connectDatabase) {
-      await connectDatabase().catch((err: unknown) => {
+      await Promise.race([
+        connectDatabase(),
+        new Promise((resolve) => setTimeout(resolve, 3000))
+      ]).catch((err: unknown) => {
         console.warn('[api] connectDatabase error:', err instanceof Error ? err.message : err);
       });
     }
 
     if (ensureSeeded) {
-      await ensureSeeded().catch((err: unknown) => {
-        console.warn('[api] ensureSeeded error:', err instanceof Error ? err.message : err);
-      });
+      if (req.method === 'GET') {
+        ensureSeeded().catch((err: unknown) => {
+          console.warn('[api] background ensureSeeded error:', err instanceof Error ? err.message : err);
+        });
+      } else {
+        await Promise.race([
+          ensureSeeded(),
+          new Promise((resolve) => setTimeout(resolve, 2500))
+        ]).catch(() => {});
+      }
     }
 
     const requestUrl = new URL(req.url || '/', 'http://localhost');
