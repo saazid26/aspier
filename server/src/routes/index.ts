@@ -35,6 +35,36 @@ router.use('/enrollments', enrollments);
 router.use('/certificates', certificateRoutes);
 router.get('/courses', catalog);
 
+// Direct root aliases for public datasets (Wings, Team, Research, News)
+router.get('/wings', (req, res, next) => {
+  req.url = '/wings';
+  publicRoutes(req, res, next);
+});
+router.get('/wings/:slug', (req, res, next) => {
+  req.url = '/wings/' + req.params.slug;
+  publicRoutes(req, res, next);
+});
+router.get('/team', (req, res, next) => {
+  req.url = '/founding-members';
+  publicRoutes(req, res, next);
+});
+router.get('/research', (req, res, next) => {
+  req.url = '/research';
+  publicRoutes(req, res, next);
+});
+router.get('/news', (req, res, next) => {
+  req.url = '/news';
+  publicRoutes(req, res, next);
+});
+router.get('/supervisors', (req, res, next) => {
+  req.url = '/supervisors';
+  publicRoutes(req, res, next);
+});
+router.get('/scholars', (req, res, next) => {
+  req.url = '/scholars';
+  publicRoutes(req, res, next);
+});
+
 // Resilient direct aliases for public form submissions & Academy registration
 router.post('/inquiries', (req, res, next) => {
   req.url = '/contact';

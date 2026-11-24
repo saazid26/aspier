@@ -3,10 +3,10 @@ import { QueryClient } from '@tanstack/react-query';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes fresh cache
-      gcTime: 10 * 60 * 1000,   // 10 minutes cache retention
+      staleTime: 0, // Instant real-time staleness for guaranteed live DB reflection
+      gcTime: 5 * 60 * 1000,
       retry: 1,
-      refetchOnWindowFocus: false
+      refetchOnWindowFocus: true // Refetches on focus for real-time synchronization
     }
   }
 });

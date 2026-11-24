@@ -487,9 +487,10 @@ const mountCrud = (path: string, model: any) => {
   router.get(`/${path}/:id`, crud.getById);
   router.post(`/${path}`, audit('create', model.modelName), crud.create);
   router.put(`/${path}/:id`, audit('update', model.modelName), crud.update);
+  router.patch(`/${path}/:id`, audit('update', model.modelName), crud.update);
   router.delete(`/${path}/:id`, audit('delete', model.modelName), crud.delete);
 };
-mountCrud('news', News); mountCrud('courses', Course); mountCrud('users', User); mountCrud('messages', Message); mountCrud('instructors', Instructor);
+mountCrud('news', News); mountCrud('courses', Course); mountCrud('users', User); mountCrud('messages', Message); mountCrud('inquiries', Message); mountCrud('instructors', Instructor);
 
 router.get('/payments', paymentQueue);
 router.get('/membership-applications', adminMembershipApplications);
