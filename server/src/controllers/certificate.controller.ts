@@ -72,6 +72,7 @@ export async function verifyCertificate(req: Request, res: Response, next: NextF
         credentialId: cert.credentialId,
         studentName: cert.studentName,
         studentEmail: cert.studentEmail,
+        recipientRole: cert.recipientRole || 'Student',
         courseTitle: cert.courseTitle,
         issueDate: cert.issueDate instanceof Date ? cert.issueDate.toISOString() : String(cert.issueDate),
         certificateImage: cert.certificateImage,
@@ -203,6 +204,7 @@ export async function getMyCertificates(req: any, res: Response, next: NextFunct
         credentialId: cert.credentialId,
         studentName: cert.studentName,
         studentEmail: cert.studentEmail,
+        recipientRole: cert.recipientRole || 'Student',
         courseTitle: cert.courseTitle,
         issueDate: cert.issueDate instanceof Date ? cert.issueDate.toISOString() : String(cert.issueDate),
         certificateImage: cert.certificateImage,
@@ -256,6 +258,7 @@ export async function issueAdminCertificate(req: any, res: Response, next: NextF
       credentialId: inputId,
       studentName,
       studentEmail,
+      recipientRole,
       studentId,
       enrollmentId,
       courseTitle,
@@ -266,6 +269,8 @@ export async function issueAdminCertificate(req: any, res: Response, next: NextF
     if (!studentName || !courseTitle) {
       throw new HttpError(400, 'Student name and course title are required.');
     }
+
+    const finalRole = recipientRole === 'Instructor' ? 'Instructor' : 'Student';
 
     let certificateImage = req.body.certificateImage;
     if (req.file) {
@@ -287,6 +292,7 @@ export async function issueAdminCertificate(req: any, res: Response, next: NextF
         credentialId: finalCredentialId,
         studentName: String(studentName).trim(),
         studentEmail: studentEmail ? String(studentEmail).trim().toLowerCase() : undefined,
+        recipientRole: finalRole,
         studentId: studentId || undefined,
         enrollmentId: enrollmentId || undefined,
         courseTitle: String(courseTitle).trim(),
@@ -363,6 +369,7 @@ export async function updateAdminCertificate(req: any, res: Response, next: Next
       credentialId: inputId,
       studentName,
       studentEmail,
+      recipientRole,
       studentId,
       enrollmentId,
       courseTitle,
@@ -397,6 +404,9 @@ export async function updateAdminCertificate(req: any, res: Response, next: Next
 
     if (studentName) cert.studentName = String(studentName).trim();
     if (studentEmail !== undefined) cert.studentEmail = studentEmail ? String(studentEmail).trim().toLowerCase() : undefined;
+    if (recipientRole && ['Student', 'Instructor'].includes(recipientRole)) {
+      cert.recipientRole = recipientRole;
+    }
     if (studentId) cert.studentId = studentId;
     if (enrollmentId) cert.enrollmentId = enrollmentId;
     if (courseTitle) cert.courseTitle = String(courseTitle).trim();

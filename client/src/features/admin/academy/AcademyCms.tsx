@@ -65,6 +65,7 @@ export function AcademyCms() {
     credentialId: '',
     studentName: '',
     studentEmail: '',
+    recipientRole: 'Student' as 'Student' | 'Instructor',
     studentId: '',
     enrollmentId: '',
     courseTitle: '',
@@ -86,6 +87,7 @@ export function AcademyCms() {
       credentialId: newId,
       studentName: claim.userId?.name || claim.studentName || '',
       studentEmail: claim.userId?.email || claim.studentEmail || '',
+      recipientRole: 'Student',
       studentId: claim.userId?._id || claim.studentId || '',
       enrollmentId: claim._id || '',
       courseTitle: claim.courseId?.title || claim.courseTitle || '',
@@ -113,6 +115,7 @@ export function AcademyCms() {
       const formData = new FormData();
       formData.append('credentialId', certForm.credentialId || generateCredentialId());
       formData.append('studentName', certForm.studentName);
+      formData.append('recipientRole', certForm.recipientRole || 'Student');
       if (certForm.studentEmail) formData.append('studentEmail', certForm.studentEmail);
       if (certForm.studentId) formData.append('studentId', certForm.studentId);
       if (certForm.enrollmentId) formData.append('enrollmentId', certForm.enrollmentId);
@@ -174,6 +177,7 @@ export function AcademyCms() {
       credentialId: cert.credentialId || '',
       studentName: cert.studentName || '',
       studentEmail: cert.studentEmail || '',
+      recipientRole: cert.recipientRole || 'Student',
       studentId: cert.studentId || '',
       enrollmentId: cert.enrollmentId || '',
       courseTitle: cert.courseTitle || '',
@@ -206,6 +210,7 @@ export function AcademyCms() {
         credentialId: editingCert.credentialId.trim().toUpperCase(),
         studentName: editingCert.studentName.trim(),
         studentEmail: editingCert.studentEmail ? editingCert.studentEmail.trim() : undefined,
+        recipientRole: editingCert.recipientRole || 'Student',
         courseTitle: editingCert.courseTitle.trim(),
         issueDate: editingCert.issueDate,
         status: editingCert.status,
@@ -1280,6 +1285,7 @@ export function AcademyCms() {
                     credentialId: generateCredentialId(),
                     studentName: '',
                     studentEmail: '',
+                    recipientRole: 'Student',
                     studentId: '',
                     enrollmentId: '',
                     courseTitle: courses[0]?.title || '',
@@ -1369,7 +1375,7 @@ export function AcademyCms() {
               </div>
             ) : (
               <div className="table-responsive-wrapper" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', minWidth: 0, width: '100%', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                <Table headers={['PNG Preview', 'Credential ID', 'Student', 'Course Title', 'Issue Date', 'Status', 'Actions']}>
+                <Table headers={['PNG Preview', 'Credential ID', 'Recipient', 'Role', 'Course Title', 'Issue Date', 'Status', 'Actions']}>
                   {certsData.certificates.map((cert: any) => (
                     <tr key={cert._id}>
                       <td style={{ width: 80 }}>
@@ -1397,6 +1403,18 @@ export function AcademyCms() {
                       <td>
                         <div style={{ fontWeight: 600, color: '#0f172a' }}>{cert.studentName}</div>
                         {cert.studentEmail && <div style={{ fontSize: '0.785rem', color: '#64748b' }}>{cert.studentEmail}</div>}
+                      </td>
+                      <td>
+                        <span
+                          className="badge"
+                          style={
+                            cert.recipientRole === 'Instructor'
+                              ? { background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe', fontWeight: 700, fontSize: '0.75rem', padding: '3px 8px' }
+                              : { background: '#ccfbf1', color: '#0f766e', border: '1px solid #99f6e4', fontWeight: 700, fontSize: '0.75rem', padding: '3px 8px' }
+                          }
+                        >
+                          {cert.recipientRole === 'Instructor' ? 'Instructor' : 'Student'}
+                        </span>
                       </td>
                       <td style={{ fontSize: '0.875rem', fontWeight: 500 }}>{cert.courseTitle}</td>
                       <td style={{ fontSize: '0.825rem', color: '#64748b' }}>
@@ -1842,7 +1860,7 @@ export function AcademyCms() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <label>
-                Student Name
+                Recipient Name
                 <Input
                   required
                   value={certForm.studentName}
@@ -1852,15 +1870,28 @@ export function AcademyCms() {
               </label>
 
               <label>
-                Student Email
-                <Input
-                  type="email"
-                  value={certForm.studentEmail}
-                  onChange={(e) => setCertForm({ ...certForm, studentEmail: e.target.value })}
-                  placeholder="e.g. student@example.com"
-                />
+                Recipient Role / Category
+                <select
+                  className="select"
+                  value={certForm.recipientRole || 'Student'}
+                  onChange={(e) => setCertForm({ ...certForm, recipientRole: e.target.value as 'Student' | 'Instructor' })}
+                  style={{ marginTop: 4, width: '100%' }}
+                >
+                  <option value="Student">Student</option>
+                  <option value="Instructor">Instructor</option>
+                </select>
               </label>
             </div>
+
+            <label>
+              Recipient Email (Optional)
+              <Input
+                type="email"
+                value={certForm.studentEmail}
+                onChange={(e) => setCertForm({ ...certForm, studentEmail: e.target.value })}
+                placeholder="e.g. user@example.com"
+              />
+            </label>
 
             <label>
               Course Title
@@ -1952,7 +1983,7 @@ export function AcademyCms() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <label>
-                Student Name
+                Recipient Name
                 <Input
                   required
                   value={editingCert.studentName}
@@ -1962,15 +1993,28 @@ export function AcademyCms() {
               </label>
 
               <label>
-                Student Email
-                <Input
-                  type="email"
-                  value={editingCert.studentEmail}
-                  onChange={(e) => setEditingCert({ ...editingCert, studentEmail: e.target.value })}
-                  placeholder="e.g. student@example.com"
-                />
+                Recipient Role / Category
+                <select
+                  className="select"
+                  value={editingCert.recipientRole || 'Student'}
+                  onChange={(e) => setEditingCert({ ...editingCert, recipientRole: e.target.value as 'Student' | 'Instructor' })}
+                  style={{ marginTop: 4, width: '100%' }}
+                >
+                  <option value="Student">Student</option>
+                  <option value="Instructor">Instructor</option>
+                </select>
               </label>
             </div>
+
+            <label>
+              Recipient Email (Optional)
+              <Input
+                type="email"
+                value={editingCert.studentEmail}
+                onChange={(e) => setEditingCert({ ...editingCert, studentEmail: e.target.value })}
+                placeholder="e.g. user@example.com"
+              />
+            </label>
 
             <label>
               Course Title

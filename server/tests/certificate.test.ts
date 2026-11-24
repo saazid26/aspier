@@ -34,8 +34,9 @@ describe('Certificate Verification and Serving Integration', () => {
     expect(res.body.certificate).toBeDefined();
     expect(res.body.certificate.credentialId).toBe(dummyCredentialId);
     expect(res.body.certificate.studentName).toBe('Ayesha Rahman');
+    expect(res.body.certificate.recipientRole).toBe('Student');
     expect(res.body.certificate.courseTitle).toContain('Research Paper Writing Course');
-    expect(res.body.certificate.imageUrl).toBe(`/api/certificates/image/${dummyCredentialId}`);
+    expect(res.body.certificate.rawImageUrl).toBe(`/api/certificates/image/${dummyCredentialId}`);
   });
 
   it('supports verify lookup via query parameter (?id=)', async () => {

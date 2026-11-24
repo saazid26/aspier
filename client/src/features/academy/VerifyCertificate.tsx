@@ -22,6 +22,7 @@ interface VerifiedCertificate {
   credentialId: string;
   studentName: string;
   studentEmail?: string;
+  recipientRole?: 'Student' | 'Instructor';
   courseTitle: string;
   issueDate: string;
   certificateImage?: string;
@@ -224,9 +225,18 @@ export function VerifyCertificate() {
                     <CheckCircle2 className="w-7 h-7 text-emerald-300" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs uppercase tracking-wider font-bold text-emerald-300">
                         Verified Authentic Credential
+                      </span>
+                      <span
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border shadow-sm ${
+                          certificate.recipientRole === 'Instructor'
+                            ? 'bg-amber-400 text-slate-950 border-amber-300'
+                            : 'bg-emerald-400 text-slate-950 border-emerald-300'
+                        }`}
+                      >
+                        Issued as: {certificate.recipientRole || 'Student'}
                       </span>
                     </div>
                     <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
@@ -263,7 +273,7 @@ export function VerifyCertificate() {
               {/* Details & PNG Image Body */}
               <div className="p-6 sm:p-8 space-y-8">
                 {/* Information Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
                     <span className="text-xs font-medium text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                       <Award className="w-3.5 h-3.5 text-teal-600" />
@@ -286,11 +296,29 @@ export function VerifyCertificate() {
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
                     <span className="text-xs font-medium text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5 text-teal-600" />
-                      Recipient
+                      Recipient Name
                     </span>
                     <p className="font-semibold text-slate-900 text-sm truncate">
                       {certificate.studentName}
                     </p>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <Award className="w-3.5 h-3.5 text-teal-600" />
+                      Recipient Role
+                    </span>
+                    <div>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold border ${
+                          certificate.recipientRole === 'Instructor'
+                            ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}
+                      >
+                        {certificate.recipientRole || 'Student'}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
@@ -316,6 +344,46 @@ export function VerifyCertificate() {
                       })}
                     </p>
                   </div>
+                </div>
+
+                {/* Clear Institutional Verification Statement right above PNG */}
+                <div
+                  className={`p-4 rounded-xl border flex items-center gap-3.5 ${
+                    certificate.recipientRole === 'Instructor'
+                      ? 'bg-indigo-50/90 border-indigo-200 text-indigo-950'
+                      : 'bg-emerald-50/90 border-emerald-200 text-emerald-950'
+                  }`}
+                >
+                  <div
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                      certificate.recipientRole === 'Instructor'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-emerald-600 text-white shadow-sm'
+                    }`}
+                  >
+                    <Award className="w-5 h-5" />
+                  </div>
+                  <p className="text-sm font-medium leading-relaxed">
+                    Verified Institutional Credential — Officially awarded to{' '}
+                    <strong className="font-bold underline decoration-current/30 underline-offset-2">
+                      {certificate.studentName}
+                    </strong>{' '}
+                    as {certificate.recipientRole === 'Instructor' ? 'an' : 'a'}{' '}
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded text-xs font-extrabold uppercase tracking-wide ${
+                        certificate.recipientRole === 'Instructor'
+                          ? 'bg-indigo-100 text-indigo-900 border border-indigo-300'
+                          : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                      }`}
+                    >
+                      {certificate.recipientRole || 'Student'}
+                    </span>{' '}
+                    for{' '}
+                    <strong className="font-bold underline decoration-current/30 underline-offset-2">
+                      {certificate.courseTitle}
+                    </strong>
+                    .
+                  </p>
                 </div>
 
                 {/* PNG Certificate Viewer with Live Sub-0.2s Image Endpoint */}

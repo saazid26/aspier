@@ -4,6 +4,7 @@ export const issueCertificateSchema = z.object({
   credentialId: z.string().trim().min(3).max(60).transform((val) => val.toUpperCase()),
   studentName: z.string().trim().min(2).max(150),
   studentEmail: z.string().trim().email().optional().or(z.literal('')).transform((v) => (v ? v.toLowerCase() : undefined)),
+  recipientRole: z.enum(['Student', 'Instructor']).default('Student').optional(),
   courseTitle: z.string().trim().min(2).max(200),
   issueDate: z.coerce.date().optional().default(() => new Date()),
   enrollmentId: z.string().optional(),

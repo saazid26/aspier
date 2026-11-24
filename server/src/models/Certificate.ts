@@ -4,6 +4,7 @@ export interface ICertificate extends Document {
   credentialId: string;
   studentName: string;
   studentEmail?: string;
+  recipientRole: 'Student' | 'Instructor';
   studentId?: Schema.Types.ObjectId;
   enrollmentId?: Schema.Types.ObjectId;
   courseTitle: string;
@@ -34,6 +35,12 @@ const certificateSchema = new Schema<ICertificate>(
       trim: true,
       lowercase: true,
       default: undefined
+    },
+    recipientRole: {
+      type: String,
+      enum: ['Student', 'Instructor'],
+      default: 'Student',
+      index: true
     },
     studentId: {
       type: Schema.Types.ObjectId,

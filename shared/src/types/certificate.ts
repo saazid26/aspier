@@ -4,6 +4,7 @@ export interface Certificate {
   credentialId: string;
   studentName: string;
   studentEmail?: string;
+  recipientRole?: 'Student' | 'Instructor';
   studentId?: string;
   enrollmentId?: string;
   courseTitle: string;
@@ -20,6 +21,7 @@ export interface CertificateVerificationResult {
   certificate?: {
     credentialId: string;
     studentName: string;
+    recipientRole?: 'Student' | 'Instructor';
     courseTitle: string;
     issueDate: string;
     imageUrl: string;
