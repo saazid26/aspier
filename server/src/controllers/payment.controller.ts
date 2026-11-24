@@ -24,7 +24,10 @@ export async function submitPayment(req: AuthRequest, res: Response, next: NextF
       title: 'New course payment submission',
       body: `${req.user.name} submitted ${method} payment for ${course.title}; TrxID ${payment.trxId}.`,
       category: 'course-payment',
-      link: '/admin/payments'
+      link: '/admin/payments',
+      applicantName: req.user.name,
+      applicantEmail: req.user.email,
+      referenceId: String(payment.trxId)
     });
     res.status(201).json({ success: true, data: payment });
   } catch (error) { next(error); }

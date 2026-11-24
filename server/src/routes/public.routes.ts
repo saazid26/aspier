@@ -34,12 +34,12 @@ import {
 
 const router = Router();
 
-// Edge & browser caching for high-speed delivery
+// Live CMS Zero-stale cache headers: ensure all public GET endpoints serve instant updates
 router.use((req, res, next) => {
-  if (req.method === 'GET' && !req.path.includes('applications') && !req.path.includes('wings') && !req.path.includes('research')) {
-    res.set('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=120');
-  } else if (req.method === 'GET') {
-    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  if (req.method === 'GET') {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
   }
   next();
 });
@@ -291,7 +291,10 @@ router.post('/contact', validate(contactSchema), async (req, res) => {
       title: 'New website inquiry',
       body: `${message.name} sent a contact message: ${message.subject || message.message.slice(0, 180)}`,
       category: 'inquiry',
-      link: '/admin/resources/messages'
+      link: '/admin/resources/messages',
+      applicantName: message.name,
+      applicantEmail: message.email,
+      referenceId: String(message._id)
     }).catch(() => {});
     return res.status(201).json({ success: true, data: message });
   } catch {

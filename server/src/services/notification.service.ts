@@ -2,7 +2,15 @@ import type { Types } from 'mongoose';
 import Notification from '../models/Notification.js';
 import { encrypt } from '../utils/crypto.js';
 
-export async function notifyAdmins(input: { title: string; body: string; category: string; link: string }) {
+export async function notifyAdmins(input: {
+  title: string;
+  body: string;
+  category: string;
+  link: string;
+  applicantName?: string;
+  applicantEmail?: string;
+  referenceId?: string;
+}) {
   return Notification.create({ ...input, audience: 'admin' });
 }
 

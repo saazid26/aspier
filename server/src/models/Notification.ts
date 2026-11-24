@@ -8,6 +8,9 @@ const schema = new Schema({
   body: { type: String, required: true, maxlength: 5000 },
   category: { type: String, required: true, maxlength: 60 },
   link: { type: String, maxlength: 300 },
+  applicantName: { type: String, trim: true, maxlength: 120 },
+  applicantEmail: { type: String, trim: true, lowercase: true, maxlength: 120 },
+  referenceId: { type: String, trim: true, maxlength: 100 },
   secretPayloadEncrypted: { type: String, select: false },
   readAt: Date
 }, { timestamps: true });

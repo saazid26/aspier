@@ -196,7 +196,10 @@ export async function submitResearchApplication(req: Request, res: Response, nex
         title: 'New Research Mate Application',
         body: `${application.name} applied as Research Mate for "${application.researchTitle}" (${application.wingName}).`,
         category: 'research-mate-application',
-        link: '/admin/research-applications'
+        link: '/admin/research-applications',
+        applicantName: application.name,
+        applicantEmail: application.email,
+        referenceId: String(application.applicationId || application._id)
       });
     } catch {
       // ignore

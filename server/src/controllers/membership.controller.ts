@@ -123,9 +123,12 @@ export async function submitApplicantSignup(req: Request, res: Response, next: N
     });
     await notifyAdmins({
       title: 'New applicant sign-up',
-      body: `${application.name} registered as ${application.role === 'youngScholar' ? 'Young Scholar' : 'Supervisor'} for ${application.wingInterest}.`,
+      body: `${application.name} registered as ${application.role === 'youngScholar' ? 'Young Scholar' : 'Supervisor'} for ${application.wingInterest || application.wing}.`,
       category: 'applicant-signup',
-      link: '/admin/membership-applications'
+      link: '/admin/membership-applications',
+      applicantName: application.name,
+      applicantEmail: application.email,
+      referenceId: String(application._id)
     });
     res.status(201).json({ success: true, data: { status: application.status, createdAt: application.createdAt } });
   } catch (error) {
@@ -261,9 +264,12 @@ export async function submitInitialApplication(req: Request, res: Response, next
     try {
       await notifyAdmins({
         title: 'New membership application',
-        body: `${application.name} applied as ${application.role === 'youngScholar' ? 'Young Scholar' : 'Supervisor'} for ${application.wingInterest}.`,
+        body: `${application.name} applied as ${application.role === 'youngScholar' ? 'Young Scholar' : 'Supervisor'} for ${application.wingInterest || application.wing}.`,
         category: 'initial-application',
-        link: '/admin/membership-applications'
+        link: '/admin/membership-applications',
+        applicantName: application.name,
+        applicantEmail: application.email,
+        referenceId: String(application.id || application._id)
       });
     } catch {
       // ignore
@@ -560,7 +566,10 @@ export async function submitMembershipProfile(req: Request, res: Response, next:
       title: `${roleTitle} profile auto-published to Team`,
       body: `${application.name} submitted their Stage 2 official profile and is now live on the public Team page.`,
       category: 'final-application',
-      link: '/admin/membership-applications'
+      link: '/admin/membership-applications',
+      applicantName: application.name,
+      applicantEmail: application.email,
+      referenceId: String(application._id)
     });
     await notifyMember({
       applicationId: application._id,

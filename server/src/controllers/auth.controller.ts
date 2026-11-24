@@ -34,8 +34,24 @@ export async function register(req: AuthRequest, res: Response, next: NextFuncti
     }
     const errors = passwordStrength(password);
     if (errors.length) throw new HttpError(400, errors.join('. '));
-    if (await User.exists({ email })) throw new HttpError(409, 'Email is already registered');
+    if (await User.exists({ email })) {
+      throw new HttpError(409, 'An account with this email already exists. Please sign in.');
+    }
     const user = await User.create({ name: String(name).trim(), email, passwordHash: await hashPassword(password), role: 'student' });
+    
+    try {
+      await notifyAdmins({
+        title: 'New student registered',
+        body: `${user.name} (${user.email}) registered as a new student.`,
+        category: 'student-registration',
+        link: '/admin/students',
+        applicantName: user.name,
+        applicantEmail: user.email,
+        referenceId: String(user._id)
+      });
+    } catch (notifErr) {
+      console.warn('[auth] notifyAdmins error on registration:', notifErr);
+    }
     
     // Automatically issue authenticated session upon student registration
     const accessToken = signAccessToken(user);

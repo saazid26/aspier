@@ -7,8 +7,10 @@ import morgan from 'morgan';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import hpp from 'hpp';
+import mongoose from 'mongoose';
 import routes from './routes/index.js';
 import { env } from './config/env.js';
+import { connectDatabase } from './config/db.js';
 import { globalLimiter } from './middleware/rateLimit.js';
 import { requireCsrf } from './middleware/csrf.js';
 import { notFound, errorHandler } from './middleware/error.js';
@@ -65,6 +67,17 @@ app.use((req, _res, next) => {
 app.use('/uploads', express.static(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../uploads'), { fallthrough: false }));
 app.use(globalLimiter);
 app.use(requireCsrf);
+app.use(async (_req, _res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await connectDatabase();
+    } catch (err) {
+      console.warn('[app] Background DB connect error:', err instanceof Error ? err.message : err);
+    }
+  }
+  next();
+});
+
 app.get('/sitemap.xml', (req, res, next) => {
   req.url = '/public/sitemap.xml';
   routes(req, res, next);
