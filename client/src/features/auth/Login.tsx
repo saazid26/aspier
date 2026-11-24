@@ -7,6 +7,7 @@ import { useCsrf } from '../../hooks/useCsrf';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { SEO } from '../../components/common/SEO';
+import { useAuth } from './AuthContext';
 import { startAuthentication } from '@simplewebauthn/browser';
 import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
 
@@ -36,6 +37,7 @@ export function Login() {
   const [webAuthnChallenge, setWebAuthnChallenge] = useState<{ token: string; options: PublicKeyCredentialRequestOptionsJSON } | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState('');
+  const { login } = useAuth();
   useCsrf();
   const navigate = useNavigate();
 
@@ -57,7 +59,7 @@ export function Login() {
     try {
       if (mode === 'activate') {
         if (password !== confirmPassword) throw new Error('Passwords do not match');
-        await api.post('/public/membership/activate', { role, activationCode, email, password, confirmPassword });
+        await api.post('/public/membership/activate', { role, activationCode, email: email.trim().toLowerCase(), password, confirmPassword });
         toast.success('Member account activated. Sign in with your Gmail and new password.');
         setMode('login');
         setPassword('');
@@ -68,6 +70,11 @@ export function Login() {
 
       if (setupToken) {
         const response = await api.post('/auth/admin-2fa/verify', { setupToken, code: totpCode });
+        const resData = response.data;
+        const rawUser = resData?.user || resData?.data?.user || resData?.data;
+        const token = resData?.token || resData?.data?.token;
+        const csrfToken = resData?.csrfToken || resData?.data?.csrfToken;
+        if (rawUser) login(rawUser, token, csrfToken);
         setBackupCodes(response.data.data.backupCodes || []);
         setSetupToken('');
         setSetupComplete(true);
@@ -75,14 +82,16 @@ export function Login() {
         return;
       }
 
+      const normalizedEmail = email.trim().toLowerCase();
       const response = await api.post('/auth/login', {
-        email,
+        email: normalizedEmail,
         password,
         role: role === 'learner' ? 'learner' : role,
         totpCode: totpCode || undefined,
         strongKey: strongKey || undefined
       });
-      if (response.data.data.requires2FASetup) {
+
+      if (response.data.data?.requires2FASetup) {
         const token = response.data.data.setupToken as string;
         const setup = await api.post('/auth/admin-2fa/setup', { setupToken: token });
         setSetupToken(token);
@@ -92,20 +101,30 @@ export function Login() {
         toast('Set up an authenticator app before continuing.');
         return;
       }
-      if (response.data.data.requires2FA) {
+
+      if (response.data.data?.requires2FA) {
         if (response.data.data.webAuthn) setWebAuthnChallenge(response.data.data.webAuthn);
         if (requiresOtp) toast.error('The authenticator or recovery code was not accepted.');
         else toast('Enter your six-digit authenticator code or a recovery code.');
         setRequiresOtp(true);
         return;
       }
+
+      const resData = response.data;
+      const rawUser = resData?.user || resData?.data?.user || resData?.data;
+      const token = resData?.token || resData?.data?.token;
+      const csrfToken = resData?.csrfToken || resData?.data?.csrfToken;
+
+      // Synchronously update session in AuthContext BEFORE calling navigate
+      login(rawUser, token, csrfToken);
+
       toast.success('Signed in');
-      const resolvedRole = response.data.data?.role || response.data.data?.user?.role;
+      const resolvedRole = rawUser?.role || resData?.data?.role || resData?.role;
       const defaultTarget = ['admin', 'superadmin'].includes(resolvedRole)
         ? '/admin'
         : '/academy/student';
       const target = redirect || defaultTarget;
-      navigate(target);
+      navigate(target, { replace: true });
     } catch (error: any) {
       const message = getApiErrorMessage(error, 'Login failed');
       setFormError(message);
@@ -123,11 +142,19 @@ export function Login() {
       const credential = await startAuthentication({ optionsJSON: webAuthnChallenge.options });
       const response = await api.post('/auth/webauthn/login/verify', { challengeToken: webAuthnChallenge.token, response: credential });
       toast.success('Biometric verification complete.');
-      const resolvedBioRole = response.data.data?.role || response.data.data?.user?.role;
+      const resData = response.data;
+      const rawUser = resData?.user || resData?.data?.user || resData?.data;
+      const token = resData?.token || resData?.data?.token;
+      const csrfToken = resData?.csrfToken || resData?.data?.csrfToken;
+
+      // Synchronously update session before navigate
+      login(rawUser, token, csrfToken);
+
+      const resolvedBioRole = rawUser?.role || resData?.data?.role;
       const defaultTarget = ['admin', 'superadmin'].includes(resolvedBioRole)
         ? '/admin'
         : '/academy/student';
-      navigate(redirect || defaultTarget);
+      navigate(redirect || defaultTarget, { replace: true });
     } catch (error: any) {
       const message = getApiErrorMessage(error, 'Biometric verification failed');
       setFormError(message);

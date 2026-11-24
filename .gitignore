@@ -10,7 +10,8 @@ dist
 *.tsbuildinfo
 server/uploads
 **/dist
-server/.env
+.temp_mongod
+.temp_mongod/
 
 
 .github

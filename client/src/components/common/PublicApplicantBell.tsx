@@ -1440,35 +1440,39 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
 
       {/* Modern Segmented Pill Tab Switcher */}
       {!isExpanded && (
-        <div className="px-4 pt-3 pb-2.5 sm:px-5 bg-white border-b border-slate-100 shrink-0">
-          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100/90 border border-slate-200/60" role="tablist" aria-label="Applicant access">
+        <div className="w-full px-4 pt-3 pb-2.5 sm:px-5 bg-white border-b border-slate-100 shrink-0 box-border">
+          <div
+            className="w-full grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100/95 border border-slate-200/80 box-border"
+            role="tablist"
+            aria-label="Applicant access"
+          >
             <button
               role="tab"
               aria-selected={mode === 'check'}
-              className={`min-h-[40px] px-2.5 rounded-lg text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`w-full min-w-0 h-10 px-2 sm:px-3 rounded-lg inline-flex items-center justify-center gap-1.5 transition-all duration-200 select-none cursor-pointer whitespace-nowrap text-[12px] sm:text-[13px] leading-none tracking-tight ${
                 mode === 'check'
-                  ? 'bg-white text-teal-800 font-semibold shadow-sm ring-1 ring-slate-200/70'
-                  : 'text-slate-600 hover:text-slate-900 font-medium'
+                  ? 'bg-white text-teal-800 font-semibold shadow-sm ring-1 ring-teal-600/20 border-0'
+                  : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 font-medium border-0 shadow-none'
               }`}
               type="button"
               onClick={() => setMode('check')}
             >
-              <ShieldCheck className="w-4 h-4 shrink-0" />
-              <span>Check Application</span>
+              <ShieldCheck className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${mode === 'check' ? 'text-teal-700' : 'text-slate-500'}`} />
+              <span className="truncate">Check Application</span>
             </button>
             <button
               role="tab"
               aria-selected={mode === 'signup'}
-              className={`min-h-[40px] px-2.5 rounded-lg text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`w-full min-w-0 h-10 px-2 sm:px-3 rounded-lg inline-flex items-center justify-center gap-1.5 transition-all duration-200 select-none cursor-pointer whitespace-nowrap text-[12px] sm:text-[13px] leading-none tracking-tight ${
                 mode === 'signup'
-                  ? 'bg-white text-teal-800 font-semibold shadow-sm ring-1 ring-slate-200/70'
-                  : 'text-slate-600 hover:text-slate-900 font-medium'
+                  ? 'bg-white text-teal-800 font-semibold shadow-sm ring-1 ring-teal-600/20 border-0'
+                  : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 font-medium border-0 shadow-none'
               }`}
               type="button"
               onClick={() => setMode('signup')}
             >
-              <UserPlus className="w-4 h-4 shrink-0" />
-              <span>Sign Up</span>
+              <UserPlus className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${mode === 'signup' ? 'text-teal-700' : 'text-slate-500'}`} />
+              <span className="truncate">Sign Up</span>
             </button>
           </div>
         </div>

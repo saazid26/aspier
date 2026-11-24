@@ -20,11 +20,12 @@ export function MyCourses() {
     queryKey: ['my-courses'],
     queryFn: async () => {
       const response = await api.get('/me/enrollments');
-      return response.data.data;
+      const raw = response.data;
+      return Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
     }
   });
 
-  const enrollments = data || [];
+  const enrollments = Array.isArray(data) ? data : Array.isArray((data as any)?.data) ? (data as any).data : [];
 
   return <>
     <h1>My courses</h1>

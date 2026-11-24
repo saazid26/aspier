@@ -6,6 +6,7 @@ import { api, getApiErrorMessage } from '../../lib/api';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { SEO } from '../../components/common/SEO';
+import { useAuth } from './AuthContext';
 
 export function Register() {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
@@ -14,6 +15,7 @@ export function Register() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const redirect = searchParams.get('redirect');
+  const { login } = useAuth();
   const passwordHint = 'Use 8+ characters with uppercase, lowercase, and a number.';
 
   return (
@@ -74,17 +76,21 @@ export function Register() {
             }
             setBusy(true);
             try {
-              await api.post('/auth/register', {
-                name: form.name,
-                email: form.email,
+              const response = await api.post('/auth/register', {
+                name: form.name.trim(),
+                email: form.email.trim().toLowerCase(),
                 password: form.password,
                 role: 'student'
               });
-              toast.success('Student account created! Please sign in to continue.');
-              const defaultLogin = '/academy/login';
+              const resData = response.data;
+              const rawUser = resData?.user || resData?.data?.user || resData?.data;
+              const token = resData?.token || resData?.data?.token;
+              const csrfToken = resData?.csrfToken || resData?.data?.csrfToken;
+              login(rawUser, token, csrfToken);
+
+              toast.success('Student account created! Welcome to ASPIER Academy.');
               const targetRedirect = redirect || '/academy/student';
-              const loginTarget = `${defaultLogin}?redirect=${encodeURIComponent(targetRedirect)}`;
-              navigate(loginTarget);
+              navigate(targetRedirect, { replace: true });
             } catch (error: any) {
               const msg = getApiErrorMessage(error, 'Registration failed');
               setFormError(msg);

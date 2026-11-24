@@ -24,16 +24,15 @@ export default async function handler(req: Request, res: Response): Promise<void
   try {
     const { app, connectDatabase, ensureSeeded } = await getApp();
 
-    // Await singleton database connection promise so readyState becomes 1
+    // Guarantee database connection and seeded admin on cold starts
     if (connectDatabase) {
       await connectDatabase().catch((err: unknown) => {
         console.warn('[api] connectDatabase error:', err instanceof Error ? err.message : err);
       });
     }
 
-    // Run non-blocking idempotent seed check without blocking concurrent API CRUD requests
     if (ensureSeeded) {
-      ensureSeeded().catch((err: unknown) => {
+      await ensureSeeded().catch((err: unknown) => {
         console.warn('[api] ensureSeeded error:', err instanceof Error ? err.message : err);
       });
     }
@@ -42,6 +41,9 @@ export default async function handler(req: Request, res: Response): Promise<void
     let apiPath = requestUrl.searchParams.get('path');
     if (!apiPath && req.url?.startsWith('/api/')) {
       apiPath = req.url.slice('/api/'.length).split('?')[0];
+    }
+    if (apiPath && !apiPath.startsWith('v1/')) {
+      apiPath = `v1/${apiPath}`;
     }
     if (!apiPath || !apiPath.startsWith('v1/')) {
       res.status(404).json({ success: false, message: 'API route not found' });

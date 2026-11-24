@@ -3,15 +3,48 @@ import { randomBytes } from 'node:crypto';
 import { env } from '../config/env.js';
 import { setCsrfCookie } from '../utils/cookies.js';
 import { HttpError } from './error.js';
+
 export function csrfToken(req: Request, res: Response): void {
   const existing = req.cookies?.csrfToken as string | undefined;
   const token = existing || randomBytes(32).toString('hex');
   setCsrfCookie(res, token);
   res.json({ success: true, data: { csrfToken: token } });
 }
+
+export function isCsrfExempt(req: Request): boolean {
+  const rawPath = req.path || req.originalUrl || req.url || '';
+  const cleanPath = (rawPath.split('?')[0] ?? '').toLowerCase();
+
+  // Exempt pre-login, registration, password recovery and token refresh
+  if (
+    cleanPath.endsWith('/auth/login') ||
+    cleanPath.endsWith('/auth/register') ||
+    cleanPath.endsWith('/auth/forgot-password') ||
+    cleanPath.endsWith('/auth/reset-password') ||
+    cleanPath.endsWith('/auth/refresh') ||
+    cleanPath.includes('/auth/admin-2fa') ||
+    cleanPath.includes('/auth/webauthn/login')
+  ) {
+    return true;
+  }
+
+  // Exempt public applications and membership signup/lookup/recovery endpoints
+  if (
+    cleanPath.includes('/membership/') ||
+    cleanPath.includes('/research-applications') ||
+    cleanPath.includes('/onboarding')
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export function requireCsrf(req: Request, _res: Response, next: NextFunction): void {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
-  if (env.NODE_ENV === 'test' && !req.headers['x-enforce-csrf']) return next();
+  const enforceInTest = Boolean(req.headers['x-enforce-csrf']);
+  if (env.NODE_ENV === 'test' && !enforceInTest) return next();
+  if (!enforceInTest && isCsrfExempt(req)) return next();
   const cookieToken = req.cookies?.csrfToken;
   const headerToken = req.headers['x-csrf-token'];
   if (!cookieToken || !headerToken || cookieToken !== headerToken) return next(new HttpError(403, 'CSRF validation failed'));

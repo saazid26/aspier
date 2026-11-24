@@ -5,7 +5,8 @@ import User from '../models/User.js';
 import { connectDatabase } from '../config/db.js';
 import { hashPassword, verifyPassword, passwordStrength } from '../services/password.service.js';
 import { signAccessToken, issueRefreshSession, rotateRefreshToken } from '../services/token.service.js';
-import { setAuthCookies, clearAuthCookies } from '../utils/cookies.js';
+import { setAuthCookies, setCsrfCookie, clearAuthCookies } from '../utils/cookies.js';
+import { ensureSeeded } from '../utils/seed.js';
 import { sha256 } from '../utils/crypto.js';
 import { HttpError } from '../middleware/error.js';
 import type { AuthRequest } from '../middleware/auth.js';
@@ -24,15 +25,25 @@ function makeBackupCodes() {
 export async function register(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { name, email: rawEmail, password, role: requestedRole } = req.body;
-    const email = String(rawEmail).trim().toLowerCase();
-    if (String(email).trim().toLowerCase() === FIXED_ADMIN_EMAIL) throw new HttpError(403, 'The administrator email is reserved');
+    const email = String(rawEmail || '').trim().toLowerCase();
+    if (email === FIXED_ADMIN_EMAIL || email === 'admin@gmail.com') {
+      throw new HttpError(403, 'The administrator email is reserved');
+    }
     if (requestedRole && requestedRole !== 'student') {
       throw new HttpError(403, 'Public registration is restricted to students only');
     }
     const errors = passwordStrength(password);
     if (errors.length) throw new HttpError(400, errors.join('. '));
     if (await User.exists({ email })) throw new HttpError(409, 'Email is already registered');
-    const user = await User.create({ name, email, passwordHash: await hashPassword(password), role: 'student' });
+    const user = await User.create({ name: String(name).trim(), email, passwordHash: await hashPassword(password), role: 'student' });
+    
+    // Automatically issue authenticated session upon student registration
+    const accessToken = signAccessToken(user);
+    const refreshToken = await issueRefreshSession(String(user._id), { device: req.headers['user-agent'], ip: req.ip });
+    setAuthCookies(res, accessToken, refreshToken);
+    const csrf = (req.cookies?.csrfToken as string) || randomBytes(32).toString('hex');
+    setCsrfCookie(res, csrf);
+
     void recordAudit({
       actor: user,
       action: 'register',
@@ -41,17 +52,42 @@ export async function register(req: AuthRequest, res: Response, next: NextFuncti
       status: 'success',
       req
     });
-    res.status(201).json({ success: true, data: { id: user._id, name: user.name, email: user.email, role: user.role } });
+
+    const sanitizedUser = {
+      _id: user._id,
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    };
+
+    res.status(201).json({
+      success: true,
+      token: accessToken,
+      csrfToken: csrf,
+      user: sanitizedUser,
+      data: {
+        token: accessToken,
+        csrfToken: csrf,
+        user: sanitizedUser,
+        ...sanitizedUser
+      }
+    });
   } catch (error) { next(error); }
 }
+
 export async function login(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    // Reliably guarantee database connection and seeded admin on cold starts
+    await ensureSeeded();
+
     const { email, password, totpCode, strongKey, role: requestedRole } = req.body;
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const isAdminEmail = normalizedEmail === 'admin@gmail.com' || normalizedEmail === 'admin@aspier.org' || normalizedEmail === FIXED_ADMIN_EMAIL;
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const adminEnvEmail = process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.trim().toLowerCase() : '';
+    const isAdminEmail = normalizedEmail === 'admin@gmail.com' || normalizedEmail === 'admin@aspier.org' || normalizedEmail === FIXED_ADMIN_EMAIL || (Boolean(adminEnvEmail) && normalizedEmail === adminEnvEmail);
     const isAdminPassword = password === 'admin123' || (Boolean(env.ADMIN_PASSWORD) && password === env.ADMIN_PASSWORD);
 
-    if (requestedRole === 'admin' && !isAdminEmail) {
+    if (requestedRole && requestedRole.toLowerCase() === 'admin' && !isAdminEmail) {
       throw new HttpError(401, 'Invalid email or password');
     }
     if (['supervisor', 'youngScholar'].includes(requestedRole) && !normalizedEmail.endsWith('@gmail.com')) {
@@ -66,7 +102,7 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
     let dbAdmin: any = null;
     if (isDbConnected && isAdminEmail) {
       try {
-        dbAdmin = await User.findOne({ email: { $in: ['admin@gmail.com', 'admin@aspier.org', FIXED_ADMIN_EMAIL] } }).select('+passwordHash +adminTwoFactorSecretEncrypted +adminStrongKeyHash +otpFailedAttempts +otpLockedUntil');
+        dbAdmin = await User.findOne({ email: { $in: [normalizedEmail, 'admin@gmail.com', 'admin@aspier.org', FIXED_ADMIN_EMAIL] } }).select('+passwordHash +adminTwoFactorSecretEncrypted +adminStrongKeyHash +otpFailedAttempts +otpLockedUntil');
       } catch (err) {
         dbAdmin = null;
       }
@@ -93,11 +129,12 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
 
     // Direct resilient login for primary admin credentials
     if (isAdminEmail && isAdminPassword) {
+      const adminRole = dbAdmin?.role === 'superadmin' ? 'superadmin' : 'admin';
       const adminPayload = {
         _id: dbAdmin ? String(dbAdmin._id) : '6b02acc199295c1e1226ae3e',
         name: dbAdmin?.name || 'ASPIER Administrator',
-        email: 'admin@gmail.com',
-        role: 'superadmin',
+        email: normalizedEmail || 'admin@gmail.com',
+        role: adminRole,
         isActive: true,
         isAdmin2FAEnabled: Boolean(dbAdmin?.isAdmin2FAEnabled)
       };
@@ -106,9 +143,9 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
         try {
           dbAdmin = await User.create({
             name: 'ASPIER Administrator',
-            email: 'admin@gmail.com',
-            passwordHash: await hashPassword('admin123'),
-            role: 'superadmin',
+            email: normalizedEmail || 'admin@gmail.com',
+            passwordHash: await hashPassword(env.ADMIN_PASSWORD || 'admin123'),
+            role: 'admin',
             isActive: true,
             isAdmin2FAEnabled: false
           });
@@ -126,6 +163,17 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
         refreshToken = 'admin-refresh-token';
       }
       setAuthCookies(res, accessToken, refreshToken);
+      const csrf = (req.cookies?.csrfToken as string) || randomBytes(32).toString('hex');
+      setCsrfCookie(res, csrf);
+
+      const sanitizedUser = {
+        _id: adminPayload._id,
+        id: adminPayload._id,
+        name: adminPayload.name,
+        email: adminPayload.email,
+        role: adminPayload.role
+      };
+
       void recordAudit({
         actor: adminPayload,
         action: 'admin_login',
@@ -134,19 +182,17 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
         status: 'success',
         req
       });
+
       return res.json({
         success: true,
+        token: accessToken,
+        csrfToken: csrf,
+        user: sanitizedUser,
         data: {
-          id: adminPayload._id,
-          name: adminPayload.name,
-          email: adminPayload.email,
-          role: adminPayload.role,
-          user: {
-            id: adminPayload._id,
-            name: adminPayload.name,
-            email: adminPayload.email,
-            role: adminPayload.role
-          }
+          token: accessToken,
+          csrfToken: csrf,
+          user: sanitizedUser,
+          ...sanitizedUser
         }
       });
     }
@@ -172,11 +218,15 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
     const isPasswordValid = Boolean(user.passwordHash && (await verifyPassword(password, user.passwordHash)));
     if (!isPasswordValid) throw new HttpError(401, 'Invalid email or password');
     if (!user.isActive) throw new HttpError(403, 'Account is inactive');
+
+    const userRoleLower = String(user.role).toLowerCase();
+    const reqRoleLower = String(requestedRole || '').toLowerCase();
     const roleMatches = !requestedRole
-      || (requestedRole === 'admin' && ['admin', 'superadmin'].includes(user.role))
-      || requestedRole === user.role
-      || (['learner', 'student'].includes(requestedRole) && ['student', 'instructor'].includes(user.role));
+      || (['admin', 'superadmin'].includes(userRoleLower) && (reqRoleLower === 'admin' || reqRoleLower === 'superadmin'))
+      || reqRoleLower === userRoleLower
+      || (['learner', 'student'].includes(reqRoleLower) && ['student', 'instructor'].includes(userRoleLower));
     if (!roleMatches) throw new HttpError(401, 'The selected role does not match this account');
+
     if (adminAccount && user.isAdmin2FAEnabled) {
       if (user.otpLockedUntil && user.otpLockedUntil > new Date()) throw new HttpError(429, 'Authenticator verification is temporarily locked. Try again later.');
       const validCode = Boolean(totpCode && /^\d{6}$/.test(totpCode) && user.adminTwoFactorSecretEncrypted && verifyTotp(totpCode, user.adminTwoFactorSecretEncrypted));
@@ -232,6 +282,17 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
     const accessToken = signAccessToken(user);
     const refreshToken = await issueRefreshSession(String(user._id), { device: req.headers['user-agent'], ip: req.ip });
     setAuthCookies(res, accessToken, refreshToken);
+    const csrf = (req.cookies?.csrfToken as string) || randomBytes(32).toString('hex');
+    setCsrfCookie(res, csrf);
+
+    const sanitizedUser = {
+      _id: user._id,
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    };
+
     void recordAudit({
       actor: user,
       action: 'login',
@@ -240,19 +301,17 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
       status: 'success',
       req
     });
+
     res.json({
       success: true,
+      token: accessToken,
+      csrfToken: csrf,
+      user: sanitizedUser,
       data: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role
-        }
+        token: accessToken,
+        csrfToken: csrf,
+        user: sanitizedUser,
+        ...sanitizedUser
       }
     });
   } catch (error) {
@@ -284,7 +343,29 @@ export async function refresh(req: AuthRequest, res: Response, next: NextFunctio
     const rotated = await rotateRefreshToken(token, { device: req.headers['user-agent'], ip: req.ip });
     const accessToken = signAccessToken(rotated.user);
     setAuthCookies(res, accessToken, rotated.refreshToken);
-    res.json({ success: true, data: { id: rotated.user._id, name: rotated.user.name, email: rotated.user.email, role: rotated.user.role } });
+    const csrf = (req.cookies?.csrfToken as string) || randomBytes(32).toString('hex');
+    setCsrfCookie(res, csrf);
+
+    const sanitizedUser = {
+      _id: rotated.user._id,
+      id: rotated.user._id,
+      name: rotated.user.name,
+      email: rotated.user.email,
+      role: rotated.user.role
+    };
+
+    res.json({
+      success: true,
+      token: accessToken,
+      csrfToken: csrf,
+      user: sanitizedUser,
+      data: {
+        token: accessToken,
+        csrfToken: csrf,
+        user: sanitizedUser,
+        ...sanitizedUser
+      }
+    });
   } catch (error) { next(error instanceof Error ? new HttpError(401, error.message) : error); }
 }
 export async function forgotPassword(req: AuthRequest, res: Response, next: NextFunction) {

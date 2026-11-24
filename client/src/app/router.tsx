@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { useAuth } from '../features/auth/AuthContext';
 import { SEO } from '../components/common/SEO';
 import { PublicLayout } from './layouts/PublicLayout';
 import { AcademyLayout } from './layouts/AcademyLayout';
@@ -68,16 +69,21 @@ const AcademyCms = lazy(() => import('../features/admin/academy/AcademyCms').the
 const SecurityHub = lazy(() => import('../features/admin/security/SecurityHub').then(m => ({ default: m.SecurityHub })));
 const Onboarding = lazy(() => import('../features/auth/Onboarding').then(m => ({ default: m.Onboarding })));
 
-function Guard({children,roles}:{children:ReactNode;roles: string[]}){
-  const [state,setState]=useState<{loading:boolean;role?:string}>({loading:true});
+function Guard({ children, roles }: { children: ReactNode; roles: string[] }) {
+  const { user, loading } = useAuth();
   const location = useLocation();
-  useEffect(()=>{api.get('/auth/me').then(r=>setState({loading:false,role:r.data.data.role})).catch(()=>setState({loading:false}))},[]);
-  if(state.loading)return <main className="container section">Loading...</main>;
-  if(!state.role){
-    const loginPath = (location.pathname.startsWith('/academy') || location.pathname.startsWith('/student')) ? '/academy/login' : '/login';
-    return <Navigate to={`${loginPath}?redirect=${encodeURIComponent(location.pathname)}`} replace/>;
+
+  if (loading) return <main className="container section">Loading...</main>;
+
+  if (!user || !user.role) {
+    const isAcademyOrStudent = location.pathname.startsWith('/academy') || location.pathname.startsWith('/student');
+    const loginPath = isAcademyOrStudent ? '/academy/login' : '/login';
+    return <Navigate to={`${loginPath}?redirect=${encodeURIComponent(location.pathname)}`} replace />;
   }
-  if(!roles.includes(state.role))return <Navigate to="/" replace/>;
+
+  const role = user.role;
+  const userMatches = roles.includes(role) || (roles.includes('admin') && role === 'superadmin') || (roles.includes('superadmin') && role === 'admin');
+  if (!userMatches) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 function Home(){

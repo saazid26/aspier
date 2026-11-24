@@ -70,5 +70,6 @@ app.get('/sitemap.xml', (req, res, next) => {
   routes(req, res, next);
 });
 app.use('/api/v1', routes);
+app.use('/api', routes);
 app.use(notFound);
 app.use(errorHandler);

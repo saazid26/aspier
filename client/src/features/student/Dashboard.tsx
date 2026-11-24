@@ -106,7 +106,8 @@ export function Dashboard() {
     queryKey: ['student-enrollments'],
     queryFn: async () => {
       const response = await api.get('/me/enrollments');
-      return response.data.data;
+      const raw = response.data;
+      return Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
     }
   });
 
@@ -114,12 +115,22 @@ export function Dashboard() {
     queryKey: ['student-classes'],
     queryFn: async () => {
       const response = await api.get('/academy/classes');
-      return response.data.data;
+      const raw = response.data;
+      return Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
     }
   });
 
-  const enrollments = enrollmentsData || [];
-  const allClasses = classesData || [];
+  const enrollments: Enrollment[] = Array.isArray(enrollmentsData)
+    ? enrollmentsData
+    : Array.isArray((enrollmentsData as any)?.data)
+    ? (enrollmentsData as any).data
+    : [];
+
+  const allClasses: ScheduledClass[] = Array.isArray(classesData)
+    ? classesData
+    : Array.isArray((classesData as any)?.data)
+    ? (classesData as any).data
+    : [];
 
   // Active courses count
   const activeCount = enrollments.filter((x) => x.status === 'active').length;

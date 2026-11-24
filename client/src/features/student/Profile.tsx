@@ -107,7 +107,7 @@ export function Profile() {
       const res = await api.post('/auth/profile/avatar', data, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      const photoUrl = res.data.data?.avatarUrl || res.data.data?.url;
+      const photoUrl = res.data?.data?.avatarUrl || res.data?.data?.url || res.data?.avatarUrl || res.data?.url;
       setFormData((prev) => ({ ...prev, avatarUrl: photoUrl }));
       setPreviewAvatar(photoUrl);
       updateMe({ avatar: photoUrl, avatarUrl: photoUrl });
@@ -159,7 +159,7 @@ export function Profile() {
       };
 
       const res = await api.patch('/auth/profile', payload);
-      const updatedUser = res.data.data;
+      const updatedUser = res.data?.data || res.data;
       updateMe(updatedUser);
       setSaveSuccess('Your profile changes have been saved successfully.');
       toast.success('Profile updated successfully!');

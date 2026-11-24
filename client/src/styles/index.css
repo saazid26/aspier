@@ -773,6 +773,24 @@ img,video,iframe,canvas,svg{max-width:100%}
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18) !important;
 }
 
+/* Scoped Notification Bar Tab Switcher Polish */
+.public-applicant-popover [role="tablist"] {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  box-sizing: border-box !important;
+}
+
+.public-applicant-popover [role="tablist"] button {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  box-sizing: border-box !important;
+}
+
+
 
 
 

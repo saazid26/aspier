@@ -495,18 +495,30 @@ export async function seedAcademyData(force = false): Promise<{
 }
 
 export async function seedDatabase(): Promise<void> {
-  const admin = await User.findOne({ email: FIXED_ADMIN_EMAIL });
+  const adminEmail = (process.env.ADMIN_EMAIL || FIXED_ADMIN_EMAIL || 'admin@gmail.com').trim().toLowerCase();
+  const adminPassword = env.ADMIN_PASSWORD || 'admin123';
+  let admin = await User.findOne({ email: { $in: [adminEmail, 'admin@gmail.com', 'admin@aspier.org'] } });
   if (!admin) {
     await User.create({
       name: 'ASPIER Administrator',
-      email: FIXED_ADMIN_EMAIL,
-      passwordHash: await hashPassword(env.ADMIN_PASSWORD || 'admin123'),
-      role: 'superadmin',
+      email: adminEmail,
+      passwordHash: await hashPassword(adminPassword),
+      role: 'admin',
       isActive: true
     });
-  } else if (env.ADMIN_PASSWORD) {
-    admin.passwordHash = await hashPassword(env.ADMIN_PASSWORD);
-    await admin.save();
+  } else {
+    let changed = false;
+    if (!['admin', 'superadmin'].includes(admin.role)) {
+      admin.role = 'admin';
+      changed = true;
+    }
+    if (adminPassword) {
+      admin.passwordHash = await hashPassword(adminPassword);
+      changed = true;
+    }
+    if (changed) {
+      await admin.save();
+    }
   }
   if (!await User.exists({ email: 'student@aspier.org' })) {
     await User.create({ name: 'Demo Student', email: 'student@aspier.org', passwordHash: await hashPassword('Student@1234'), role: 'student', isActive: true });
@@ -627,6 +639,7 @@ export async function ensureSeeded(): Promise<void> {
       await seedDatabase();
     } catch (err) {
       console.warn('[seed] ensureSeeded error:', err instanceof Error ? err.message : err);
+      global._seedPromise = undefined;
     }
   })();
   return global._seedPromise;
