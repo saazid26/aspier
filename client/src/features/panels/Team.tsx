@@ -178,30 +178,42 @@ export function Team() {
               <h2>Meet our Founder</h2>
             </div>
           </div>
-          <article className="card founder-card">
-            <div className="founder-avatar-wrap mx-auto md:mx-0 flex justify-center md:justify-start">
-              <ProfileAvatar name={founder.founderName || 'Md Saazid Bin Saif'} photo={founder.founderPhoto} className="profile-photo founder-profile-photo mx-auto md:mx-0" />
+          <article className="card founder-card flex flex-col md:flex-row items-center md:items-stretch lg:items-center gap-6 md:gap-8 lg:gap-10 p-6 md:p-8 lg:p-10">
+            <div className="founder-avatar-wrap shrink-0 w-44 h-44 sm:w-52 sm:h-52 md:w-[230px] md:h-auto lg:w-[275px] xl:w-[300px] md:aspect-[4/5] md:min-h-[280px] lg:min-h-[330px] mx-auto md:mx-0 flex justify-center">
+              <div className="founder-portrait-frame relative w-full h-full rounded-2xl overflow-hidden border border-emerald-900/15 shadow-md bg-emerald-50/40">
+                <ProfileAvatar
+                  name={founder.founderName || 'Md Saazid Bin Saif'}
+                  photo={founder.founderPhoto}
+                  className="founder-profile-photo w-full h-full"
+                />
+              </div>
             </div>
-            <div className="founder-copy">
+            <div className="founder-copy flex-1 text-center md:text-left flex flex-col items-center md:items-start min-w-0">
               <span className="eyebrow founder-role-badge">Leadership</span>
-              <h3>{founder.founderName || 'Md Saazid Bin Saif'}</h3>
-              <h4>{founder.founderTitle || founder.founderDescription || 'Founder & Executive Director, ASPIER'}</h4>
+              <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-2 mb-1">
+                {founder.founderName || 'Md Saazid Bin Saif'}
+              </h3>
+              <h4 className="text-base sm:text-lg font-semibold text-teal-800 mb-4">
+                {founder.founderTitle || founder.founderDescription || 'Founder & Executive Director, ASPIER'}
+              </h4>
               {founder.founderBio ? (
-                <RichTextContent content={founder.founderBio} className="muted founder-bio" />
+                <RichTextContent content={founder.founderBio} className="muted founder-bio text-left leading-relaxed text-sm sm:text-base text-slate-600 space-y-3" />
               ) : (
-                <p className="muted founder-bio">
+                <p className="muted founder-bio text-left leading-relaxed text-sm sm:text-base text-slate-600">
                   Founder of the Aeronautical, Spatial, Planetary Institute for Environmental Research (ASPIER), advancing collaborative inquiry, open data practices, and research education.
                 </p>
               )}
               {!!founder.founderResearchDomains?.length && (
-                <div className="domain-list">
+                <div className="domain-list mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
                   {founder.founderResearchDomains.map((domain) => (
                     <span className="domain-chip" key={domain}>{domain}</span>
                   ))}
                 </div>
               )}
               {/* Conditional academic and social media profile icons */}
-              <AcademicSocialLinks member={founderLinks} className="founder-social-links" />
+              <div className="mt-5 w-full flex justify-center md:justify-start">
+                <AcademicSocialLinks member={founderLinks} className="founder-social-links" />
+              </div>
             </div>
           </article>
         </div>
