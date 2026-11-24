@@ -526,18 +526,18 @@ export function AcademyCms() {
       recordType: 'student',
       _id: st._id,
       userId: st._id,
-      studentName: st.name || '',
-      studentEmail: st.email || '',
-      studentPhone: st.phone || '',
+      studentName: st.studentName || st.name || '',
+      studentEmail: st.studentEmail || st.email || '',
+      studentPhone: st.studentPhone || st.phone || '',
       university: st.university || '',
-      courseId: '',
-      courseTitle: 'Direct User Account (No Course Yet)',
-      paymentMethod: 'Free / None',
-      paymentStatus: 'Free / Scholarship',
-      trxId: '',
-      feePaid: 0,
-      progressPercent: 0,
-      status: st.isActive !== false ? 'Active' : 'Inactive'
+      courseId: st.courseId || '',
+      courseTitle: st.courseTitle || 'Direct User Account (No Course Yet)',
+      paymentMethod: st.paymentMethod || 'Free / None',
+      paymentStatus: st.paymentStatus || 'Free / Scholarship',
+      trxId: st.trxId || '',
+      feePaid: Number(st.feePaid || 0),
+      progressPercent: Number(st.progressPercent || 0),
+      status: st.status || (st.isActive !== false ? 'Active' : 'Inactive')
     });
     setEnrollmentModalOpen(true);
   };
@@ -2030,7 +2030,7 @@ export function AcademyCms() {
       {enrollmentModalOpen && editingStudentEnrollment && (
         <Modal
           open={enrollmentModalOpen}
-          title={editingStudentEnrollment.recordType === 'enrollment' ? 'Edit Student & Course Enrollment' : 'Edit Direct Student User Account'}
+          title="Edit Student & Enrollment Record"
           onClose={() => setEnrollmentModalOpen(false)}
         >
           <form className="form" onSubmit={handleSaveStudentEnrollment} style={{ marginTop: 12 }}>

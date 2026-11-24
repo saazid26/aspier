@@ -75,16 +75,34 @@ export function AcademyLayout() {
               fetchPriority="high"
             />
             <span
-              className="brand-wordmark brand-wordmark-academy normal-case inline-flex items-center gap-1.5"
+              className="brand-wordmark brand-wordmark-academy normal-case inline-flex items-baseline gap-1.5 leading-none"
               style={{
-                fontFamily: "'Plus Jakarta Sans', 'Outfit', sans-serif",
+                fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif",
                 textTransform: 'none'
               }}
             >
-              <span className="font-bold tracking-[0.04em] text-lg sm:text-xl" style={{ color: '#15803D', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.04em' }}>
+              <span
+                className="word-aspier font-extrabold tracking-[0.04em] text-lg sm:text-[21px] leading-none normal-case"
+                style={{
+                  color: '#15803D',
+                  fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif",
+                  fontWeight: 800,
+                  letterSpacing: '0.04em',
+                  textTransform: 'none'
+                }}
+              >
                 ASPIER
               </span>
-              <span className="word-academy font-semibold tracking-normal text-lg sm:text-xl normal-case" style={{ color: '#168A41', textTransform: 'none', fontWeight: 600, letterSpacing: 'normal' }}>
+              <span
+                className="word-academy font-normal tracking-[0.01em] text-lg sm:text-[21px] leading-none normal-case"
+                style={{
+                  color: '#15803D',
+                  fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif",
+                  fontWeight: 400,
+                  letterSpacing: '0.01em',
+                  textTransform: 'none'
+                }}
+              >
                 Academy
               </span>
             </span>
@@ -181,13 +199,19 @@ export function AcademyLayout() {
                 style={{ width: 38, height: 38, minWidth: 38, minHeight: 38 }}
               />
               <span
-                className="brand-wordmark brand-wordmark-academy normal-case text-xl inline-flex items-center gap-1.5"
-                style={{ fontFamily: "'Plus Jakarta Sans', 'Outfit', sans-serif", textTransform: 'none' }}
+                className="brand-wordmark brand-wordmark-academy normal-case inline-flex items-baseline gap-1.5 leading-none text-lg sm:text-[21px]"
+                style={{ fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif", textTransform: 'none' }}
               >
-                <span className="font-bold tracking-[0.04em]" style={{ color: '#34d399', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.04em' }}>
+                <span
+                  className="word-aspier font-extrabold tracking-[0.04em] leading-none normal-case"
+                  style={{ color: '#34d399', fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif", fontWeight: 800, letterSpacing: '0.04em', textTransform: 'none' }}
+                >
                   ASPIER
                 </span>
-                <span className="word-academy font-semibold tracking-normal normal-case" style={{ color: '#6ee7b7', textTransform: 'none', fontWeight: 600, letterSpacing: 'normal' }}>
+                <span
+                  className="word-academy font-normal tracking-[0.01em] leading-none normal-case"
+                  style={{ color: '#34d399', fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif", fontWeight: 400, letterSpacing: '0.01em', textTransform: 'none' }}
+                >
                   Academy
                 </span>
               </span>
