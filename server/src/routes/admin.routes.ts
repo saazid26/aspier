@@ -70,7 +70,24 @@ router.get('/dashboard', async (_req, res) => {
     if (mongoose.connection.readyState !== 1) {
       return res.json({ success: true, data: { students: 0, activeEnrollments: 0, pendingPayments: 0, wings: 10, research: 3 } });
     }
-    res.json({ success: true, data: { students: await User.countDocuments({ role: 'student' }), activeEnrollments: await Enrollment.countDocuments({ status: 'active' }), pendingPayments: await Payment.countDocuments({ status: 'pending' }), wings: await Wing.countDocuments(), research: await Research.countDocuments() } });
+    const [students, activeEnrollments, pendingEnrollments, pendingPaymentsCount, wings, research] = await Promise.all([
+      User.countDocuments({ role: 'student' }),
+      Enrollment.countDocuments({ status: { $in: ['approved', 'active', 'Approved', 'Active'] } }),
+      Enrollment.countDocuments({ status: { $in: ['pending', 'Pending'] } }),
+      Payment.countDocuments({ status: { $in: ['pending', 'Pending'] } }),
+      Wing.countDocuments(),
+      Research.countDocuments()
+    ]);
+    res.json({
+      success: true,
+      data: {
+        students,
+        activeEnrollments,
+        pendingPayments: Math.max(pendingEnrollments, pendingPaymentsCount),
+        wings,
+        research
+      }
+    });
   } catch {
     res.json({ success: true, data: { students: 0, activeEnrollments: 0, pendingPayments: 0, wings: 10, research: 3 } });
   }

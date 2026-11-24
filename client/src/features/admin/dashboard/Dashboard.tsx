@@ -1,3 +1,40 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../lib/api';
-export function Dashboard(){const {data}=useQuery({queryKey:['admin-dashboard'],queryFn:async()=>{const r=await api.get('/admin/dashboard');return r.data.data}});return <><h1>Platform dashboard</h1><div className="kpis"><div className="card"><div className="kpi">{data?.students||0}</div><p className="muted">Students</p></div><div className="card"><div className="kpi">{data?.activeEnrollments||0}</div><p className="muted">Active enrollments</p></div><div className="card"><div className="kpi">{data?.pendingPayments||0}</div><p className="muted">Pending payments</p></div><div className="card"><div className="kpi">{data?.wings||0}</div><p className="muted">Wings</p></div></div><section className="section"><h2>Recent activity</h2><div className="card">Audit events are available in the Security & Audit section.</div></section></>}
+
+export function Dashboard() {
+  const { data } = useQuery({
+    queryKey: ['admin-dashboard'],
+    queryFn: async () => {
+      const r = await api.get('/admin/dashboard');
+      return r.data.data;
+    }
+  });
+
+  return (
+    <>
+      <h1>Platform dashboard</h1>
+      <div className="kpis">
+        <div className="card">
+          <div className="kpi">{data?.students ?? 0}</div>
+          <p className="muted">Students</p>
+        </div>
+        <div className="card">
+          <div className="kpi">{data?.activeEnrollments ?? 0}</div>
+          <p className="muted">Active enrollments</p>
+        </div>
+        <div className="card">
+          <div className="kpi">{data?.pendingPayments ?? 0}</div>
+          <p className="muted">Pending payments</p>
+        </div>
+        <div className="card">
+          <div className="kpi">{data?.wings ?? 10}</div>
+          <p className="muted">Wings</p>
+        </div>
+      </div>
+      <section className="section">
+        <h2>Recent activity</h2>
+        <div className="card">Audit events are available in the Security & Audit section.</div>
+      </section>
+    </>
+  );
+}

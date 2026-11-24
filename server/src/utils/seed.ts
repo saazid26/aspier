@@ -374,116 +374,24 @@ export async function seedAcademyData(force = false): Promise<{
     }
   }
 
-  // 5. Students & Enrollments
-  const existingEnrollmentsCount = await Enrollment.countDocuments();
-  if (force || existingEnrollmentsCount === 0) {
-    const studentUsersData = [
-      { name: 'Nusrat Jahan', email: 'nusrat.jahan@gmail.com', phone: '01712345678', university: 'University of Dhaka', department: 'Computer Science & Engineering', role: 'student' },
-      { name: 'Tanvir Ahmed', email: 'tanvir.ahmed@gmail.com', phone: '01898765432', university: 'BUET', department: 'Water Resources Engineering', role: 'student' },
-      { name: 'Sumaiya Akter', email: 'sumaiya.akter@gmail.com', phone: '01611223344', university: 'Jahangirnagar University', department: 'Environmental Science', role: 'student' },
-      { name: 'Rakibul Hassan', email: 'rakib.hassan@gmail.com', phone: '01955667788', university: 'University of Chittagong', department: 'Marine Science', role: 'student' },
-      { name: 'Demo Student', email: 'student@aspier.org', phone: '01603012448', university: 'University of Rajshahi', department: 'Applied Physics', role: 'student' }
-    ];
-
-    const studentUsers = [];
-    for (const u of studentUsersData) {
-      let user = await User.findOne({ email: u.email });
-      if (!user) {
-        user = await User.create({
-          ...u,
-          passwordHash: await hashPassword('Student@1234'),
-          isActive: true
-        });
-      }
-      studentUsers.push(user);
-    }
-
-    if (paperWritingCourse && studentUsers.length >= 5) {
-      const pwLessonIds: any[] = [];
-      (paperWritingCourse.modules || []).forEach((m: any) => {
-        (m.lessons || []).forEach((l: any) => {
-          if (l._id) pwLessonIds.push(l._id);
-        });
-      });
-
-      const enrollmentsData = [
-        {
-          user: studentUsers[0],
-          course: paperWritingCourse,
-          status: 'active',
-          completedLessonIds: pwLessonIds.slice(0, 6),
-          progressPercent: 50,
-          payment: { method: 'bKash', senderNumber: '01712345678', trxId: 'BK78912301', amount: paperWritingCourse.price, status: 'approved' }
-        },
-        {
-          user: studentUsers[1],
-          course: paperWritingCourse,
-          status: 'active',
-          completedLessonIds: pwLessonIds.slice(0, 3),
-          progressPercent: 25,
-          payment: { method: 'Nagad', senderNumber: '01898765432', trxId: 'NG54321098', amount: paperWritingCourse.price, status: 'approved' }
-        },
-        {
-          user: studentUsers[2],
-          course: aiCourse || paperWritingCourse,
-          status: 'pending',
-          completedLessonIds: [],
-          progressPercent: 0,
-          payment: { method: 'bKash', senderNumber: '01611223344', trxId: 'BK11223344', amount: (aiCourse || paperWritingCourse).price, status: 'pending' }
-        },
-        {
-          user: studentUsers[3],
-          course: climateCourse || paperWritingCourse,
-          status: 'active',
-          completedLessonIds: pwLessonIds.slice(0, 4),
-          progressPercent: 75,
-          payment: { method: 'Nagad', senderNumber: '01955667788', trxId: 'NG99887766', amount: (climateCourse || paperWritingCourse).price, status: 'approved' }
-        },
-        {
-          user: studentUsers[4],
-          course: paperWritingCourse,
-          status: 'active',
-          completedLessonIds: pwLessonIds,
-          progressPercent: 100,
-          payment: { method: 'bKash', senderNumber: '01603012448', trxId: 'BK10020030', amount: paperWritingCourse.price, status: 'approved' }
-        }
-      ];
-
-      for (const item of enrollmentsData) {
-        if (!item.user || !item.course) continue;
-        const enrollment = await Enrollment.findOneAndUpdate(
-          { userId: item.user._id, courseId: item.course._id },
-          {
-            $set: {
-              status: item.status,
-              completedLessonIds: item.completedLessonIds,
-              progressPercent: item.progressPercent,
-              enrolledAt: new Date(Date.now() - Math.floor(Math.random() * 15 * 86400000))
-            }
-          },
-          { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
-
-        await Payment.findOneAndUpdate(
-          { trxId: item.payment.trxId },
-          {
-            $set: {
-              userId: item.user._id,
-              courseId: item.course._id,
-              enrollmentId: enrollment._id,
-              method: item.payment.method,
-              senderNumber: item.payment.senderNumber,
-              amount: item.payment.amount,
-              status: item.payment.status,
-              submittedAt: enrollment.enrolledAt,
-              reviewedAt: item.payment.status === 'approved' ? enrollment.enrolledAt : undefined
-            }
-          },
-          { upsert: true }
-        );
-      }
-    }
+  // 5. Clean up any dummy students, enrollments, and payments so fresh databases start with 0
+  const dummyStudentEmails = [
+    'nusrat.jahan@gmail.com',
+    'tanvir.ahmed@gmail.com',
+    'sumaiya.akter@gmail.com',
+    'rakib.hassan@gmail.com',
+    'student@aspier.org'
+  ];
+  const dummyStudents = await User.find({ email: { $in: dummyStudentEmails } });
+  const dummyStudentIds = dummyStudents.map((s) => s._id);
+  if (dummyStudentIds.length > 0) {
+    await Enrollment.deleteMany({ userId: { $in: dummyStudentIds } });
+    await Payment.deleteMany({ userId: { $in: dummyStudentIds } });
+    await User.deleteMany({ _id: { $in: dummyStudentIds } });
   }
+  await Payment.deleteMany({
+    trxId: { $in: ['BK78912301', 'NG54321098', 'BK11223344', 'NG99887766', 'BK10020030'] }
+  });
 
   return {
     courses: await Course.countDocuments(),
@@ -520,9 +428,8 @@ export async function seedDatabase(): Promise<void> {
       await admin.save();
     }
   }
-  if (!await User.exists({ email: 'student@aspier.org' })) {
-    await User.create({ name: 'Demo Student', email: 'student@aspier.org', passwordHash: await hashPassword('Student@1234'), role: 'student', isActive: true });
-  }
+  // Safely clean up any dummy student records
+  await User.deleteMany({ email: { $in: ['student@aspier.org', 'nusrat.jahan@gmail.com', 'tanvir.ahmed@gmail.com', 'sumaiya.akter@gmail.com', 'rakib.hassan@gmail.com'] } });
   for (const wing of fallbackWings) {
     const seedWing = {
       name: wing.name,
@@ -637,6 +544,18 @@ export async function ensureSeeded(): Promise<void> {
         return;
       }
       await seedDatabase();
+      // Safely ensure no legacy dummy students, enrollments, or payments remain
+      const dummyEmails = ['student@aspier.org', 'nusrat.jahan@gmail.com', 'tanvir.ahmed@gmail.com', 'sumaiya.akter@gmail.com', 'rakib.hassan@gmail.com'];
+      const dummyUsers = await User.find({ email: { $in: dummyEmails } });
+      const dummyIds = dummyUsers.map(u => u._id);
+      if (dummyIds.length > 0) {
+        await Enrollment.deleteMany({ userId: { $in: dummyIds } });
+        await Payment.deleteMany({ userId: { $in: dummyIds } });
+        await User.deleteMany({ _id: { $in: dummyIds } });
+      }
+      await Payment.deleteMany({
+        trxId: { $in: ['BK78912301', 'NG54321098', 'BK11223344', 'NG99887766', 'BK10020030'] }
+      });
     } catch (err) {
       console.warn('[seed] ensureSeeded error:', err instanceof Error ? err.message : err);
       global._seedPromise = undefined;

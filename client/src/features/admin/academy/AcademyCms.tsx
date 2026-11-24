@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Sparkles, Download, Plus, CheckCircle, Trash2, Edit2 } from 'lucide-react';
+import { Sparkles, Download, Plus, CheckCircle, Trash2, Edit2, Users } from 'lucide-react';
 import { api } from '../../../lib/api';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Button } from '../../../components/ui/Button';
@@ -1041,7 +1041,7 @@ export function AcademyCms() {
                     </td>
                   </tr>
                 ))
-              ) : (
+              ) : students.length > 0 ? (
                 students.map((st: any) => (
                   <tr key={st._id}>
                     <td><strong>{st.name}</strong></td>
@@ -1053,6 +1053,18 @@ export function AcademyCms() {
                     <td><span className="muted">—</span></td>
                   </tr>
                 ))
+              ) : (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                      <Users size={32} style={{ color: '#94a3b8' }} />
+                      <div style={{ fontWeight: 600, color: '#334155' }}>No Student Enrollments Found</div>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                        Enrollment applications and student records will appear here once students register.
+                      </div>
+                    </div>
+                  </td>
+                </tr>
               )}
             </Table>
           </div>
