@@ -6,6 +6,7 @@ import { api } from '../../lib/api';
 import { useCsrf } from '../../hooks/useCsrf';
 import { prefetchRoute } from '../../lib/prefetch';
 import { PublicApplicantBell } from '../../components/common/PublicApplicantBell';
+import { SocialConnectFooter } from '../../components/SocialConnectFooter';
 const links = [
   { to: '/', label: 'Home', end: true },
   { to: '/wings', label: 'Wings' },
@@ -112,6 +113,25 @@ export function PublicLayout() {
       </div>
     </nav>
     <main key={location.pathname}><Outlet/></main>
-    <footer className="footer"><div className="container">{settings?.footerCopyright || <><strong>ASPIER</strong> — Aeronautical, Spatial, Planetary Institute for Environmental Research · © {new Date().getFullYear()}</>}</div></footer>
+    <footer className="footer">
+      <div className="container">
+        <SocialConnectFooter variant="light" showBorder={false} className="mb-6" />
+        <div className="border-t border-slate-200/80 pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <div>
+            {settings?.footerCopyright || (
+              <>
+                <strong>ASPIER</strong> — Aeronautical, Spatial, Planetary Institute for Environmental Research · © {new Date().getFullYear()}
+              </>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-medium">
+            <Link to="/wings" className="hover:text-teal-700 transition">Research Wings</Link>
+            <Link to="/team" className="hover:text-teal-700 transition">Team</Link>
+            <Link to="/academy" className="hover:text-teal-700 transition">Academy</Link>
+            <Link to="/contact" className="hover:text-teal-700 transition">Contact</Link>
+          </div>
+        </div>
+      </div>
+    </footer>
   </div>;
 }
