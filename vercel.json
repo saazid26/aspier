@@ -6,6 +6,7 @@
     { "source": "/sitemap.xml", "destination": "/api/index?path=v1/public/sitemap.xml" },
     { "source": "/robots.txt", "destination": "/api/index?path=v1/public/robots.txt" },
     { "source": "/api/(.*)", "destination": "/api/index?path=$1" },
+    { "source": "/google18d74d32a5c55233.html", "destination": "/google18d74d32a5c55233.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

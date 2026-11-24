@@ -84,6 +84,10 @@ app.get('/robots.txt', (req, res, next) => {
   req.url = '/public/robots.txt';
   routes(req, res, next);
 });
+app.get('/google18d74d32a5c55233.html', (_req, res) => {
+  res.header('Content-Type', 'text/html');
+  res.send('google-site-verification: google18d74d32a5c55233.html');
+});
 app.use('/api/v1', routes);
 app.use('/api', routes);
 app.use(notFound);
