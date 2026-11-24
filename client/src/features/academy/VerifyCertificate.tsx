@@ -24,7 +24,11 @@ interface VerifiedCertificate {
   studentEmail?: string;
   courseTitle: string;
   issueDate: string;
+  certificateImage?: string;
   imageUrl: string;
+  rawImageUrl?: string;
+  absoluteImageUrl?: string;
+  verifyUrl?: string;
   status: string;
   verifiedAt: string;
 }
@@ -53,15 +57,30 @@ export function VerifyCertificate() {
     setCertificate(null);
 
     try {
-      const res = await api.get(`/certificates/verify/${encodeURIComponent(cleanId)}`);
+      // Primary: request with query parameter to guarantee forward slashes in IDs (e.g. 26/11-06) are never split
+      const res = await api.get('/certificates/verify', {
+        params: { id: cleanId }
+      });
       if (res.data?.valid && res.data?.certificate) {
         setCertificate(res.data.certificate);
         // Sync URL param without full page reload
         setSearchParams({ id: cleanId }, { replace: true });
+        return;
       } else {
         setError(res.data?.message || 'Certificate verification failed.');
       }
     } catch (err: any) {
+      // Fallback: try encoded path parameter
+      try {
+        const fallbackRes = await api.get(`/certificates/verify/${encodeURIComponent(cleanId)}`);
+        if (fallbackRes.data?.valid && fallbackRes.data?.certificate) {
+          setCertificate(fallbackRes.data.certificate);
+          setSearchParams({ id: cleanId }, { replace: true });
+          return;
+        }
+      } catch {
+        // preserve original error
+      }
       const msg =
         err?.response?.data?.message ||
         `No verified ASPIER Academy certificate found with Credential ID "${cleanId}". Please check the ID or contact academy administration.`;
@@ -95,9 +114,11 @@ export function VerifyCertificate() {
 
   const handleDownload = () => {
     if (!certificate) return;
+    const downloadSrc = certificate.certificateImage || certificate.imageUrl;
+    const cleanFilename = (certificate.credentialId || 'Certificate').replace(/[/\\?%*:|"<>]/g, '-');
     const link = document.createElement('a');
-    link.href = certificate.imageUrl;
-    link.download = `ASPIER-Certificate-${certificate.credentialId}.png`;
+    link.href = downloadSrc;
+    link.download = `ASPIER-Certificate-${cleanFilename}.png`;
     link.target = '_blank';
     document.body.appendChild(link);
     link.click();
@@ -305,7 +326,7 @@ export function VerifyCertificate() {
                       Official PNG Certificate Preview
                     </h3>
                     <a
-                      href={certificate.imageUrl}
+                      href={certificate.certificateImage || certificate.imageUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 font-medium"
@@ -316,7 +337,7 @@ export function VerifyCertificate() {
 
                   <div className="relative rounded-xl border-2 border-slate-200 bg-slate-900/5 p-2 sm:p-4 overflow-hidden flex items-center justify-center">
                     <img
-                      src={certificate.imageUrl}
+                      src={certificate.certificateImage || certificate.imageUrl}
                       alt={`Certificate for ${certificate.studentName} - ${certificate.courseTitle}`}
                       className="w-full max-h-[600px] object-contain rounded-lg shadow-sm border border-slate-200 bg-white"
                       loading="eager"

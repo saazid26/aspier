@@ -1374,13 +1374,13 @@ export function AcademyCms() {
                     <tr key={cert._id}>
                       <td style={{ width: 80 }}>
                         <a
-                          href={`/api/certificates/image/${cert.credentialId}`}
+                          href={cert.certificateImage || `/api/certificates/image/${encodeURIComponent(cert.credentialId)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Click to view full resolution PNG"
                         >
                           <img
-                            src={`/api/certificates/image/${cert.credentialId}`}
+                            src={cert.certificateImage || `/api/certificates/image/${encodeURIComponent(cert.credentialId)}`}
                             alt={cert.credentialId}
                             style={{ width: 70, height: 48, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f8fafc' }}
                             onError={(e) => {
@@ -1419,7 +1419,7 @@ export function AcademyCms() {
                             Edit
                           </Button>
                           <a
-                            href={`/academy/verify-certificate?id=${cert.credentialId}`}
+                            href={`/academy/verify-certificate?id=${encodeURIComponent(cert.credentialId)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="button button-secondary"
@@ -1430,7 +1430,7 @@ export function AcademyCms() {
                             Verify Link
                           </a>
                           <a
-                            href={`/api/certificates/image/${cert.credentialId}`}
+                            href={cert.certificateImage || `/api/certificates/image/${encodeURIComponent(cert.credentialId)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="button button-secondary"

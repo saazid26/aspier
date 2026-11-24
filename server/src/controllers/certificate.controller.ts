@@ -11,11 +11,29 @@ const imageCache = new Map<string, { buffer: Buffer; contentType: string; cached
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 /**
- * Public Verification Endpoint: GET /api/certificates/verify/:credentialId
+ * Public Verification Endpoint: GET /api/certificates/verify/:credentialId & /verify/*
  */
 export async function verifyCertificate(req: Request, res: Response, next: NextFunction) {
   try {
-    const rawId = req.params.credentialId || (req.query.credentialId as string) || (req.query.id as string) || '';
+    const paramMatch = req.params[0] || (req.params as any).credentialId || (req.params as any).id;
+    const queryMatch = (req.query.credentialId as string) || (req.query.id as string);
+    let rawId = paramMatch || queryMatch || '';
+
+    if (!rawId && req.url) {
+      const match = req.url.match(/\/(?:verify|image)\/([^?]+)/);
+      if (match && match[1]) {
+        rawId = match[1];
+      }
+    }
+
+    if (rawId) {
+      try {
+        rawId = decodeURIComponent(rawId);
+      } catch {
+        // preserve rawId
+      }
+    }
+
     const credentialId = String(rawId).trim().toUpperCase();
 
     if (!credentialId) {
@@ -25,7 +43,14 @@ export async function verifyCertificate(req: Request, res: Response, next: NextF
       });
     }
 
-    const cert = await Certificate.findOne({ credentialId, status: 'issued' });
+    const escaped = credentialId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const cert = await Certificate.findOne({
+      $or: [
+        { credentialId: credentialId },
+        { credentialId: { $regex: new RegExp(`^${escaped}$`, 'i') } }
+      ],
+      status: { $regex: /^issued$/i }
+    });
 
     if (!cert) {
       return res.status(404).json({
@@ -35,9 +60,10 @@ export async function verifyCertificate(req: Request, res: Response, next: NextF
     }
 
     const origin = req.protocol + '://' + req.get('host');
-    const imageUrl = cert.certificateImage?.startsWith('http')
+    const rawImageUrl = `/api/certificates/image/${encodeURIComponent(cert.credentialId)}`;
+    const imageUrl = cert.certificateImage?.startsWith('data:') || cert.certificateImage?.startsWith('http')
       ? cert.certificateImage
-      : `/api/certificates/image/${encodeURIComponent(cert.credentialId)}`;
+      : rawImageUrl;
 
     return res.status(200).json({
       valid: true,
@@ -48,8 +74,11 @@ export async function verifyCertificate(req: Request, res: Response, next: NextF
         studentEmail: cert.studentEmail,
         courseTitle: cert.courseTitle,
         issueDate: cert.issueDate instanceof Date ? cert.issueDate.toISOString() : String(cert.issueDate),
+        certificateImage: cert.certificateImage,
         imageUrl,
-        absoluteImageUrl: cert.certificateImage?.startsWith('http') ? cert.certificateImage : `${origin}${imageUrl}`,
+        rawImageUrl,
+        absoluteImageUrl: cert.certificateImage?.startsWith('http') ? cert.certificateImage : `${origin}${rawImageUrl}`,
+        verifyUrl: `/academy/verify-certificate?id=${encodeURIComponent(cert.credentialId)}`,
         status: cert.status,
         verifiedAt: new Date().toISOString()
       }
@@ -60,12 +89,30 @@ export async function verifyCertificate(req: Request, res: Response, next: NextF
 }
 
 /**
- * Fast Raw PNG Image Serving: GET /api/certificates/image/:credentialId
+ * Fast Raw PNG Image Serving: GET /api/certificates/image/:credentialId & /image/*
  * Serves raw PNG buffer with 1-hour cache header for < 200ms load times.
  */
 export async function serveCertificateImage(req: Request, res: Response, next: NextFunction) {
   try {
-    const rawId = req.params.credentialId || '';
+    const paramMatch = req.params[0] || (req.params as any).credentialId || (req.params as any).id;
+    const queryMatch = (req.query.credentialId as string) || (req.query.id as string);
+    let rawId = paramMatch || queryMatch || '';
+
+    if (!rawId && req.url) {
+      const match = req.url.match(/\/image\/([^?]+)/);
+      if (match && match[1]) {
+        rawId = match[1];
+      }
+    }
+
+    if (rawId) {
+      try {
+        rawId = decodeURIComponent(rawId);
+      } catch {
+        // preserve rawId
+      }
+    }
+
     const credentialId = String(rawId).trim().toUpperCase();
 
     if (!credentialId) {
@@ -81,7 +128,15 @@ export async function serveCertificateImage(req: Request, res: Response, next: N
       return res.end(cached.buffer);
     }
 
-    const cert = await Certificate.findOne({ credentialId, status: 'issued' });
+    const escaped = credentialId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const cert = await Certificate.findOne({
+      $or: [
+        { credentialId: credentialId },
+        { credentialId: { $regex: new RegExp(`^${escaped}$`, 'i') } }
+      ],
+      status: { $regex: /^issued$/i }
+    });
+
     if (!cert || !cert.certificateImage) {
       return res.status(404).send('Certificate image not found or credential unissued');
     }
@@ -108,6 +163,61 @@ export async function serveCertificateImage(req: Request, res: Response, next: N
     }
 
     return res.status(404).send('Unsupported image format');
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Student: GET /api/certificates/my & /api/v1/certificates/my - List student's own issued certificates
+ */
+export async function getMyCertificates(req: any, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?._id;
+    const userEmail = req.user?.email ? String(req.user.email).toLowerCase().trim() : '';
+
+    if (!userId && !userEmail) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const certificates = await Certificate.find({
+      $or: [
+        { studentId: userId },
+        ...(userEmail ? [{ studentEmail: userEmail }] : [])
+      ],
+      status: { $regex: /^issued$/i }
+    })
+      .sort({ issueDate: -1, createdAt: -1 })
+      .lean();
+
+    const origin = req.protocol + '://' + req.get('host');
+
+    const formatted = certificates.map((cert) => {
+      const rawImageUrl = `/api/certificates/image/${encodeURIComponent(cert.credentialId)}`;
+      const imageUrl = cert.certificateImage?.startsWith('data:') || cert.certificateImage?.startsWith('http')
+        ? cert.certificateImage
+        : rawImageUrl;
+
+      return {
+        _id: cert._id,
+        credentialId: cert.credentialId,
+        studentName: cert.studentName,
+        studentEmail: cert.studentEmail,
+        courseTitle: cert.courseTitle,
+        issueDate: cert.issueDate instanceof Date ? cert.issueDate.toISOString() : String(cert.issueDate),
+        certificateImage: cert.certificateImage,
+        imageUrl,
+        rawImageUrl,
+        absoluteImageUrl: cert.certificateImage?.startsWith('http') ? cert.certificateImage : `${origin}${rawImageUrl}`,
+        verifyUrl: `/academy/verify-certificate?id=${encodeURIComponent(cert.credentialId)}`,
+        status: cert.status
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      certificates: formatted
+    });
   } catch (error) {
     next(error);
   }

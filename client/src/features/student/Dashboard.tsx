@@ -7,6 +7,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  Download,
   ExternalLink,
   GraduationCap,
   Lock,
@@ -390,7 +391,7 @@ export function Dashboard() {
                       enr.certificateStatus === 'issued' ? (
                         <div className="ml-auto flex flex-wrap items-center gap-2">
                           <Link
-                            to={`/academy/verify-certificate?id=${enr.credentialId || ''}`}
+                            to={`/academy/verify-certificate?id=${encodeURIComponent(enr.credentialId || '')}`}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-800 hover:bg-teal-700 text-white shadow-sm transition"
                           >
                             <Award size={14} className="text-amber-300" />
@@ -401,7 +402,7 @@ export function Dashboard() {
                             onClick={() => setSelectedCertificateCourse(course)}
                             className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-teal-300 text-teal-800 hover:bg-teal-50 transition"
                           >
-                            View Modal
+                            View Certificate
                           </button>
                         </div>
                       ) : enr.certificateStatus === 'claimed' ? (
@@ -855,6 +856,31 @@ export function Dashboard() {
                 <X size={20} />
               </button>
 
+              {/* If official high-resolution PNG is issued, display it prominently */}
+              {matchedEnrollment?.certificateImage ? (
+                <div className="mb-6 rounded-2xl overflow-hidden border-2 border-teal-200 bg-slate-900/5 p-2 sm:p-4 shadow-sm flex flex-col items-center justify-center">
+                  <div className="flex items-center justify-between w-full mb-3 px-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-teal-800 flex items-center gap-1.5">
+                      <Award size={15} className="text-teal-600" />
+                      Official PNG Certificate
+                    </span>
+                    <a
+                      href={matchedEnrollment.certificateImage}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-teal-700 hover:text-teal-900 inline-flex items-center gap-1 font-semibold"
+                    >
+                      Open Raw Image <ExternalLink size={13} />
+                    </a>
+                  </div>
+                  <img
+                    src={matchedEnrollment.certificateImage}
+                    alt="Official ASPIER Academy Certificate"
+                    className="w-full max-h-[500px] object-contain rounded-lg bg-white border border-slate-200 shadow"
+                  />
+                </div>
+              ) : null}
+
               {/* Certificate Canvas / Inner Frame */}
               <div className="border-2 border-double border-amber-500/40 rounded-2xl p-6 sm:p-8 bg-gradient-to-b from-amber-50/50 via-white to-amber-50/30 relative">
                 {/* ASPIER Crest & Branding */}
@@ -957,6 +983,25 @@ export function Dashboard() {
 
               {/* Modal Actions */}
               <div className="flex flex-wrap items-center justify-center gap-3 mt-6 print:hidden">
+                {matchedEnrollment?.certificateImage && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = matchedEnrollment.certificateImage!;
+                      const cleanId = (matchedEnrollment.credentialId || 'Certificate').replace(/[/\\?%*:|"<>]/g, '-');
+                      link.download = `ASPIER-Certificate-${cleanId}.png`;
+                      link.target = '_blank';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-emerald-700 text-white hover:bg-emerald-600 transition shadow-sm cursor-pointer"
+                  >
+                    <Download size={16} />
+                    Download Official PNG
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handlePrintCertificate}
@@ -967,7 +1012,7 @@ export function Dashboard() {
                 </button>
                 {matchedEnrollment?.credentialId && (
                   <Link
-                    to={`/academy/verify-certificate?id=${matchedEnrollment.credentialId}`}
+                    to={`/academy/verify-certificate?id=${encodeURIComponent(matchedEnrollment.credentialId)}`}
                     className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-amber-600 text-white hover:bg-amber-700 transition shadow-sm"
                   >
                     <ExternalLink size={16} />

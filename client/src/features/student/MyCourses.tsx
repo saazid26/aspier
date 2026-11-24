@@ -67,9 +67,13 @@ export function MyCourses() {
                   <span className="badge badge-green" style={{ fontSize: '0.75rem' }}>
                     Certificate: {x.credentialId}
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: '#148f83', fontWeight: 600 }}>
+                  <Link
+                    to={`/academy/verify-certificate?id=${encodeURIComponent(x.credentialId)}`}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', color: '#148f83', fontWeight: 600, textDecoration: 'none' }}
+                  >
                     Verify Certificate →
-                  </span>
+                  </Link>
                 </div>
               )}
               {x.certificateStatus === 'claimed' && (

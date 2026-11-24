@@ -170,8 +170,8 @@ const claimCertificateHandler = async (req: any, res: any, next: any) => {
           certificateStatus: 'issued',
           certificateIssuedAt: enrollment.certificateIssuedAt,
           certificateImage: enrollment.certificateImage,
-          verifyUrl: `/academy/verify-certificate?id=${enrollment.credentialId}`,
-          imageUrl: `/api/certificates/image/${enrollment.credentialId}`,
+          verifyUrl: `/academy/verify-certificate?id=${encodeURIComponent(enrollment.credentialId)}`,
+          imageUrl: enrollment.certificateImage || `/api/certificates/image/${encodeURIComponent(enrollment.credentialId)}`,
           enrollmentId: enrollment._id
         }
       });
