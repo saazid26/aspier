@@ -148,7 +148,17 @@ export function Team() {
 
   return (
     <>
-      <SEO title="ASPIER Team" description="Meet the ASPIER supervisors and research scholars." />
+      <SEO
+        title="Research Supervisors, Young Scholars & Research Mates | ASPIER"
+        exact
+        description="Meet the multidisciplinary research leadership, university supervisors, young scholars, and research mates driving discovery at ASPIER."
+        keywords="ASPIER team, research supervisors, young scholars, research mates, aerospace researchers, planetary scientists, environmental scientists, ASPIER faculty"
+        canonicalPath="/team"
+        breadcrumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'Team', path: '/team' }
+        ]}
+      />
       <section className="team-hero">
         <div className="container">
           <span className="eyebrow">ASPIER Team</span>

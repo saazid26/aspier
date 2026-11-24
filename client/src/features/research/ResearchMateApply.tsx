@@ -402,7 +402,15 @@ export function ResearchMateApply() {
     <main className="container section py-10 sm:py-16">
       <SEO
         title="Apply as Research Mate | ASPIER Academic Wings"
-        description="Apply to join ongoing and future research projects across ASPIER Academic Wings as a Research Mate. Free initial Stage 1 application."
+        exact
+        description="Apply to join active and emerging research projects across ASPIER's 10 Academic Wings as a Research Mate. Collaborate with leading supervisors and co-author scientific publications."
+        keywords="ASPIER Research Mate, apply research mate, academic wings research, undergraduate researcher, scientific research collaboration"
+        canonicalPath="/wings/apply-research"
+        breadcrumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'Wings', path: '/wings' },
+          { name: 'Apply Research Mate', path: '/wings/apply-research' }
+        ]}
       />
 
       <div className="w-full max-w-3xl mx-auto box-border">

@@ -1,3 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /student/
+Disallow: /academy/student/
+Disallow: /api/
+
 Sitemap: https://aspier.org/sitemap.xml

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
@@ -8,58 +8,67 @@ import { PublicLayout } from './layouts/PublicLayout';
 import { AcademyLayout } from './layouts/AcademyLayout';
 import { StudentLayout } from './layouts/StudentLayout';
 import { AdminLayout } from './layouts/AdminLayout';
+
+// Above-the-fold Homepage components (eagerly bundled for sub-0.2s FCP)
 import { Hero } from '../features/home/Hero';
 import { MissionSection } from '../features/home/MissionSection';
 import { FeaturedResearch } from '../features/home/FeaturedResearch';
 import { Announcements } from '../features/home/Announcements';
 import { WingsGrid } from '../features/wings/WingsGrid';
-import { WingPage } from '../features/wings/WingPage';
-import { ResearchDetail } from '../features/research/ResearchDetail';
-import { ResearchList } from '../features/research/ResearchList';
-import { ResearchMateApply } from '../features/research/ResearchMateApply';
-import { WebAuthnSettings } from '../features/admin/security/WebAuthnSettings';
-import { SupervisorList } from '../features/panels/SupervisorList';
-import { SupervisorProfile } from '../features/panels/SupervisorProfile';
-import { ScholarList } from '../features/panels/ScholarList';
-import { ScholarProfile } from '../features/panels/ScholarProfile';
-import { NewsList } from '../features/news/NewsList';
-import { NewsDetail } from '../features/news/NewsDetail';
-import { ContactForm } from '../features/contact/ContactForm';
-import { JoinForm } from '../features/contact/JoinForm';
-import { MembershipPortal } from '../features/contact/MembershipPortal';
-import { Login } from '../features/auth/Login';
-import { Register } from '../features/auth/Register';
-import { Forgot } from '../features/auth/Forgot';
-import { Reset } from '../features/auth/Reset';
-import { Catalog } from '../features/academy/Catalog';
-import { CourseDetail } from '../features/academy/CourseDetail';
-import { EnrollPayment } from '../features/academy/EnrollPayment';
-import { PaymentStatus } from '../features/academy/PaymentStatus';
-import { Player } from '../features/academy/Player';
-import { ClassSchedule } from '../features/academy/ClassSchedule';
-import { InstructorProfile } from '../features/academy/InstructorProfile';
-import { Dashboard as StudentDashboard } from '../features/student/Dashboard';
-import { MyCourses } from '../features/student/MyCourses';
-import { PaymentHistory } from '../features/student/PaymentHistory';
-import { Profile } from '../features/student/Profile';
 import { TeamPreview } from '../features/panels/TeamPreview';
-const Team = lazy(() => import('../features/panels/Team').then(module => ({ default: module.Team })));
-const AdminDashboard = lazy(() => import('../features/admin/dashboard/Dashboard').then(module => ({ default: module.Dashboard })));
-const ResourcePage = lazy(() => import('../features/admin/ResourcePage').then(module => ({ default: module.ResourcePage })));
-const PaymentQueue = lazy(() => import('../features/admin/payments/PaymentQueue').then(module => ({ default: module.PaymentQueue })));
-const LiveClassManager = lazy(() => import('../features/admin/classes/LiveClassManager').then(module => ({ default: module.LiveClassManager })));
-const RecordingManager = lazy(() => import('../features/admin/classes/RecordingManager').then(module => ({ default: module.RecordingManager })));
-const CurriculumBuilder = lazy(() => import('../features/admin/courses/CurriculumBuilder').then(module => ({ default: module.CurriculumBuilder })));
-const StudentList = lazy(() => import('../features/admin/students/StudentList').then(module => ({ default: module.StudentList })));
-const MessageInbox = lazy(() => import('../features/admin/messages/MessageInbox').then(module => ({ default: module.MessageInbox })));
-const MediaLibrary = lazy(() => import('../features/admin/media/MediaLibrary').then(module => ({ default: module.MediaLibrary })));
-const SiteSettings = lazy(() => import('../features/admin/settings/SiteSettings').then(module => ({ default: module.SiteSettings })));
-const PaymentSettings = lazy(() => import('../features/admin/settings/PaymentSettings').then(module => ({ default: module.PaymentSettings })));
-const Setup2FA = lazy(() => import('../features/admin/security/Setup2FA').then(module => ({ default: module.Setup2FA })));
-const ActiveSessions = lazy(() => import('../features/admin/security/ActiveSessions').then(module => ({ default: module.ActiveSessions })));
-const AuditLog = lazy(() => import('../features/admin/auditlog/AuditLog').then(module => ({ default: module.AuditLog })));
-const MembershipApplications = lazy(() => import('../features/admin/membership/MembershipApplications').then(module => ({ default: module.MembershipApplications })));
-const ResearchApplications = lazy(() => import('../features/admin/research/ResearchApplications').then(module => ({ default: module.ResearchApplications })));
+
+// Code-split secondary public pages
+const WingPage = lazy(() => import('../features/wings/WingPage').then(m => ({ default: m.WingPage })));
+const ResearchDetail = lazy(() => import('../features/research/ResearchDetail').then(m => ({ default: m.ResearchDetail })));
+const ResearchMateApply = lazy(() => import('../features/research/ResearchMateApply').then(m => ({ default: m.ResearchMateApply })));
+const Team = lazy(() => import('../features/panels/Team').then(m => ({ default: m.Team })));
+const SupervisorList = lazy(() => import('../features/panels/SupervisorList').then(m => ({ default: m.SupervisorList })));
+const SupervisorProfile = lazy(() => import('../features/panels/SupervisorProfile').then(m => ({ default: m.SupervisorProfile })));
+const ScholarList = lazy(() => import('../features/panels/ScholarList').then(m => ({ default: m.ScholarList })));
+const ScholarProfile = lazy(() => import('../features/panels/ScholarProfile').then(m => ({ default: m.ScholarProfile })));
+const NewsList = lazy(() => import('../features/news/NewsList').then(m => ({ default: m.NewsList })));
+const NewsDetail = lazy(() => import('../features/news/NewsDetail').then(m => ({ default: m.NewsDetail })));
+const ContactForm = lazy(() => import('../features/contact/ContactForm').then(m => ({ default: m.ContactForm })));
+const JoinForm = lazy(() => import('../features/contact/JoinForm').then(m => ({ default: m.JoinForm })));
+const Login = lazy(() => import('../features/auth/Login').then(m => ({ default: m.Login })));
+const Register = lazy(() => import('../features/auth/Register').then(m => ({ default: m.Register })));
+const Forgot = lazy(() => import('../features/auth/Forgot').then(m => ({ default: m.Forgot })));
+const Reset = lazy(() => import('../features/auth/Reset').then(m => ({ default: m.Reset })));
+const Onboarding = lazy(() => import('../features/auth/Onboarding').then(m => ({ default: m.Onboarding })));
+
+// Code-split Academy pages
+const Catalog = lazy(() => import('../features/academy/Catalog').then(m => ({ default: m.Catalog })));
+const CourseDetail = lazy(() => import('../features/academy/CourseDetail').then(m => ({ default: m.CourseDetail })));
+const EnrollPayment = lazy(() => import('../features/academy/EnrollPayment').then(m => ({ default: m.EnrollPayment })));
+const PaymentStatus = lazy(() => import('../features/academy/PaymentStatus').then(m => ({ default: m.PaymentStatus })));
+const Player = lazy(() => import('../features/academy/Player').then(m => ({ default: m.Player })));
+const ClassSchedule = lazy(() => import('../features/academy/ClassSchedule').then(m => ({ default: m.ClassSchedule })));
+const InstructorProfile = lazy(() => import('../features/academy/InstructorProfile').then(m => ({ default: m.InstructorProfile })));
+
+// Code-split Student Portal pages
+const StudentDashboard = lazy(() => import('../features/student/Dashboard').then(m => ({ default: m.Dashboard })));
+const MyCourses = lazy(() => import('../features/student/MyCourses').then(m => ({ default: m.MyCourses })));
+const PaymentHistory = lazy(() => import('../features/student/PaymentHistory').then(m => ({ default: m.PaymentHistory })));
+const Profile = lazy(() => import('../features/student/Profile').then(m => ({ default: m.Profile })));
+const WebAuthnSettings = lazy(() => import('../features/admin/security/WebAuthnSettings').then(m => ({ default: m.WebAuthnSettings })));
+
+// Code-split Admin pages
+const AdminDashboard = lazy(() => import('../features/admin/dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
+const ResourcePage = lazy(() => import('../features/admin/ResourcePage').then(m => ({ default: m.ResourcePage })));
+const PaymentQueue = lazy(() => import('../features/admin/payments/PaymentQueue').then(m => ({ default: m.PaymentQueue })));
+const LiveClassManager = lazy(() => import('../features/admin/classes/LiveClassManager').then(m => ({ default: m.LiveClassManager })));
+const RecordingManager = lazy(() => import('../features/admin/classes/RecordingManager').then(m => ({ default: m.RecordingManager })));
+const CurriculumBuilder = lazy(() => import('../features/admin/courses/CurriculumBuilder').then(m => ({ default: m.CurriculumBuilder })));
+const StudentList = lazy(() => import('../features/admin/students/StudentList').then(m => ({ default: m.StudentList })));
+const MessageInbox = lazy(() => import('../features/admin/messages/MessageInbox').then(m => ({ default: m.MessageInbox })));
+const MediaLibrary = lazy(() => import('../features/admin/media/MediaLibrary').then(m => ({ default: m.MediaLibrary })));
+const SiteSettings = lazy(() => import('../features/admin/settings/SiteSettings').then(m => ({ default: m.SiteSettings })));
+const PaymentSettings = lazy(() => import('../features/admin/settings/PaymentSettings').then(m => ({ default: m.PaymentSettings })));
+const Setup2FA = lazy(() => import('../features/admin/security/Setup2FA').then(m => ({ default: m.Setup2FA })));
+const ActiveSessions = lazy(() => import('../features/admin/security/ActiveSessions').then(m => ({ default: m.ActiveSessions })));
+const AuditLog = lazy(() => import('../features/admin/auditlog/AuditLog').then(m => ({ default: m.AuditLog })));
+const MembershipApplications = lazy(() => import('../features/admin/membership/MembershipApplications').then(m => ({ default: m.MembershipApplications })));
+const ResearchApplications = lazy(() => import('../features/admin/research/ResearchApplications').then(m => ({ default: m.ResearchApplications })));
 const BrandingSettings = lazy(() => import('../features/admin/branding/BrandingSettings').then(m => ({ default: m.BrandingSettings })));
 const HomeCms = lazy(() => import('../features/admin/home/HomeCms').then(m => ({ default: m.HomeCms })));
 const WingsResearchManager = lazy(() => import('../features/admin/wings-research/WingsResearchManager').then(m => ({ default: m.WingsResearchManager })));
@@ -67,7 +76,6 @@ const TeamManager = lazy(() => import('../features/admin/team/TeamManager').then
 const AnnouncementsCms = lazy(() => import('../features/admin/announcements/AnnouncementsCms').then(m => ({ default: m.AnnouncementsCms })));
 const AcademyCms = lazy(() => import('../features/admin/academy/AcademyCms').then(m => ({ default: m.AcademyCms })));
 const SecurityHub = lazy(() => import('../features/admin/security/SecurityHub').then(m => ({ default: m.SecurityHub })));
-const Onboarding = lazy(() => import('../features/auth/Onboarding').then(m => ({ default: m.Onboarding })));
 
 function Guard({ children, roles }: { children: ReactNode; roles: string[] }) {
   const { user, loading } = useAuth();
@@ -94,9 +102,11 @@ function Home(){
   return (
     <>
       <SEO
-        title={settings?.siteTitle || 'ASPIER'}
+        title={settings?.siteTitle || 'ASPIER | Aeronautical, Spatial, Planetary Institution for Environmental Research'}
         exact
-        description={settings?.seoDescription || 'Aeronautical, Spatial, Planetary Institute for Environmental Research'}
+        description={settings?.seoDescription || 'ASPIER (Aeronautical, Spatial, Planetary Institution for Environmental Research) advances multidisciplinary science across aerospace systems, satellite remote sensing, planetary exploration, and environmental modeling.'}
+        keywords="ASPIER, ASPIER Global, ASPIER Academy, Aeronautical Spatial Planetary Institution for Environmental Research, Aeronautical Engineering Research, Spatial Data and Remote Sensing, Planetary Science Research, Environmental Research Institute, Research Paper Writing Course, Academic Research Wings, Research Mates, Young Scholars"
+        canonicalPath="/"
       />
       <Hero />
       <MissionSection />

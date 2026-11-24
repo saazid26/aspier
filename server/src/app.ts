@@ -82,6 +82,10 @@ app.get('/sitemap.xml', (req, res, next) => {
   req.url = '/public/sitemap.xml';
   routes(req, res, next);
 });
+app.get('/robots.txt', (req, res, next) => {
+  req.url = '/public/robots.txt';
+  routes(req, res, next);
+});
 app.use('/api/v1', routes);
 app.use('/api', routes);
 app.use(notFound);

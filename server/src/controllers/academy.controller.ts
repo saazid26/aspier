@@ -7,10 +7,18 @@ import Instructor from '../models/Instructor.js';
 import { HttpError } from '../middleware/error.js';
 import { encrypt, decrypt } from '../utils/crypto.js';
 import { fallbackCourses } from '../utils/fallbackData.js';
+import { fastCache } from '../utils/fastCache.js';
+
 export async function catalog(_req: AuthRequest, res: Response) {
+  const cached = fastCache.get('academy:catalog');
+  if (cached) return res.json({ success: true, data: cached });
+
   try {
-    const courses = await Course.find({ status: 'published' }).populate('instructorId', 'name title photo').sort({ createdAt: -1 });
-    if (courses && courses.length > 0) return res.json({ success: true, data: courses });
+    const courses = await Course.find({ status: 'published' }).populate('instructorId', 'name title photo').sort({ createdAt: -1 }).lean();
+    if (courses && courses.length > 0) {
+      fastCache.set('academy:catalog', courses, 60);
+      return res.json({ success: true, data: courses });
+    }
   } catch (err) {
     console.warn('[academy/catalog] fallback:', err instanceof Error ? err.message : err);
   }

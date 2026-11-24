@@ -28,9 +28,12 @@ async function connectWithRetry(uri: string, maxAttempts = 3): Promise<typeof mo
       attempt++;
       return await mongoose.connect(uri, {
         bufferCommands: true,
-        serverSelectionTimeoutMS: 8000,
-        maxPoolSize: 10,
-        connectTimeoutMS: 10000
+        serverSelectionTimeoutMS: 5000,
+        maxPoolSize: 20,
+        minPoolSize: 2,
+        socketTimeoutMS: 20000,
+        connectTimeoutMS: 10000,
+        family: 4
       });
     } catch (error) {
       console.warn(`[db] MongoDB connection attempt ${attempt}/${maxAttempts} failed: ${error instanceof Error ? error.message : error}`);

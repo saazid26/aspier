@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { prefetchRoute } from '../../lib/prefetch';
 
 export function AcademyLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -66,7 +67,11 @@ export function AcademyLayout() {
             <img
               className="brand-logo academy-brand-logo"
               src={settings?.academyLogoUrl || '/aspier-academy-logo.png'}
-              alt="ASPIER Academy"
+              alt="ASPIER Academy — Research Training & Technical Courses"
+              width="160"
+              height="48"
+              decoding="async"
+              fetchPriority="high"
             />
           </Link>
 
@@ -92,6 +97,8 @@ export function AcademyLayout() {
               className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
               to="/"
               onClick={() => setMenuOpen(false)}
+              onMouseEnter={() => prefetchRoute('/')}
+              onFocus={() => prefetchRoute('/')}
             >
               ASPIER
             </Link>
@@ -99,13 +106,17 @@ export function AcademyLayout() {
               className={`nav-link ${location.pathname === '/academy' ? 'active' : ''}`}
               to="/academy"
               onClick={() => setMenuOpen(false)}
+              onMouseEnter={() => prefetchRoute('/academy')}
+              onFocus={() => prefetchRoute('/academy')}
             >
-              Home
+              Courses
             </Link>
             <Link
               className={`nav-link ${location.pathname === '/academy/register' ? 'active' : ''}`}
               to="/academy/register"
               onClick={() => setMenuOpen(false)}
+              onMouseEnter={() => prefetchRoute('/academy/register')}
+              onFocus={() => prefetchRoute('/academy/register')}
             >
               Register
             </Link>
@@ -120,6 +131,8 @@ export function AcademyLayout() {
               }`}
               to="/academy/student"
               onClick={() => setMenuOpen(false)}
+              onMouseEnter={() => prefetchRoute('/academy/student')}
+              onFocus={() => prefetchRoute('/academy/student')}
             >
               Student Portal
             </Link>

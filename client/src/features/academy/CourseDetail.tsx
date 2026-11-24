@@ -33,7 +33,26 @@ export function CourseDetail() {
   if (!data) return <main className="container section"><p role="status">Loading course…</p></main>;
 
   return <main className="container section">
-    <SEO title={`${data.title} | ASPIER Academy`} description={data.description || `Course details for ${data.title}`} />
+    <SEO
+      title={`${data.title} | ASPIER Academy`}
+      exact
+      description={data.description ? data.description.replace(/<[^>]+>/g, '').slice(0, 160) : `Learn ${data.title} at ASPIER Academy with hands-on research mentorship and practical scientific training.`}
+      keywords={`${data.title}, ASPIER Academy, scientific course, ${data.level || 'research'} training, research paper writing`}
+      canonicalPath={`/academy/courses/${data.slug || id}`}
+      courseSchema={{
+        name: data.title,
+        description: data.description ? data.description.replace(/<[^>]+>/g, '').slice(0, 300) : data.title,
+        price: data.price,
+        currency: 'BDT',
+        instructor: typeof data.instructorId === 'object' ? data.instructorId?.name : undefined,
+        category: data.level
+      }}
+      breadcrumbs={[
+        { name: 'Home', path: '/' },
+        { name: 'ASPIER Academy', path: '/academy' },
+        { name: data.title, path: `/academy/courses/${data.slug || id}` }
+      ]}
+    />
     <CoverMedia src={data.thumbnail} alt={`${data.title} course banner`} fallbackLabel={data.title} className="research-detail-cover course-detail-cover" fallbackClassName="course-image-placeholder"/>
     {data.sampleData && <span className="badge-sample">Sample course</span>}
     <span className="eyebrow">{data.level} course · ASPIER Academy</span>

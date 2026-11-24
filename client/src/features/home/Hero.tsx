@@ -26,7 +26,15 @@ export function Hero() {
     </div>
     <div className={`hero-art ${showImage ? 'has-image' : ''}`} aria-label={showImage ? 'ASPIER featured image' : 'Abstract ASPIER research artwork'}>
       {showImage
-        ? <img src={imageUrl} alt="ASPIER featured research" decoding="async" onError={() => setImageFailed(true)}/>
+        ? <img
+            src={imageUrl}
+            alt="ASPIER — Aeronautical, Spatial, Planetary Institution for Environmental Research"
+            width="600"
+            height="400"
+            decoding="async"
+            fetchPriority="high"
+            onError={() => setImageFailed(true)}
+          />
         : <div className="hero-artwork" aria-hidden="true"><span className="art-orbit orbit-one"/><span className="art-orbit orbit-two"/><span className="art-sun"/><span className="art-dot dot-one"/><span className="art-dot dot-two"/><span className="art-dot dot-three"/></div>}
     </div>
   </div></section>;

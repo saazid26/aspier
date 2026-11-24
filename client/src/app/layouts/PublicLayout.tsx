@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useCsrf } from '../../hooks/useCsrf';
+import { prefetchRoute } from '../../lib/prefetch';
 import { PublicApplicantBell } from '../../components/common/PublicApplicantBell';
 const links = [
   { to: '/', label: 'Home', end: true },
@@ -56,7 +57,15 @@ export function PublicLayout() {
     <nav className="nav">
       <div className="container nav-inner">
         <Link className="brand" to="/" aria-label="ASPIER home" onClick={() => setMenuOpen(false)}>
-          <img className="brand-logo" src={settings?.aspierLogoUrl || '/aspier-logo.png'} alt="ASPIER"/>
+          <img
+            className="brand-logo"
+            src={settings?.aspierLogoUrl || '/aspier-logo.png'}
+            alt="ASPIER — Aeronautical, Spatial, Planetary Institution for Environmental Research"
+            width="160"
+            height="48"
+            decoding="async"
+            fetchPriority="high"
+          />
         </Link>
         <div className="header-right-controls" ref={navControlsRef}>
           <PublicApplicantBell onOpenChange={(open) => { if (open) setMenuOpen(false); }}/>
@@ -68,9 +77,37 @@ export function PublicLayout() {
           </button>
         </div>
         <div ref={navLinksRef} className={`nav-links ${menuOpen ? 'nav-links-open' : ''}`}>
-          {links.map(({to,label,end}) => <NavLink key={to} to={to} end={end} className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} onClick={() => setMenuOpen(false)}>{label}</NavLink>)}
-          <NavLink to="/join" className={({isActive}) => isActive ? 'nav-link nav-apply active' : 'nav-link nav-apply'} onClick={() => setMenuOpen(false)}>Apply</NavLink>
-          <NavLink to="/login" className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} onClick={() => setMenuOpen(false)}>Login</NavLink>
+          {links.map(({to,label,end}) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'}
+              onClick={() => setMenuOpen(false)}
+              onMouseEnter={() => prefetchRoute(to)}
+              onFocus={() => prefetchRoute(to)}
+            >
+              {label}
+            </NavLink>
+          ))}
+          <NavLink
+            to="/join"
+            className={({isActive}) => isActive ? 'nav-link nav-apply active' : 'nav-link nav-apply'}
+            onClick={() => setMenuOpen(false)}
+            onMouseEnter={() => prefetchRoute('/join')}
+            onFocus={() => prefetchRoute('/join')}
+          >
+            Apply
+          </NavLink>
+          <NavLink
+            to="/login"
+            className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'}
+            onClick={() => setMenuOpen(false)}
+            onMouseEnter={() => prefetchRoute('/login')}
+            onFocus={() => prefetchRoute('/login')}
+          >
+            Login
+          </NavLink>
         </div>
       </div>
     </nav>

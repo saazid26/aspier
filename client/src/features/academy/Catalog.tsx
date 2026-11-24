@@ -45,8 +45,15 @@ export function Catalog() {
   return (
     <main className="container section academy-catalog">
       <SEO
-        title="ASPIER Academy"
-        description="Explore online and live research paper writing courses, AI foundations, and specialized training programs."
+        title="ASPIER Academy | Research Training, Scientific Writing & Technical Courses"
+        exact
+        description="Master scientific paper writing, geospatial data modeling, and machine learning research with ASPIER Academy courses taught by active researchers."
+        keywords="ASPIER Academy, scientific writing course, research training, academic courses, remote sensing training, Python for research, academic writing Bangladesh, scientific research academy"
+        canonicalPath="/academy"
+        breadcrumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'ASPIER Academy', path: '/academy' }
+        ]}
       />
       <header className="academy-catalog-header">
         <span className="eyebrow">ASPIER Academy</span>

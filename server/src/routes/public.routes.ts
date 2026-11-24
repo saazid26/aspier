@@ -21,6 +21,7 @@ import {
   fallbackWings,
   fallbackSettings,
   fallbackNews,
+  fallbackCourses,
   demoResearch,
   demoSupervisors,
   demoScholars,
@@ -31,6 +32,7 @@ import {
   getFallbackSupervisors,
   getFallbackScholars
 } from '../utils/fallbackData.js';
+import { fastCache } from '../utils/fastCache.js';
 
 const router = Router();
 
@@ -44,9 +46,25 @@ router.use((req, res, next) => {
   next();
 });
 
+router.get('/robots.txt', (_req, res) => {
+  const baseUrl = (env.CLIENT_URL || 'https://aspierglobal.vercel.app').replace(/\/$/, '');
+  const content = `User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /student/
+Disallow: /academy/student/
+Disallow: /api/
+
+Sitemap: ${baseUrl}/sitemap.xml
+`;
+  res.header('Content-Type', 'text/plain');
+  res.send(content);
+});
+
 router.get('/sitemap.xml', async (_req, res) => {
   try {
     const baseUrl = (env.CLIENT_URL || 'https://aspierglobal.vercel.app').replace(/\/$/, '');
+    const today = new Date().toISOString().split('T')[0];
     const [wings, research, courses, news, supervisors, scholars] = await Promise.all([
       Wing.find({ isActive: true }).select('slug updatedAt').catch(() => []),
       Research.find({ status: 'published' }).select('slug updatedAt').catch(() => []),
@@ -58,29 +76,51 @@ router.get('/sitemap.xml', async (_req, res) => {
 
     const activeWings = wings.length ? wings : fallbackWings;
     const activeResearch = research.length ? research : demoResearch;
+    const activeCourses = courses.length ? courses : (fallbackCourses as any[]);
     const activeNews = news.length ? news : fallbackNews;
     const activeSupervisors = supervisors.length ? supervisors : demoSupervisors;
     const activeScholars = scholars.length ? scholars : demoScholars;
 
-    const staticUrls = ['', '/team', '/research', '/wings', '/news', '/academy', '/contact', '/join'];
+    const staticUrls = [
+      { path: '', priority: '1.0', changefreq: 'daily' },
+      { path: '/wings', priority: '0.9', changefreq: 'weekly' },
+      { path: '/wings/apply-research', priority: '0.85', changefreq: 'weekly' },
+      { path: '/team', priority: '0.85', changefreq: 'weekly' },
+      { path: '/academy', priority: '0.9', changefreq: 'weekly' },
+      { path: '/academy/classes', priority: '0.8', changefreq: 'weekly' },
+      { path: '/research', priority: '0.8', changefreq: 'weekly' },
+      { path: '/news', priority: '0.75', changefreq: 'weekly' },
+      { path: '/contact', priority: '0.7', changefreq: 'monthly' },
+      { path: '/join', priority: '0.8', changefreq: 'monthly' }
+    ];
+
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
-    for (const path of staticUrls) {
-      xml += `  <url>\n    <loc>${baseUrl}${path}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>${path === '' ? '1.0' : '0.8'}</priority>\n  </url>\n`;
+    for (const item of staticUrls) {
+      xml += `  <url>\n    <loc>${baseUrl}${item.path}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${item.changefreq}</changefreq>\n    <priority>${item.priority}</priority>\n  </url>\n`;
     }
     for (const wing of activeWings) {
-      xml += `  <url>\n    <loc>${baseUrl}/wings/${wing.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+      const mod = (wing as any).updatedAt ? new Date((wing as any).updatedAt).toISOString().split('T')[0] : today;
+      xml += `  <url>\n    <loc>${baseUrl}/wings/${wing.slug}</loc>\n    <lastmod>${mod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n`;
+    }
+    for (const course of activeCourses) {
+      const mod = (course as any).updatedAt ? new Date((course as any).updatedAt).toISOString().split('T')[0] : today;
+      xml += `  <url>\n    <loc>${baseUrl}/academy/courses/${course.slug || (course as any)._id}</loc>\n    <lastmod>${mod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n`;
     }
     for (const r of activeResearch) {
-      xml += `  <url>\n    <loc>${baseUrl}/research/${r.slug}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
+      const mod = (r as any).updatedAt ? new Date((r as any).updatedAt).toISOString().split('T')[0] : today;
+      xml += `  <url>\n    <loc>${baseUrl}/research/${r.slug}</loc>\n    <lastmod>${mod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.75</priority>\n  </url>\n`;
     }
     for (const n of activeNews) {
-      xml += `  <url>\n    <loc>${baseUrl}/news/${n.slug}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
+      const mod = (n as any).updatedAt ? new Date((n as any).updatedAt).toISOString().split('T')[0] : today;
+      xml += `  <url>\n    <loc>${baseUrl}/news/${n.slug}</loc>\n    <lastmod>${mod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
     }
     for (const s of activeSupervisors) {
-      xml += `  <url>\n    <loc>${baseUrl}/supervisors/${s.slug}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
+      const mod = (s as any).updatedAt ? new Date((s as any).updatedAt).toISOString().split('T')[0] : today;
+      xml += `  <url>\n    <loc>${baseUrl}/supervisors/${s.slug}</loc>\n    <lastmod>${mod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
     }
     for (const sc of activeScholars) {
-      xml += `  <url>\n    <loc>${baseUrl}/scholars/${sc.slug}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
+      const mod = (sc as any).updatedAt ? new Date((sc as any).updatedAt).toISOString().split('T')[0] : today;
+      xml += `  <url>\n    <loc>${baseUrl}/scholars/${sc.slug}</loc>\n    <lastmod>${mod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
     }
     xml += '</urlset>';
     res.header('Content-Type', 'application/xml');
@@ -91,9 +131,14 @@ router.get('/sitemap.xml', async (_req, res) => {
 });
 
 router.get('/wings', async (_req, res) => {
+  const cached = fastCache.get('public:wings');
+  if (cached) return res.json({ success: true, data: cached });
   try {
-    const list = await Wing.find({ isActive: true }).sort({ order: 1 });
-    if (list && list.length > 0) return res.json({ success: true, data: list });
+    const list = await Wing.find({ isActive: true }).sort({ order: 1 }).lean();
+    if (list && list.length > 0) {
+      fastCache.set('public:wings', list, 60);
+      return res.json({ success: true, data: list });
+    }
   } catch (err) {
     console.warn('[wings] fallback:', err instanceof Error ? err.message : err);
   }
@@ -203,9 +248,14 @@ router.get('/founding-members/:slug', async (req, res) => {
 });
 
 router.get('/supervisors', async (_req, res) => {
+  const cached = fastCache.get('public:supervisors');
+  if (cached) return res.json({ success: true, data: cached });
   try {
-    const list = await Supervisor.find().sort({ name: 1 });
-    if (list && list.length > 0) return res.json({ success: true, data: list });
+    const list = await Supervisor.find().sort({ name: 1 }).lean();
+    if (list && list.length > 0) {
+      fastCache.set('public:supervisors', list, 60);
+      return res.json({ success: true, data: list });
+    }
   } catch (err) {
     console.warn('[supervisors] fallback:', err instanceof Error ? err.message : err);
   }
@@ -214,7 +264,7 @@ router.get('/supervisors', async (_req, res) => {
 
 router.get('/supervisors/:slug', async (req, res) => {
   try {
-    const item = await Supervisor.findOne({ slug: req.params.slug });
+    const item = await Supervisor.findOne({ slug: req.params.slug }).lean();
     if (item) return res.json({ success: true, data: item });
   } catch (err) {
     console.warn('[supervisors/:slug] fallback:', err instanceof Error ? err.message : err);
@@ -225,9 +275,14 @@ router.get('/supervisors/:slug', async (req, res) => {
 });
 
 router.get('/scholars', async (_req, res) => {
+  const cached = fastCache.get('public:scholars');
+  if (cached) return res.json({ success: true, data: cached });
   try {
-    const list = await Scholar.find().sort({ name: 1 });
-    if (list && list.length > 0) return res.json({ success: true, data: list });
+    const list = await Scholar.find().sort({ name: 1 }).lean();
+    if (list && list.length > 0) {
+      fastCache.set('public:scholars', list, 60);
+      return res.json({ success: true, data: list });
+    }
   } catch (err) {
     console.warn('[scholars] fallback:', err instanceof Error ? err.message : err);
   }
@@ -236,7 +291,7 @@ router.get('/scholars', async (_req, res) => {
 
 router.get('/scholars/:slug', async (req, res) => {
   try {
-    const item = await Scholar.findOne({ slug: req.params.slug });
+    const item = await Scholar.findOne({ slug: req.params.slug }).lean();
     if (item) return res.json({ success: true, data: item });
   } catch (err) {
     console.warn('[scholars/:slug] fallback:', err instanceof Error ? err.message : err);
@@ -247,10 +302,16 @@ router.get('/scholars/:slug', async (req, res) => {
 });
 
 router.get('/news', async (req, res) => {
+  const cacheKey = req.query.announcements === 'true' ? 'public:announcements' : 'public:news';
+  const cached = fastCache.get(cacheKey);
+  if (cached) return res.json({ success: true, data: cached });
   try {
     const filter = req.query.announcements === 'true' ? { isAnnouncement: true } : {};
-    const list = await News.find(filter).sort({ publishedAt: -1 });
-    if (list && list.length > 0) return res.json({ success: true, data: list });
+    const list = await News.find(filter).sort({ publishedAt: -1 }).lean();
+    if (list && list.length > 0) {
+      fastCache.set(cacheKey, list, 60);
+      return res.json({ success: true, data: list });
+    }
   } catch (err) {
     console.warn('[news] fallback:', err instanceof Error ? err.message : err);
   }

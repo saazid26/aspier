@@ -28,7 +28,19 @@ export function WingsGrid() {
   const data = remoteData && remoteData.length > 0 ? remoteData : (staticWings as Wing[]);
 
   return <section className="section">
-    {isWingsPage && <SEO title="Academic Wings" description="Explore the ten specialized interdisciplinary research wings of ASPIER." />}
+    {isWingsPage && (
+      <SEO
+        title="Academic Wings & Research Programs | ASPIER"
+        exact
+        description="Explore ASPIER's 10 Academic Wings spanning aeronautics, planetary science, spatial analytics, climate modeling, and autonomous research initiatives."
+        keywords="ASPIER academic wings, aeronautical engineering wing, planetary science wing, remote sensing wing, climate modeling, environmental research wings"
+        canonicalPath="/wings"
+        breadcrumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'Wings', path: '/wings' }
+        ]}
+      />
+    )}
     <div className="container">
       <div className="section-head"><div><span className="eyebrow">ASPIER Academic Wings</span><h1>Explore disciplines</h1></div></div>
       {isError && data.length === 0 && <p role="alert">Could not load academic wings. Please refresh to try again.</p>}

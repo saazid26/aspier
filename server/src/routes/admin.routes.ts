@@ -59,9 +59,22 @@ import {
 } from '../utils/fallbackData.js';
 import { recordAudit } from '../services/audit.service.js';
 import { seedAcademyData } from '../utils/seed.js';
+import { fastCache } from '../utils/fastCache.js';
 
 const router = Router();
 router.use(authenticate, authorize('admin', 'superadmin'), noStore);
+
+// Instant live cache invalidation on any successful Admin CMS mutation
+router.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    res.on('finish', () => {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        fastCache.clear();
+      }
+    });
+  }
+  next();
+});
 router.get('/dashboard', async (_req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
