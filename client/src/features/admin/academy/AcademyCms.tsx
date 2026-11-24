@@ -252,8 +252,25 @@ export function AcademyCms() {
   const [instructorModalOpen, setInstructorModalOpen] = useState(false);
   const [savingInstructor, setSavingInstructor] = useState(false);
 
-  // Enrollment Modal State
-  const [editingEnrollment, setEditingEnrollment] = useState<any | null>(null);
+  // Student & Enrollment Modal State
+  const [rosterFilter, setRosterFilter] = useState<'all' | 'enrollments' | 'students'>('all');
+  const [editingStudentEnrollment, setEditingStudentEnrollment] = useState<{
+    recordType: 'enrollment' | 'student';
+    _id: string;
+    userId?: string;
+    studentName: string;
+    studentEmail: string;
+    studentPhone?: string;
+    university?: string;
+    courseId: string;
+    courseTitle: string;
+    paymentMethod: string;
+    paymentStatus: string;
+    trxId: string;
+    feePaid: number;
+    progressPercent: number;
+    status: string;
+  } | null>(null);
   const [enrollmentModalOpen, setEnrollmentModalOpen] = useState(false);
   const [savingEnrollment, setSavingEnrollment] = useState(false);
 
@@ -483,21 +500,102 @@ export function AcademyCms() {
     }
   };
 
-  // Save Enrollment
-  const handleSaveEnrollment = async (e: React.FormEvent) => {
+  const handleOpenEditEnrollment = (enr: any) => {
+    setEditingStudentEnrollment({
+      recordType: 'enrollment',
+      _id: enr._id,
+      userId: enr.userId?._id || enr.userId,
+      studentName: enr.studentName || 'Student',
+      studentEmail: enr.studentEmail || '',
+      studentPhone: enr.studentPhone || '',
+      university: enr.university || '',
+      courseId: enr.courseId?._id || enr.courseId || '',
+      courseTitle: enr.courseTitle || 'Course',
+      paymentMethod: enr.paymentMethod || 'bKash',
+      paymentStatus: enr.status === 'Approved' ? 'Paid' : enr.status === 'Pending' ? 'Pending' : 'Free / Scholarship',
+      trxId: enr.trxId === 'N/A' ? '' : enr.trxId || '',
+      feePaid: Number(enr.feePaid || 0),
+      progressPercent: Number(enr.progressPercent || 0),
+      status: enr.status === 'Approved' ? 'Active' : enr.status === 'Pending' ? 'Pending' : enr.status === 'Rejected' ? 'Inactive' : enr.status || 'Active'
+    });
+    setEnrollmentModalOpen(true);
+  };
+
+  const handleOpenEditStudent = (st: any) => {
+    setEditingStudentEnrollment({
+      recordType: 'student',
+      _id: st._id,
+      userId: st._id,
+      studentName: st.name || '',
+      studentEmail: st.email || '',
+      studentPhone: st.phone || '',
+      university: st.university || '',
+      courseId: '',
+      courseTitle: 'Direct User Account / None',
+      paymentMethod: 'Free / None',
+      paymentStatus: 'Free / Scholarship',
+      trxId: '',
+      feePaid: 0,
+      progressPercent: 0,
+      status: st.isActive !== false ? 'Active' : 'Inactive'
+    });
+    setEnrollmentModalOpen(true);
+  };
+
+  // Save Student or Enrollment
+  const handleSaveStudentEnrollment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingStudentEnrollment) return;
+    if (!editingStudentEnrollment.studentName.trim() || !editingStudentEnrollment.studentEmail.trim()) {
+      toast.error('Student name and email are required');
+      return;
+    }
     setSavingEnrollment(true);
     try {
-      await api.patch(`/admin/enrollments/${editingEnrollment._id}`, {
-        status: editingEnrollment.status,
-        progressPercent: Number(editingEnrollment.progressPercent || 0)
-      });
-      toast.success('Enrollment status updated.');
+      if (editingStudentEnrollment.recordType === 'enrollment') {
+        await api.put(`/admin/enrollments/${editingStudentEnrollment._id}`, {
+          studentName: editingStudentEnrollment.studentName,
+          studentEmail: editingStudentEnrollment.studentEmail,
+          studentPhone: editingStudentEnrollment.studentPhone,
+          university: editingStudentEnrollment.university,
+          courseId: editingStudentEnrollment.courseId || undefined,
+          status: editingStudentEnrollment.status,
+          progressPercent: Number(editingStudentEnrollment.progressPercent || 0),
+          paymentMethod: editingStudentEnrollment.paymentMethod,
+          paymentStatus: editingStudentEnrollment.paymentStatus,
+          trxId: editingStudentEnrollment.trxId,
+          feePaid: Number(editingStudentEnrollment.feePaid || 0)
+        });
+        toast.success('Enrollment and student details saved successfully.');
+      } else {
+        await api.put(`/admin/students/${editingStudentEnrollment._id}`, {
+          name: editingStudentEnrollment.studentName,
+          email: editingStudentEnrollment.studentEmail,
+          phone: editingStudentEnrollment.studentPhone,
+          university: editingStudentEnrollment.university,
+          status: editingStudentEnrollment.status,
+          courseId: editingStudentEnrollment.courseId || undefined,
+          progressPercent: Number(editingStudentEnrollment.progressPercent || 0),
+          paymentMethod: editingStudentEnrollment.paymentMethod,
+          paymentStatus: editingStudentEnrollment.paymentStatus,
+          trxId: editingStudentEnrollment.trxId,
+          feePaid: Number(editingStudentEnrollment.feePaid || 0)
+        });
+        toast.success('Student user account saved successfully.');
+      }
       setEnrollmentModalOpen(false);
-      setEditingEnrollment(null);
-      await refetchEnrollments();
+      setEditingStudentEnrollment(null);
+
+      // Instant Roster Sync across React Query keys
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-academy-enrollments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-academy-students'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] }),
+        refetchEnrollments(),
+        refetchStudents()
+      ]);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Could not update enrollment');
+      toast.error(err.response?.data?.message || 'Could not save student changes');
     } finally {
       setSavingEnrollment(false);
     }
@@ -507,20 +605,45 @@ export function AcademyCms() {
     try {
       await api.patch(`/admin/enrollments/${id}`, { status: 'Approved' });
       toast.success('Enrollment approved & activated.');
-      await refetchEnrollments();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-academy-enrollments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] }),
+        refetchEnrollments()
+      ]);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Could not approve enrollment');
     }
   };
 
   const handleDeleteEnrollment = async (id: string, studentName: string) => {
-    if (!window.confirm(`Delete enrollment for "${studentName}"?`)) return;
+    if (!window.confirm(`Are you sure you want to permanently delete the enrollment for "${studentName}"?`)) return;
     try {
       await api.delete(`/admin/enrollments/${id}`);
-      toast.success('Enrollment deleted.');
-      await refetchEnrollments();
+      toast.success('Enrollment deleted successfully.');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-academy-enrollments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] }),
+        refetchEnrollments()
+      ]);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Could not delete enrollment');
+    }
+  };
+
+  const handleDeleteStudent = async (id: string, studentName: string, email: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete student account "${studentName}" (${email}) and all linked records? This action cannot be undone.`)) return;
+    try {
+      await api.delete(`/admin/students/${id}`);
+      toast.success(`Student user "${studentName}" deleted permanently.`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-academy-students'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-academy-enrollments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] }),
+        refetchStudents(),
+        refetchEnrollments()
+      ]);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Could not delete student account');
     }
   };
 
@@ -539,7 +662,21 @@ export function AcademyCms() {
         enr.status || 'Approved',
         `${enr.progressPercent || 0}%`,
         enr.enrolledAt ? new Date(enr.enrolledAt).toLocaleDateString() : ''
-      ])
+      ]),
+      ...students
+        .filter((st: any) => !enrollments.some((enr: any) => String(enr.userId?._id || enr.userId) === String(st._id)))
+        .map((st: any) => [
+          st.name || 'Student',
+          st.email || '',
+          st.phone || '',
+          'Direct User Account',
+          '—',
+          '—',
+          0,
+          st.isActive !== false ? 'Active' : 'Suspended',
+          '0%',
+          st.createdAt ? new Date(st.createdAt).toLocaleDateString() : ''
+        ])
     ];
     const csvContent = 'data:text/csv;charset=utf-8,' + rows.map((e) => e.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
     const encodedUri = encodeURI(csvContent);
@@ -1123,139 +1260,240 @@ export function AcademyCms() {
       )}
 
       {/* Tab 5: Students & Enrollments */}
-      {activeTab === 'Students & Enrollments' && (
-        <div style={{ marginTop: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-            <div>
-              <p className="muted" style={{ margin: 0 }}>
-                Active Enrollments: <strong>{enrollments.length}</strong> | Total Registered Student Users: <strong>{students.length}</strong>
-              </p>
-            </div>
-            <Button variant="secondary" onClick={exportStudentsCsv} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Download size={15} />
-              Export Students Roster (CSV)
-            </Button>
-          </div>
+      {activeTab === 'Students & Enrollments' && (() => {
+        const enrolledUserIds = new Set(enrollments.map((e: any) => String(e.userId?._id || e.userId || '')));
+        const directStudents = students.filter((s: any) => !enrolledUserIds.has(String(s._id)));
 
-          <div className="table-responsive-wrapper" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', minWidth: 0, width: '100%', borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff' }}>
-            <Table headers={['Student Name', 'Email', 'Course Enrolled', 'Payment Info', 'Progress', 'Status', 'Actions']}>
-              {enrollments.length > 0 ? (
-                enrollments.map((enr: any) => (
-                  <tr key={enr._id}>
-                    <td>
-                      <strong style={{ color: '#0f172a' }}>{enr.studentName || 'Student'}</strong>
-                      {enr.university && (
-                        <div style={{ fontSize: '0.775rem', color: '#64748b' }}>{enr.university}</div>
-                      )}
-                    </td>
-                    <td>
-                      <a href={`mailto:${enr.studentEmail}`} style={{ color: '#0d9488', fontSize: '0.85rem' }}>
-                        {enr.studentEmail}
-                      </a>
-                    </td>
-                    <td>
-                      <strong style={{ fontSize: '0.875rem' }}>{enr.courseTitle}</strong>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '0.825rem' }}>
-                        <span style={{ fontWeight: 600, color: '#0f766e' }}>{enr.paymentMethod}</span> • ৳{enr.feePaid} BDT
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', fontFamily: 'monospace' }}>
-                        TrxID: {enr.trxId}
-                      </div>
-                    </td>
-                    <td style={{ minWidth: 140 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ flex: 1, height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
-                          <div
-                            style={{
-                              width: `${Math.min(100, Math.max(0, enr.progressPercent || 0))}%`,
-                              height: '100%',
-                              background: (enr.progressPercent || 0) === 100 ? '#10b981' : '#0d9488',
-                              borderRadius: 4
-                            }}
-                          />
-                        </div>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, minWidth: 36, textAlign: 'right' }}>
-                          {enr.progressPercent || 0}%
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <Badge variant={enr.status === 'Approved' ? 'green' : enr.status === 'Pending' ? 'amber' : 'gray'}>
-                        {enr.status}
-                      </Badge>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        {enr.status === 'Pending' && (
+        const displayList = rosterFilter === 'enrollments'
+          ? enrollments.map((e: any) => ({ ...e, recordType: 'enrollment' }))
+          : rosterFilter === 'students'
+          ? students.map((s: any) => ({
+              _id: s._id,
+              recordType: 'student',
+              studentName: s.name,
+              studentEmail: s.email,
+              studentPhone: s.phone || '',
+              university: s.university || '',
+              courseTitle: 'Direct User Account',
+              courseId: '',
+              paymentMethod: '—',
+              trxId: '—',
+              feePaid: 0,
+              progressPercent: 0,
+              status: s.isActive !== false ? 'Active' : 'Inactive',
+              rawStatus: s.isActive !== false ? 'active' : 'inactive',
+              isActive: s.isActive !== false
+            }))
+          : [
+              ...enrollments.map((e: any) => ({ ...e, recordType: 'enrollment' })),
+              ...directStudents.map((s: any) => ({
+                _id: s._id,
+                recordType: 'student',
+                studentName: s.name,
+                studentEmail: s.email,
+                studentPhone: s.phone || '',
+                university: s.university || '',
+                courseTitle: 'Direct User Account',
+                courseId: '',
+                paymentMethod: '—',
+                trxId: '—',
+                feePaid: 0,
+                progressPercent: 0,
+                status: s.isActive !== false ? 'Active' : 'Inactive',
+                rawStatus: s.isActive !== false ? 'active' : 'inactive',
+                isActive: s.isActive !== false
+              }))
+            ];
+
+        return (
+          <div style={{ marginTop: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                <p className="muted" style={{ margin: 0, fontSize: '0.875rem' }}>
+                  Active Enrollments: <strong>{enrollments.length}</strong> | Total Registered Student Users: <strong>{students.length}</strong>
+                </p>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    type="button"
+                    onClick={() => setRosterFilter('all')}
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: '0.775rem',
+                      fontWeight: 600,
+                      borderRadius: 6,
+                      border: '1px solid',
+                      borderColor: rosterFilter === 'all' ? '#0f766e' : '#cbd5e1',
+                      background: rosterFilter === 'all' ? '#0f766e' : '#f8fafc',
+                      color: rosterFilter === 'all' ? '#fff' : '#475569',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    All ({enrollments.length + directStudents.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRosterFilter('enrollments')}
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: '0.775rem',
+                      fontWeight: 600,
+                      borderRadius: 6,
+                      border: '1px solid',
+                      borderColor: rosterFilter === 'enrollments' ? '#0f766e' : '#cbd5e1',
+                      background: rosterFilter === 'enrollments' ? '#0f766e' : '#f8fafc',
+                      color: rosterFilter === 'enrollments' ? '#fff' : '#475569',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Course Enrollments ({enrollments.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRosterFilter('students')}
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: '0.775rem',
+                      fontWeight: 600,
+                      borderRadius: 6,
+                      border: '1px solid',
+                      borderColor: rosterFilter === 'students' ? '#0f766e' : '#cbd5e1',
+                      background: rosterFilter === 'students' ? '#0f766e' : '#f8fafc',
+                      color: rosterFilter === 'students' ? '#fff' : '#475569',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Direct Student Accounts ({students.length})
+                  </button>
+                </div>
+              </div>
+
+              <Button variant="secondary" onClick={exportStudentsCsv} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Download size={15} />
+                Export Students Roster (CSV)
+              </Button>
+            </div>
+
+            <div className="table-responsive-wrapper" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', minWidth: 0, width: '100%', borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff' }}>
+              <Table headers={['Student Name', 'Email', 'Course Enrolled', 'Payment Info', 'Progress', 'Status', 'Actions']}>
+                {displayList.length > 0 ? (
+                  displayList.map((row: any) => (
+                    <tr key={`${row.recordType}-${row._id}`}>
+                      <td>
+                        <strong style={{ color: '#0f172a' }}>{row.studentName || 'Student'}</strong>
+                        {row.recordType === 'student' && (
+                          <span style={{ fontSize: '0.7rem', color: '#0369a1', background: '#e0f2fe', padding: '1px 6px', borderRadius: 4, marginLeft: 6, fontWeight: 600 }}>
+                            Direct Account
+                          </span>
+                        )}
+                        {row.university && (
+                          <div style={{ fontSize: '0.775rem', color: '#64748b' }}>{row.university}</div>
+                        )}
+                      </td>
+                      <td>
+                        <a href={`mailto:${row.studentEmail}`} style={{ color: '#0d9488', fontSize: '0.85rem' }}>
+                          {row.studentEmail}
+                        </a>
+                        {row.studentPhone && (
+                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{row.studentPhone}</div>
+                        )}
+                      </td>
+                      <td>
+                        {row.recordType === 'enrollment' ? (
+                          <strong style={{ fontSize: '0.875rem', color: '#0f172a' }}>{row.courseTitle}</strong>
+                        ) : (
+                          <Badge variant="gray">Direct User Account</Badge>
+                        )}
+                      </td>
+                      <td>
+                        {row.recordType === 'enrollment' ? (
+                          <div>
+                            <div style={{ fontSize: '0.825rem' }}>
+                              <span style={{ fontWeight: 600, color: '#0f766e' }}>{row.paymentMethod}</span> • ৳{row.feePaid} BDT
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontFamily: 'monospace' }}>
+                              TrxID: {row.trxId}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="muted" style={{ fontSize: '0.825rem' }}>No Course Enrolled</span>
+                        )}
+                      </td>
+                      <td style={{ minWidth: 140 }}>
+                        {row.recordType === 'enrollment' ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ flex: 1, height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                              <div
+                                style={{
+                                  width: `${Math.min(100, Math.max(0, row.progressPercent || 0))}%`,
+                                  height: '100%',
+                                  background: (row.progressPercent || 0) === 100 ? '#10b981' : '#0d9488',
+                                  borderRadius: 4
+                                }}
+                              />
+                            </div>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, minWidth: 36, textAlign: 'right' }}>
+                              {row.progressPercent || 0}%
+                            </span>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>0%</span>
+                        )}
+                      </td>
+                      <td>
+                        <Badge variant={['Approved', 'Active', 'active'].includes(row.status) ? 'green' : ['Pending', 'pending'].includes(row.status) ? 'amber' : 'gray'}>
+                          {row.status}
+                        </Badge>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          {row.status === 'Pending' && row.recordType === 'enrollment' && (
+                            <Button
+                              variant="secondary"
+                              style={{ padding: '5px 10px', fontSize: '0.775rem', color: '#16a34a', borderColor: '#86efac', background: '#f0fdf4', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                              onClick={() => handleQuickApproveEnrollment(row._id)}
+                            >
+                              <CheckCircle size={13} />
+                              Approve
+                            </Button>
+                          )}
                           <Button
                             variant="secondary"
-                            style={{ padding: '5px 10px', fontSize: '0.775rem', color: '#16a34a', borderColor: '#86efac', background: '#f0fdf4', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                            onClick={() => handleQuickApproveEnrollment(enr._id)}
+                            style={{ padding: '5px 10px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            onClick={() => row.recordType === 'enrollment' ? handleOpenEditEnrollment(row) : handleOpenEditStudent(row)}
                           >
-                            <CheckCircle size={13} />
-                            Approve
+                            <Edit2 size={13} />
+                            Edit
                           </Button>
-                        )}
-                        <Button
-                          variant="secondary"
-                          style={{ padding: '5px 10px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                          onClick={() => {
-                            setEditingEnrollment({
-                              _id: enr._id,
-                              studentName: enr.studentName,
-                              courseTitle: enr.courseTitle,
-                              status: enr.status,
-                              progressPercent: enr.progressPercent || 0
-                            });
-                            setEnrollmentModalOpen(true);
-                          }}
-                        >
-                          <Edit2 size={13} />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="danger"
-                          style={{ padding: '5px 10px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                          onClick={() => handleDeleteEnrollment(enr._id, enr.studentName || 'Student')}
-                        >
-                          <Trash2 size={13} />
-                          Delete
-                        </Button>
+                          <Button
+                            variant="danger"
+                            style={{ padding: '5px 10px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            onClick={() => row.recordType === 'enrollment' ? handleDeleteEnrollment(row._id, row.studentName || 'Student') : handleDeleteStudent(row._id, row.studentName || 'Student', row.studentEmail)}
+                          >
+                            <Trash2 size={13} />
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                        <Users size={32} style={{ color: '#94a3b8' }} />
+                        <div style={{ fontWeight: 600, color: '#334155' }}>No Student Records Found</div>
+                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                          Enrollment applications and student user records will appear here once registered.
+                        </div>
                       </div>
                     </td>
                   </tr>
-                ))
-              ) : students.length > 0 ? (
-                students.map((st: any) => (
-                  <tr key={st._id}>
-                    <td><strong>{st.name}</strong></td>
-                    <td><a href={`mailto:${st.email}`}>{st.email}</a></td>
-                    <td><span className="muted">Direct User Account</span></td>
-                    <td><span className="muted">—</span></td>
-                    <td>0%</td>
-                    <td><Badge variant={st.isActive !== false ? 'green' : 'amber'}>{st.isActive !== false ? 'Active' : 'Suspended'}</Badge></td>
-                    <td><span className="muted">—</span></td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                      <Users size={32} style={{ color: '#94a3b8' }} />
-                      <div style={{ fontWeight: 600, color: '#334155' }}>No Student Enrollments Found</div>
-                      <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                        Enrollment applications and student records will appear here once students register.
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </Table>
+                )}
+              </Table>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Tab 6: Certificates & Verification */}
       {activeTab === 'Certificates & Verification' && (
@@ -1787,43 +2025,172 @@ export function AcademyCms() {
         </Modal>
       )}
 
-      {/* Enrollment Status Edit Modal */}
-      {enrollmentModalOpen && editingEnrollment && (
-        <Modal open={enrollmentModalOpen} title="Edit Student Enrollment" onClose={() => setEnrollmentModalOpen(false)}>
-          <form className="form" onSubmit={handleSaveEnrollment} style={{ marginTop: 12 }}>
-            <div style={{ background: '#f8fafc', padding: 14, borderRadius: 8, marginBottom: 16, border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>{editingEnrollment.studentName}</div>
-              <div style={{ fontSize: '0.825rem', color: '#64748b' }}>Course: {editingEnrollment.courseTitle}</div>
+      {/* Edit Student / Enrollment Modal */}
+      {enrollmentModalOpen && editingStudentEnrollment && (
+        <Modal
+          open={enrollmentModalOpen}
+          title={editingStudentEnrollment.recordType === 'enrollment' ? 'Edit Student & Course Enrollment' : 'Edit Direct Student User Account'}
+          onClose={() => setEnrollmentModalOpen(false)}
+        >
+          <form className="form" onSubmit={handleSaveStudentEnrollment} style={{ marginTop: 12 }}>
+            <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: 8, marginBottom: 16, border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>{editingStudentEnrollment.studentName || 'Student'}</div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{editingStudentEnrollment.studentEmail}</div>
+              </div>
+              <Badge variant={editingStudentEnrollment.recordType === 'enrollment' ? 'blue' : 'gray'}>
+                {editingStudentEnrollment.recordType === 'enrollment' ? 'Course Enrollment' : 'Direct User Account'}
+              </Badge>
             </div>
 
-            <label>
-              Enrollment Status
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+              <label>
+                Student Full Name *
+                <Input
+                  required
+                  value={editingStudentEnrollment.studentName}
+                  onChange={(e) => setEditingStudentEnrollment({ ...editingStudentEnrollment, studentName: e.target.value })}
+                  placeholder="Full Name"
+                />
+              </label>
+
+              <label>
+                Email Address *
+                <Input
+                  required
+                  type="email"
+                  value={editingStudentEnrollment.studentEmail}
+                  onChange={(e) => setEditingStudentEnrollment({ ...editingStudentEnrollment, studentEmail: e.target.value })}
+                  placeholder="student@example.com"
+                />
+              </label>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginTop: 10 }}>
+              <label>
+                Phone Number
+                <Input
+                  value={editingStudentEnrollment.studentPhone || ''}
+                  onChange={(e) => setEditingStudentEnrollment({ ...editingStudentEnrollment, studentPhone: e.target.value })}
+                  placeholder="+880 1XXXXXXXXX"
+                />
+              </label>
+
+              <label>
+                University / Institution
+                <Input
+                  value={editingStudentEnrollment.university || ''}
+                  onChange={(e) => setEditingStudentEnrollment({ ...editingStudentEnrollment, university: e.target.value })}
+                  placeholder="e.g. Dhaka University"
+                />
+              </label>
+            </div>
+
+            <label style={{ marginTop: 10 }}>
+              Enrolled Course
               <select
                 className="select"
-                value={editingEnrollment.status || 'Approved'}
-                onChange={(e) => setEditingEnrollment({ ...editingEnrollment, status: e.target.value })}
+                value={editingStudentEnrollment.courseId}
+                onChange={(e) => {
+                  const selectedCourse = courses.find((c: any) => c._id === e.target.value);
+                  setEditingStudentEnrollment({
+                    ...editingStudentEnrollment,
+                    courseId: e.target.value,
+                    courseTitle: selectedCourse ? selectedCourse.title : 'Direct User Account / None'
+                  });
+                }}
               >
-                <option value="Approved">Approved (Active Access)</option>
-                <option value="Pending">Pending Verification</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Expired">Expired</option>
+                <option value="">Direct User Account / None</option>
+                {courses.map((c: any) => (
+                  <option key={c._id} value={c._id}>
+                    {c.title} {c.price ? `(৳${c.price} BDT)` : '(Free)'}
+                  </option>
+                ))}
               </select>
             </label>
 
-            <label>
-              Course Progress (% completed)
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={Number(editingEnrollment.progressPercent || 0)}
-                onChange={(e) => setEditingEnrollment({ ...editingEnrollment, progressPercent: Math.min(100, Math.max(0, Number(e.target.value))) })}
-              />
-            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginTop: 10 }}>
+              <label>
+                Payment Status
+                <select
+                  className="select"
+                  value={editingStudentEnrollment.paymentStatus}
+                  onChange={(e) => setEditingStudentEnrollment({ ...editingStudentEnrollment, paymentStatus: e.target.value })}
+                >
+                  <option value="Paid">Paid / Approved</option>
+                  <option value="Pending">Pending Verification</option>
+                  <option value="Free / Scholarship">Free / Scholarship</option>
+                  <option value="Waived">Waived / Special Approval</option>
+                  <option value="Rejected">Rejected / Refunded</option>
+                </select>
+              </label>
 
-            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-              <Button disabled={savingEnrollment}>{savingEnrollment ? 'Saving…' : 'Save Enrollment'}</Button>
-              <Button type="button" variant="secondary" onClick={() => setEnrollmentModalOpen(false)}>Cancel</Button>
+              <label>
+                Payment Method & Provider
+                <Input
+                  value={editingStudentEnrollment.paymentMethod}
+                  onChange={(e) => setEditingStudentEnrollment({ ...editingStudentEnrollment, paymentMethod: e.target.value })}
+                  placeholder="e.g. bKash, Nagad, Bank, Scholarship"
+                />
+              </label>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginTop: 10 }}>
+              <label>
+                Transaction ID / Reference
+                <Input
+                  value={editingStudentEnrollment.trxId}
+                  onChange={(e) => setEditingStudentEnrollment({ ...editingStudentEnrollment, trxId: e.target.value })}
+                  placeholder="e.g. TRX-XXXXXX or N/A"
+                />
+              </label>
+
+              <label>
+                Fee Paid (BDT)
+                <Input
+                  type="number"
+                  min={0}
+                  value={editingStudentEnrollment.feePaid}
+                  onChange={(e) => setEditingStudentEnrollment({ ...editingStudentEnrollment, feePaid: Number(e.target.value) })}
+                  placeholder="0"
+                />
+              </label>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginTop: 10 }}>
+              <label>
+                Course Progress (% completed)
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={editingStudentEnrollment.progressPercent}
+                  onChange={(e) => setEditingStudentEnrollment({ ...editingStudentEnrollment, progressPercent: Math.min(100, Math.max(0, Number(e.target.value))) })}
+                />
+              </label>
+
+              <label>
+                Account / Enrollment Status
+                <select
+                  className="select"
+                  value={editingStudentEnrollment.status}
+                  onChange={(e) => setEditingStudentEnrollment({ ...editingStudentEnrollment, status: e.target.value })}
+                >
+                  <option value="Active">Active (Full Access)</option>
+                  <option value="Pending">Pending Verification</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Inactive">Inactive / Suspended</option>
+                </select>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 24, justifyContent: 'flex-end' }}>
+              <Button type="button" variant="secondary" onClick={() => setEnrollmentModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={savingEnrollment} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                {savingEnrollment ? <><RefreshCw className="animate-spin" size={15} /> Saving Changes…</> : 'Save Changes'}
+              </Button>
             </div>
           </form>
         </Modal>

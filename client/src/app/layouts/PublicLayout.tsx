@@ -68,8 +68,8 @@ export function PublicLayout() {
             fetchPriority="high"
           />
           <span
-            className="brand-wordmark brand-wordmark-aspier normal-case font-extrabold tracking-tight"
-            style={{ color: '#0F5132', textTransform: 'none', letterSpacing: '-0.025em', fontWeight: 800 }}
+            className="brand-wordmark brand-wordmark-aspier font-bold tracking-[0.04em] text-lg sm:text-xl"
+            style={{ color: '#15803D', fontFamily: "'Plus Jakarta Sans', 'Outfit', sans-serif", fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}
           >
             ASPIER
           </span>
@@ -132,8 +132,8 @@ export function PublicLayout() {
               style={{ width: 38, height: 38, minWidth: 38, minHeight: 38 }}
             />
             <span
-              className="brand-wordmark brand-wordmark-aspier normal-case font-extrabold tracking-tight text-xl"
-              style={{ color: '#0F5132', textTransform: 'none', letterSpacing: '-0.025em', fontWeight: 800 }}
+              className="brand-wordmark brand-wordmark-aspier font-bold tracking-[0.04em] text-xl"
+              style={{ color: '#15803D', fontFamily: "'Plus Jakarta Sans', 'Outfit', sans-serif", fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}
             >
               ASPIER
             </span>

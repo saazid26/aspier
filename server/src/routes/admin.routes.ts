@@ -610,21 +610,85 @@ router.get('/enrollments', async (_req, res) => {
   }
 });
 
-router.patch('/enrollments/:id', async (req, res) => {
+const handleUpdateEnrollment = async (req: any, res: any) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       await connectDatabase();
     }
-    const { status, progressPercent } = req.body;
-    const targetStatus = status === 'Approved' ? 'active' : status === 'Pending' ? 'pending' : status === 'Rejected' ? 'rejected' : status;
+    const {
+      status,
+      progressPercent,
+      progress,
+      courseId,
+      studentName,
+      studentEmail,
+      studentPhone,
+      university,
+      paymentMethod,
+      trxId,
+      feePaid,
+      paymentStatus
+    } = req.body;
 
     const enr = await Enrollment.findById(req.params.id);
     if (!enr) return res.status(404).json({ success: false, message: 'Enrollment not found' });
 
-    if (targetStatus) enr.status = targetStatus;
-    if (typeof progressPercent === 'number') enr.progressPercent = Math.min(100, Math.max(0, progressPercent));
+    // Target status normalization
+    let targetStatus: 'pending' | 'active' | 'rejected' | 'expired' = enr.status;
+    if (status !== undefined) {
+      const s = String(status).trim().toLowerCase();
+      if (['approved', 'active', 'completed'].includes(s)) {
+        targetStatus = 'active';
+      } else if (s === 'pending') {
+        targetStatus = 'pending';
+      } else if (['rejected', 'suspended', 'inactive'].includes(s)) {
+        targetStatus = 'rejected';
+      } else if (s === 'expired') {
+        targetStatus = 'expired';
+      } else {
+        targetStatus = 'pending';
+      }
+      enr.status = targetStatus;
+    }
+
+    const progVal = progressPercent !== undefined ? progressPercent : progress;
+    if (progVal !== undefined && !isNaN(Number(progVal))) {
+      enr.progressPercent = Math.min(100, Math.max(0, Number(progVal)));
+    }
+
+    if (courseId && mongoose.isValidObjectId(courseId)) {
+      enr.courseId = courseId;
+    }
+
     await enr.save();
 
+    // Update student user details if provided
+    if (enr.userId && (studentName || studentEmail || studentPhone !== undefined || university !== undefined || status !== undefined)) {
+      const studentUser = await User.findById(enr.userId);
+      if (studentUser) {
+        if (studentName && typeof studentName === 'string') {
+          studentUser.name = studentName.trim();
+        }
+        if (studentEmail && typeof studentEmail === 'string') {
+          const newEmail = studentEmail.toLowerCase().trim();
+          if (newEmail !== studentUser.email.toLowerCase().trim()) {
+            const existing = await User.findOne({ email: newEmail, _id: { $ne: studentUser._id } });
+            if (existing) {
+              return res.status(400).json({ success: false, message: 'Email address is already in use by another account' });
+            }
+            studentUser.email = newEmail;
+          }
+        }
+        if (studentPhone !== undefined) studentUser.phone = String(studentPhone).trim();
+        if (university !== undefined) studentUser.university = String(university).trim();
+        if (status !== undefined) {
+          studentUser.isActive = targetStatus === 'active';
+        }
+        await studentUser.save();
+      }
+    }
+
+    // Synchronize linked payment record
     if (targetStatus === 'active') {
       await Payment.updateMany(
         { userId: enr.userId, courseId: enr.courseId, status: 'pending' },
@@ -637,19 +701,56 @@ router.patch('/enrollments/:id', async (req, res) => {
       );
     }
 
+    if (paymentMethod || trxId || feePaid !== undefined || paymentStatus) {
+      let payment = await Payment.findOne({ userId: enr.userId, courseId: enr.courseId });
+      const rawPStatus = paymentStatus ? String(paymentStatus).toLowerCase() : targetStatus === 'active' ? 'approved' : 'pending';
+      const resolvedPaymentStatus: 'approved' | 'pending' | 'rejected' = ['paid', 'approved', 'active', 'completed'].includes(rawPStatus)
+        ? 'approved'
+        : ['rejected', 'refunded', 'failed'].includes(rawPStatus)
+        ? 'rejected'
+        : 'pending';
+      const method = ['bKash', 'Nagad'].includes(paymentMethod) ? paymentMethod : 'bKash';
+      const senderNum = studentPhone || (enr.userId as any)?.phone || '01700000000';
+
+      if (!payment) {
+        payment = new Payment({
+          userId: enr.userId,
+          courseId: enr.courseId,
+          enrollmentId: enr._id,
+          amount: Number(feePaid) || 0,
+          method,
+          senderNumber: senderNum,
+          trxId: trxId || `ADM-${Date.now().toString().slice(-6)}`,
+          status: resolvedPaymentStatus
+        });
+      } else {
+        payment.method = method;
+        if (trxId) payment.trxId = trxId;
+        if (feePaid !== undefined) payment.amount = Number(feePaid);
+        if (paymentStatus) {
+          payment.status = resolvedPaymentStatus;
+        }
+      }
+      await payment.save();
+    }
+
     await recordAudit({
       req,
-      action: 'update_enrollment_status',
-      description: `Updated enrollment status to ${targetStatus} for enrollment ${enr._id}`,
+      action: 'update_enrollment',
+      description: `Updated enrollment ${enr._id} for student ${enr.userId}`,
       resource: 'Enrollment',
       resourceId: String(enr._id)
     });
 
-    res.json({ success: true, data: enr });
+    fastCache.clear();
+    res.json({ success: true, message: 'Enrollment updated successfully', data: enr });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err?.message || 'Failed to update enrollment' });
   }
-});
+};
+
+router.put('/enrollments/:id', handleUpdateEnrollment);
+router.patch('/enrollments/:id', handleUpdateEnrollment);
 
 router.delete('/enrollments/:id', async (req, res) => {
   try {
@@ -657,16 +758,18 @@ router.delete('/enrollments/:id', async (req, res) => {
       await connectDatabase();
     }
     const enr = await Enrollment.findByIdAndDelete(req.params.id);
-    if (enr) {
-      await recordAudit({
-        req,
-        action: 'delete_enrollment',
-        description: `Deleted enrollment ${req.params.id}`,
-        resource: 'Enrollment',
-        resourceId: req.params.id
-      });
+    if (!enr) {
+      return res.status(404).json({ success: false, message: 'Enrollment not found' });
     }
-    res.json({ success: true, message: 'Enrollment deleted' });
+    await recordAudit({
+      req,
+      action: 'delete_enrollment',
+      description: `Deleted enrollment ${req.params.id}`,
+      resource: 'Enrollment',
+      resourceId: req.params.id
+    });
+    fastCache.clear();
+    res.json({ success: true, message: 'Enrollment deleted successfully' });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err?.message || 'Failed to delete enrollment' });
   }
@@ -712,10 +815,213 @@ router.get('/audit', async (req, res) => {
 });
 router.get('/students', async (_req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
     const students = await User.find({ role: 'student' }).sort({ createdAt: -1 });
     res.json({ success: true, data: students || [] });
   } catch {
     res.json({ success: true, data: [] });
+  }
+});
+
+router.get('/students/:id', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const student = await User.findById(req.params.id);
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
+    res.json({ success: true, data: student });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || 'Failed to get student' });
+  }
+});
+
+const handleUpdateStudent = async (req: any, res: any) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const student = await User.findById(req.params.id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student user not found' });
+    }
+
+    const {
+      name,
+      email,
+      status,
+      phone,
+      university,
+      department,
+      studentId,
+      academicLevel,
+      city,
+      courseId,
+      enrolledCourseId,
+      enrollmentStatus,
+      progressPercent,
+      progress,
+      paymentMethod,
+      trxId,
+      feePaid,
+      paymentStatus
+    } = req.body;
+
+    // Update Full Name
+    if (name && typeof name === 'string' && name.trim()) {
+      student.name = name.trim();
+    }
+
+    // Update Email with uniqueness validation excluding current student
+    if (email && typeof email === 'string' && email.trim()) {
+      const newEmail = email.toLowerCase().trim();
+      if (newEmail !== student.email.toLowerCase().trim()) {
+        const existing = await User.findOne({ email: newEmail, _id: { $ne: student._id } });
+        if (existing) {
+          return res.status(400).json({ success: false, message: 'Email address is already in use by another account' });
+        }
+        student.email = newEmail;
+      }
+    }
+
+    // Update Active / Inactive / Suspended status
+    if (status !== undefined) {
+      const s = String(status).trim().toLowerCase();
+      student.isActive = s === 'active' || s === 'approved' || status === true;
+    }
+
+    // Optional profile fields
+    if (phone !== undefined) student.phone = String(phone).trim();
+    if (university !== undefined) student.university = String(university).trim();
+    if (department !== undefined) student.department = String(department).trim();
+    if (studentId !== undefined) student.studentId = String(studentId).trim();
+    if (academicLevel !== undefined) student.academicLevel = String(academicLevel).trim();
+    if (city !== undefined) student.city = String(city).trim();
+
+    await student.save();
+
+    // Optionally assign or enroll into an Academy course
+    const targetCourseId = courseId || enrolledCourseId;
+    if (targetCourseId && targetCourseId !== 'none' && mongoose.isValidObjectId(targetCourseId)) {
+      const course = await Course.findById(targetCourseId);
+      if (course) {
+        let enr = await Enrollment.findOne({ userId: student._id, courseId: course._id });
+        const rawStatus = (enrollmentStatus || status || 'active').toString().toLowerCase();
+        const normalizedStatus = ['approved', 'active', 'completed'].includes(rawStatus)
+          ? 'active'
+          : rawStatus === 'pending'
+          ? 'pending'
+          : rawStatus === 'expired'
+          ? 'expired'
+          : 'rejected';
+
+        const progVal = progressPercent !== undefined ? progressPercent : progress;
+        const normalizedProgress = progVal !== undefined && !isNaN(Number(progVal))
+          ? Math.min(100, Math.max(0, Number(progVal)))
+          : 0;
+
+        if (!enr) {
+          enr = new Enrollment({
+            userId: student._id,
+            courseId: course._id,
+            status: normalizedStatus,
+            progressPercent: normalizedProgress,
+            enrolledAt: new Date()
+          });
+        } else {
+          enr.status = normalizedStatus;
+          if (progVal !== undefined) enr.progressPercent = normalizedProgress;
+        }
+        await enr.save();
+
+        // Handle linked payment if payment info provided
+        if (paymentMethod || trxId || feePaid !== undefined || paymentStatus) {
+          let payment = await Payment.findOne({ userId: student._id, courseId: course._id });
+          const method = ['bKash', 'Nagad'].includes(paymentMethod) ? paymentMethod : 'bKash';
+          const rawPStatus = paymentStatus ? String(paymentStatus).toLowerCase() : normalizedStatus === 'active' ? 'approved' : 'pending';
+          const pStatus: 'approved' | 'pending' | 'rejected' = ['paid', 'approved', 'active', 'completed'].includes(rawPStatus)
+            ? 'approved'
+            : ['rejected', 'refunded', 'failed'].includes(rawPStatus)
+            ? 'rejected'
+            : 'pending';
+          const fee = feePaid !== undefined ? Number(feePaid) : course.price || 0;
+          const transactionId = trxId || `ADM-${Date.now().toString().slice(-6)}`;
+          const senderNum = student.phone || '01700000000';
+
+          if (!payment) {
+            payment = new Payment({
+              userId: student._id,
+              courseId: course._id,
+              enrollmentId: enr._id,
+              amount: fee,
+              method,
+              senderNumber: senderNum,
+              trxId: transactionId,
+              status: pStatus
+            });
+          } else {
+            payment.amount = fee;
+            payment.method = method;
+            if (trxId) payment.trxId = transactionId;
+            payment.status = pStatus;
+          }
+          await payment.save();
+        }
+      }
+    }
+
+    await recordAudit({
+      req,
+      action: 'update_student_user',
+      description: `Updated student user ${student.name} (${student.email})`,
+      resource: 'User',
+      resourceId: String(student._id)
+    });
+
+    fastCache.clear();
+    res.json({ success: true, message: 'Student user updated successfully', data: student });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || 'Failed to update student user' });
+  }
+};
+
+router.put('/students/:id', handleUpdateStudent);
+router.patch('/students/:id', handleUpdateStudent);
+
+router.delete('/students/:id', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const student = await User.findById(req.params.id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student user not found' });
+    }
+
+    // Safety guardrail: strictly block deletion of admin/superadmin accounts
+    if (['admin', 'superadmin'].includes(student.role)) {
+      return res.status(403).json({ success: false, message: 'Security restriction: Cannot delete an administrator account' });
+    }
+
+    // Delete linked enrollments and payments
+    await Enrollment.deleteMany({ userId: student._id });
+    await Payment.deleteMany({ userId: student._id });
+    await User.findByIdAndDelete(student._id);
+
+    await recordAudit({
+      req,
+      action: 'delete_student_user',
+      description: `Permanently deleted student user ${student.name} (${student.email}) and all linked records`,
+      resource: 'User',
+      resourceId: String(student._id)
+    });
+
+    fastCache.clear();
+    res.json({ success: true, message: `Student "${student.name}" and linked records deleted permanently` });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || 'Failed to delete student user' });
   }
 });
 router.get('/inbox/all', async (_req, res) => {

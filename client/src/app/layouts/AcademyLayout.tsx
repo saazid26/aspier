@@ -75,15 +75,18 @@ export function AcademyLayout() {
               fetchPriority="high"
             />
             <span
-              className="brand-wordmark brand-wordmark-academy normal-case font-bold tracking-tight text-lg sm:text-xl inline-flex items-center gap-1.5"
+              className="brand-wordmark brand-wordmark-academy normal-case inline-flex items-center gap-1.5"
               style={{
-                letterSpacing: '-0.025em',
-                fontWeight: 800,
+                fontFamily: "'Plus Jakarta Sans', 'Outfit', sans-serif",
                 textTransform: 'none'
               }}
             >
-              <span style={{ color: '#0F5132', textTransform: 'uppercase', fontWeight: 800 }}>ASPIER</span>
-              <span className="word-academy" style={{ color: '#135D3B', textTransform: 'none', fontWeight: 600 }}>Academy</span>
+              <span className="font-bold tracking-[0.04em] text-lg sm:text-xl" style={{ color: '#15803D', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.04em' }}>
+                ASPIER
+              </span>
+              <span className="word-academy font-semibold tracking-normal text-lg sm:text-xl normal-case" style={{ color: '#168A41', textTransform: 'none', fontWeight: 600, letterSpacing: 'normal' }}>
+                Academy
+              </span>
             </span>
           </Link>
 
@@ -178,11 +181,15 @@ export function AcademyLayout() {
                 style={{ width: 38, height: 38, minWidth: 38, minHeight: 38 }}
               />
               <span
-                className="brand-wordmark brand-wordmark-academy normal-case font-bold tracking-tight text-xl inline-flex items-center gap-1.5"
-                style={{ letterSpacing: '-0.025em', fontWeight: 800, textTransform: 'none' }}
+                className="brand-wordmark brand-wordmark-academy normal-case text-xl inline-flex items-center gap-1.5"
+                style={{ fontFamily: "'Plus Jakarta Sans', 'Outfit', sans-serif", textTransform: 'none' }}
               >
-                <span style={{ color: '#34d399', textTransform: 'uppercase', fontWeight: 800 }}>ASPIER</span>
-                <span className="word-academy" style={{ color: '#6ee7b7', textTransform: 'none', fontWeight: 600 }}>Academy</span>
+                <span className="font-bold tracking-[0.04em]" style={{ color: '#34d399', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.04em' }}>
+                  ASPIER
+                </span>
+                <span className="word-academy font-semibold tracking-normal normal-case" style={{ color: '#6ee7b7', textTransform: 'none', fontWeight: 600, letterSpacing: 'normal' }}>
+                  Academy
+                </span>
               </span>
             </Link>
           </div>
