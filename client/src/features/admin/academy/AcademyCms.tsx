@@ -10,6 +10,7 @@ import { Table } from '../../../components/ui/Table';
 import { Modal } from '../../../components/ui/Modal';
 import { Badge } from '../../../components/ui/Badge';
 import { ImageUploader } from '../../../components/forms/ImageUploader';
+import { SmoothImageUploader } from '../../../components/SmoothImageUploader';
 import { RichTextEditor } from '../../../components/forms/RichTextEditor';
 
 export function AcademyCms() {
@@ -1819,42 +1820,27 @@ export function AcademyCms() {
               </label>
             </div>
 
-            <label>
-              Certificate Image (PNG File)
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setCertFile(file);
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      setPreviewImage(reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                  }
+            <div className="settings-image-field" style={{ marginTop: 16 }}>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                Certificate Image (PNG / JPG / WebP)
+              </label>
+              <SmoothImageUploader
+                value={previewImage || certForm.certificateImage || ''}
+                onChange={(url) => {
+                  setPreviewImage(url);
+                  setCertForm((prev) => ({ ...prev, certificateImage: url }));
                 }}
-                style={{ display: 'block', marginTop: 4, width: '100%', padding: '8px 0' }}
+                onRemove={() => {
+                  setPreviewImage('');
+                  setCertFile(null);
+                  setCertForm((prev) => ({ ...prev, certificateImage: '' }));
+                }}
+                shape="banner"
+                aspectRatio="16/9"
+                helperText="Click + to Upload Image or Drag & Drop certificate photo here (Max 10MB)"
+                maxSizeMB={10}
               />
-              <small className="muted" style={{ display: 'block', marginTop: 4 }}>
-                Upload high-resolution PNG file. Stored resiliently in MongoDB / CDN for sub-0.2s live serving without filesystem loss.
-              </small>
-            </label>
-
-            {/* Live Preview of Uploaded PNG */}
-            {previewImage && (
-              <div style={{ marginTop: 12, border: '1px solid #cbd5e1', borderRadius: 8, padding: 8, background: '#f8fafc', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>
-                  PNG Certificate Live Preview
-                </span>
-                <img
-                  src={previewImage}
-                  alt="Certificate Preview"
-                  style={{ maxHeight: 220, maxWidth: '100%', objectFit: 'contain', margin: '0 auto', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff' }}
-                />
-              </div>
-            )}
+            </div>
 
             <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
               <Button disabled={issuingCertificate}>

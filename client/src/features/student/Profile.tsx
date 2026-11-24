@@ -22,6 +22,7 @@ import toast from 'react-hot-toast';
 import { useMe } from '../auth/useMe';
 import { ChangePassword } from '../auth/ChangePassword';
 import { api, getApiErrorMessage } from '../../lib/api';
+import { SmoothImageUploader } from '../../components/SmoothImageUploader';
 
 export function Profile() {
   const { me, updateMe, loading } = useMe();
@@ -188,30 +189,29 @@ export function Profile() {
       {/* 1. INTERACTIVE STUDENT PROFILE FORM CARD */}
       <section className="w-full rounded-2xl bg-white border border-slate-200/90 shadow-sm p-4 sm:p-6 lg:p-8 box-border">
         {/* Live Header Summary & 1:1 Circular Profile Photo Uploader */}
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 pb-6 mb-6 border-b border-slate-200">
-          {/* Avatar Container */}
-          <div className="relative group shrink-0">
-            {previewAvatar ? (
-              <img
-                src={previewAvatar}
-                alt={formData.name || 'Student Avatar'}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-teal-600/30 bg-teal-50 shadow-sm"
-              />
-            ) : (
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-teal-50 border-2 border-teal-600/30 flex items-center justify-center text-teal-800 text-xl sm:text-2xl font-bold shadow-sm">
-                {getInitials(formData.name)}
-              </div>
-            )}
-
-            {isUploadingPhoto && (
-              <div className="absolute inset-0 rounded-full bg-slate-900/60 flex items-center justify-center text-white">
-                <Orbit className="w-6 h-6 animate-spin" />
-              </div>
-            )}
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 pb-6 mb-6 border-b border-slate-200">
+          {/* Avatar Container with Smooth Drag-and-Drop Uploader */}
+          <div className="shrink-0 flex flex-col items-center">
+            <SmoothImageUploader
+              value={formData.avatarUrl || previewAvatar}
+              onChange={(url) => {
+                setFormData((prev) => ({ ...prev, avatarUrl: url }));
+                setPreviewAvatar(url);
+                updateMe({ avatar: url, avatarUrl: url });
+              }}
+              onRemove={() => {
+                setFormData((prev) => ({ ...prev, avatarUrl: '' }));
+                setPreviewAvatar('');
+                updateMe({ avatar: '', avatarUrl: '' });
+              }}
+              endpoint="/auth/profile/avatar"
+              shape="circle"
+              helperText="1:1 Circle • Drag & Drop or Click + (Max 10MB)"
+            />
           </div>
 
-          {/* User Details & Photo Action Buttons */}
-          <div className="flex-1 text-center sm:text-left min-w-0">
+          {/* User Details & Status */}
+          <div className="flex-1 text-center sm:text-left min-w-0 pt-1">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
               <div>
                 <h2 className="text-lg sm:text-xl font-bold text-slate-900 truncate">
@@ -226,39 +226,9 @@ export function Profile() {
                 <span>{me?.role === 'student' ? 'Student Member' : me?.role || 'Student'}</span>
               </span>
             </div>
-
-            {/* Photo Action Controls */}
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 mt-3.5">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={handlePhotoSelect}
-              />
-              <button
-                type="button"
-                disabled={isUploadingPhoto}
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-semibold transition cursor-pointer disabled:opacity-50"
-              >
-                <Camera className="w-3.5 h-3.5" />
-                <span>{previewAvatar ? 'Change Photo' : 'Upload Photo'}</span>
-              </button>
-
-              {previewAvatar && (
-                <button
-                  type="button"
-                  disabled={isUploadingPhoto}
-                  onClick={handleRemovePhoto}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200 text-xs font-semibold transition cursor-pointer disabled:opacity-50"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Remove</span>
-                </button>
-              )}
-              <span className="text-[11px] text-slate-400">JPG, PNG, or WebP (max 2MB)</span>
-            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Profile picture is synchronized with your student dashboard, discussion forums, and verified credentials.
+            </p>
           </div>
         </div>
 

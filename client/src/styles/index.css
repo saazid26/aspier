@@ -525,6 +525,22 @@ body{min-width:0;overflow-x:clip}
   .nav-links{left:16px!important;right:16px!important;top:calc(100% + 6px)!important}
 }
 @media(max-width:520px){.applicant-credential-fields{grid-template-columns:minmax(0,1fr)}.applicant-credential-fields>.button{width:100%}}
+/* Universal Smooth Image Uploader & Drag-and-Drop */
+.smooth-image-uploader {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin: 0 auto;
+}
+.smooth-image-uploader [role="button"] {
+  outline: none;
+  touch-action: manipulation;
+}
+.smooth-image-uploader [role="button"]:focus-visible {
+  outline: 3px solid #0f988b;
+  outline-offset: 3px;
+}
+
 .image-uploader{display:grid;justify-items:center;gap:10px;width:100%}
 .image-upload-frame{position:relative;display:flex;width:7rem;height:7rem;align-items:center;justify-content:center;overflow:hidden;border:0;border-radius:50%;background:#f1f5f9;box-shadow:0 4px 12px rgba(15,23,42,.16);outline:4px solid rgba(20,143,131,.2);color:#557178;cursor:pointer}
 .image-upload-frame:focus-visible{outline:4px solid #148f83;outline-offset:3px}
