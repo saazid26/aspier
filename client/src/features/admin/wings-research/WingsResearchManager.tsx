@@ -174,6 +174,32 @@ export function WingsResearchManager() {
     }
   };
 
+  // Handle Research Application Delete
+  const deleteApplication = async (id: string, name: string) => {
+    const applicantName = name || 'this applicant';
+    if (!window.confirm(`Are you sure you want to permanently delete this research application from ${applicantName}?`)) return;
+
+    // Optimistically update query cache so row is removed and counter decrements immediately
+    const previousApps = queryClient.getQueryData<any[]>(['admin-research-apps']);
+    queryClient.setQueryData(['admin-research-apps'], (old: any[] = []) =>
+      old.filter((a) => a._id !== id && a.applicationId !== id)
+    );
+
+    try {
+      await api.delete(`/admin/research-applications/${id}`);
+      toast.success('Research application deleted');
+      await refetchApps();
+      await queryClient.invalidateQueries({ queryKey: ['admin-research-apps'] });
+      await queryClient.invalidateQueries({ queryKey: ['research-applications'] });
+    } catch (err: any) {
+      // Rollback on error
+      if (previousApps) {
+        queryClient.setQueryData(['admin-research-apps'], previousApps);
+      }
+      toast.error(err.response?.data?.message || 'Could not delete research application');
+    }
+  };
+
   return (
     <div className="admin-page-container">
       <div className="section-head" style={{ marginBottom: 20 }}>
@@ -380,7 +406,7 @@ export function WingsResearchManager() {
       {activeTab === 'Research Applications' && (
         <div style={{ marginTop: 20 }}>
           <p className="muted" style={{ marginBottom: 16 }}>Submitted proposals and fellow applications: <strong>{applications.length}</strong></p>
-          <Table headers={['Date', 'Applicant Name', 'Email', 'Proposed Title', 'Wing Interest', 'Status']}>
+          <Table headers={['Date', 'Applicant Name', 'Email', 'Proposed Title', 'Wing Interest', 'Status', 'Actions']}>
             {applications.map((app) => (
               <tr key={app._id}>
                 <td style={{ fontSize: '0.85rem' }}>{new Date(app.createdAt).toLocaleDateString()}</td>
@@ -392,6 +418,14 @@ export function WingsResearchManager() {
                   <Badge variant={app.status === 'approved' ? 'green' : app.status === 'rejected' ? 'red' : 'blue'}>
                     {app.status || 'pending'}
                   </Badge>
+                </td>
+                <td>
+                  <Button
+                    variant="danger"
+                    onClick={() => deleteApplication(app._id, app.name || app.applicantName)}
+                  >
+                    Delete
+                  </Button>
                 </td>
               </tr>
             ))}

@@ -722,9 +722,22 @@ export async function downloadResearchApplicationCv(req: Request, res: Response,
 export async function deleteResearchApplication(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const id = String(req.params.id || '');
+    if (!id) throw new HttpError(400, 'Application ID is required');
 
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase().catch(() => {});
+    }
+
+    let deleted = null;
     if (mongoose.connection.readyState === 1) {
-      await ResearchApplication.findByIdAndDelete(id).catch(() => null);
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        deleted = await ResearchApplication.findByIdAndDelete(id);
+      }
+      if (!deleted) {
+        deleted = await ResearchApplication.findOneAndDelete({
+          $or: [{ applicationId: id }, { _id: id }]
+        });
+      }
     }
 
     const inMem = getFallbackResearchApplications();
