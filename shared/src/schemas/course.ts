@@ -6,6 +6,12 @@ export const courseSchema = z.object({
   description: z.string().trim().max(10000),
   wingId: z.string().optional(),
   instructorId: z.string().optional(),
+  instructors: z.array(z.object({
+    name: z.string().min(1),
+    designationOrDetails: z.string().optional(),
+    photoUrl: z.string().optional(),
+    bio: z.string().optional()
+  })).optional(),
   price: z.number().nonnegative(),
   thumbnail: z.string().optional(),
   duration: z.string().trim().optional(),

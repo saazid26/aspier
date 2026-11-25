@@ -328,10 +328,10 @@ export function CourseDetail() {
             >
               <Clock size={48} style={{ color: '#38bdf8', marginBottom: 12 }} />
               <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', color: '#f8fafc' }}>
-                Class 13: Video Recording Coming Soon
+                Class {activeClass.classNumber}: Video Recording Coming Soon
               </h3>
               <p style={{ margin: 0, maxWidth: 500, fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.5 }}>
-                The high-definition video recording for <em>Remote Sensing, GEE & RS Normalization</em> is currently in final post-production and will be published here shortly.
+                The high-definition video recording for <em>{activeClass.title}</em> is currently in preparation and will be published here shortly.
               </p>
             </div>
           )}
@@ -432,15 +432,23 @@ export function CourseDetail() {
                       </h3>
 
                       {/* Topics Covered */}
-                      {cls.topics && cls.topics.length > 0 && (
-                        <div style={{ marginTop: 6 }}>
-                          <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.875rem', color: '#475569' }}>
-                            {cls.topics.map((tp, tIdx) => (
-                              <li key={tIdx}>{tp}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                      {(() => {
+                        const rawTopics = cls.topics || [];
+                        const titleClean = (cls.title || '').trim().toLowerCase();
+                        const distinctTopics = rawTopics.filter(
+                          (t) => t && t.trim().toLowerCase() !== titleClean
+                        );
+                        if (distinctTopics.length === 0) return null;
+                        return (
+                          <div style={{ marginTop: 6 }}>
+                            <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.875rem', color: '#475569' }}>
+                              {distinctTopics.map((tp, tIdx) => (
+                                <li key={tIdx}>{tp}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -489,6 +497,114 @@ export function CourseDetail() {
           })}
         </div>
       </section>
+
+      {/* Course Instructors Section */}
+      {(() => {
+        const instructors: any[] = (data.instructors && data.instructors.length > 0)
+          ? data.instructors
+          : (typeof data.instructorId === 'object' && data.instructorId?.name)
+          ? [{
+              name: data.instructorId.name,
+              designationOrDetails: data.instructorId.designation || data.instructorId.title || 'Course Instructor',
+              photoUrl: data.instructorId.photo || data.instructorId.avatar || data.instructorId.photoUrl,
+              bio: data.instructorId.bio
+            }]
+          : [];
+
+        if (instructors.length === 0) return null;
+
+        return (
+          <section style={{ marginTop: '2.5rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginBottom: '1.25rem',
+                borderBottom: '1px solid var(--border, #e5e7eb)',
+                paddingBottom: '0.75rem'
+              }}
+            >
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: 'var(--text, #0f172a)' }}>
+                  Course Instructor{instructors.length > 1 ? 's' : ''}
+                </h2>
+                <p className="muted" style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem' }}>
+                  Meet the research mentors and domain experts leading this course
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+              {instructors.map((ins, idx) => (
+                <div
+                  key={idx}
+                  className="card"
+                  style={{
+                    padding: '1.25rem 1.5rem',
+                    borderRadius: 12,
+                    border: '1px solid var(--border, #e5e7eb)',
+                    background: 'var(--surface, #ffffff)',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 16
+                  }}
+                >
+                  {ins.photoUrl ? (
+                    <img
+                      src={ins.photoUrl}
+                      alt={ins.name}
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '2px solid #0f766e',
+                        flexShrink: 0
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: '50%',
+                        background: '#0f766e',
+                        color: '#ffffff',
+                        fontSize: '1.5rem',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      {ins.name?.charAt(0) || 'I'}
+                    </div>
+                  )}
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text, #0f172a)' }}>
+                      {ins.name}
+                    </h3>
+                    {ins.designationOrDetails && (
+                      <p style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#0f766e', fontWeight: 600 }}>
+                        {ins.designationOrDetails}
+                      </p>
+                    )}
+                    {ins.bio && (
+                      <div
+                        style={{ margin: 0, fontSize: '0.85rem', color: '#475569', lineHeight: 1.5 }}
+                        dangerouslySetInnerHTML={{ __html: ins.bio }}
+                      />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* Bottom Sticky/Floating Enroll Bar */}
       <section

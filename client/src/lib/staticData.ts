@@ -1,4 +1,4 @@
-import { RESEARCH_PAPER_WRITING_CLASSES } from '../features/academy/researchCourseCurriculum';
+import { RESEARCH_PAPER_WRITING_CLASSES, RESEARCH_PAPER_WRITING_MODULES } from '../features/academy/researchCourseCurriculum';
 
 export const staticWings = [
   {
@@ -270,7 +270,7 @@ export const staticCourses = [
     status: "published",
     classes: RESEARCH_PAPER_WRITING_CLASSES,
     curriculum: RESEARCH_PAPER_WRITING_CLASSES,
-    modules: defaultDummyModules
+    modules: RESEARCH_PAPER_WRITING_MODULES
   }
 ];
 

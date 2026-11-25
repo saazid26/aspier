@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { demoResearch, demoScholars, demoSupervisors, demoFoundingMembers, makeDemoCover, makeDemoAvatar } from './seedData/demoContent.js';
-import { RESEARCH_PAPER_WRITING_CLASSES } from './researchCourseCurriculum.js';
+import { RESEARCH_PAPER_WRITING_CLASSES, RESEARCH_PAPER_WRITING_MODULES } from './researchCourseCurriculum.js';
 
 export const fallbackWings = [
   {
@@ -246,7 +246,7 @@ export const fallbackCourses = [
     thumbnail: makeDemoCover("Research Paper Writing"),
     classes: RESEARCH_PAPER_WRITING_CLASSES,
     curriculum: RESEARCH_PAPER_WRITING_CLASSES,
-    modules: defaultDummyModules
+    modules: RESEARCH_PAPER_WRITING_MODULES
   }
 ];
 

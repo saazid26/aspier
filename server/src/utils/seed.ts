@@ -17,7 +17,7 @@ import FoundingMember from '../models/FoundingMember.js';
 import News from '../models/News.js';
 import { demoResearch, demoScholars, demoSupervisors, demoFoundingMembers, makeDemoAvatar, makeDemoCover } from './seedData/demoContent.js';
 import { fallbackWings, fallbackResearchList } from './fallbackData.js';
-import { RESEARCH_PAPER_WRITING_CLASSES } from './researchCourseCurriculum.js';
+import { RESEARCH_PAPER_WRITING_CLASSES, RESEARCH_PAPER_WRITING_MODULES } from './researchCourseCurriculum.js';
 
 export async function seedAcademyData(force = false): Promise<{
   courses: number;
@@ -185,7 +185,7 @@ export async function seedAcademyData(force = false): Promise<{
         sampleData: true,
         classes: RESEARCH_PAPER_WRITING_CLASSES,
         curriculum: RESEARCH_PAPER_WRITING_CLASSES,
-        modules: defaultPaperWritingModules
+        modules: RESEARCH_PAPER_WRITING_MODULES
       }
     ];
 

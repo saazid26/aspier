@@ -22,6 +22,13 @@ const moduleSchema = new Schema({
   lessons: { type: [lessonSchema], default: [] }
 }, { _id: true });
 
+const instructorSubSchema = new Schema({
+  name: { type: String, required: true },
+  designationOrDetails: String,
+  photoUrl: String,
+  bio: String
+}, { _id: true });
+
 const deliveryModeSetter = (value: unknown) => {
   if (value === 'Online / Live') return 'Online and Live';
   if (value === 'Online and Recorded' || value === 'Online Recorded') return 'Online Recorded';
@@ -53,6 +60,7 @@ const schema = new Schema({
   enrollmentContact: String,
   wingId: { type: Schema.Types.ObjectId, ref: 'Wing' },
   instructorId: { type: Schema.Types.ObjectId, ref: 'Instructor' },
+  instructors: { type: [instructorSubSchema], default: [] },
   price: { type: Number, required: true, default: 2000 },
   thumbnail: String,
   bannerUrl: String,

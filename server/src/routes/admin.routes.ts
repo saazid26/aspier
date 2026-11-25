@@ -934,15 +934,31 @@ router.get('/classes', async (_req, res) => {
 });
 router.put('/courses/:id/curriculum', async (req, res) => {
   try {
-    const course = await Course.findByIdAndUpdate(req.params.id, { $set: { modules: req.body.modules } }, { new: true, runValidators: true });
+    const updateData: any = {};
+    if (req.body.classes) {
+      updateData.classes = req.body.classes;
+      if (!req.body.curriculum) updateData.curriculum = req.body.classes;
+    }
+    if (req.body.curriculum) {
+      updateData.curriculum = req.body.curriculum;
+      if (!req.body.classes) updateData.classes = req.body.curriculum;
+    }
+    if (req.body.modules) updateData.modules = req.body.modules;
+
+    const course = await Course.findByIdAndUpdate(
+      req.params.id,
+      { $set: updateData },
+      { new: true, runValidators: false }
+    );
     if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
+    fastCache.clear();
     await recordAudit({
       req,
       action: 'update_course_curriculum',
-      description: `Updated curriculum & modules for course "${course.title}" (${(req.body.modules || []).length} modules)`,
+      description: `Updated curriculum & classes for course "${course.title}" (${(course.classes || []).length} classes)`,
       resource: 'Course',
       resourceId: String(course._id)
-    });
+    }).catch(() => {});
     res.json({ success: true, data: course });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err?.message || 'Failed to update course curriculum' });
@@ -954,6 +970,10 @@ router.post('/update-research-course-curriculum', async (req, res) => {
     if (mongoose.connection.readyState !== 1) {
       await connectDatabase();
     }
+
+    // 1. Purge dummy classes (live schedules) and standalone instructors
+    await ClassModel.deleteMany({});
+    await Instructor.deleteMany({});
 
     let course = await Course.findOne({
       $or: [
@@ -1003,14 +1023,14 @@ router.post('/update-research-course-curriculum', async (req, res) => {
     await recordAudit({
       req,
       action: 'update_research_course_curriculum',
-      description: `Configured Higher Study-Oriented Research Paper Writing Course (2000 BDT, Online Recorded, 15 classes)`,
+      description: `Configured Higher Study-Oriented Research Paper Writing Course (2000 BDT, Online Recorded, 15 classes) & purged dummy schedules and instructors`,
       resource: 'Course',
       resourceId: String(course._id)
     }).catch(() => {});
 
     return res.json({
       success: true,
-      message: 'Course updated successfully to Higher Study-Oriented Research Paper Writing Course (2,000 BDT, Online Recorded, Classes 0–14).',
+      message: 'Course updated successfully to Higher Study-Oriented Research Paper Writing Course (2,000 BDT, Online Recorded, Classes 0–14), and purged dummy live schedules and instructors.',
       data: course
     });
   } catch (err: any) {

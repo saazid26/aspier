@@ -11,7 +11,7 @@ export const RESEARCH_PAPER_WRITING_CLASSES: CourseClassItem[] = [
   {
     classNumber: 0,
     title: 'Orientation Class',
-    topics: ['Orientation Class'],
+    topics: [],
     videoUrl: 'https://youtu.be/ZTFKbqsAD0w',
     youtubeVideoId: 'ZTFKbqsAD0w',
     duration: '45 mins'
@@ -48,7 +48,7 @@ export const RESEARCH_PAPER_WRITING_CLASSES: CourseClassItem[] = [
   {
     classNumber: 4,
     title: 'Questionnaire Development (KII, Likert Scaling)',
-    topics: ['Questionnaire Development (KII, Likert Scaling)'],
+    topics: [],
     videoUrl: 'https://youtu.be/cVAbhHYC-6c',
     youtubeVideoId: 'cVAbhHYC-6c',
     duration: '60 mins'
@@ -56,7 +56,7 @@ export const RESEARCH_PAPER_WRITING_CLASSES: CourseClassItem[] = [
   {
     classNumber: 5,
     title: 'Data Collection and Research Design',
-    topics: ['Data Collection and Research Design'],
+    topics: [],
     videoUrl: 'https://youtu.be/Uwdr_Uq7_34',
     youtubeVideoId: 'Uwdr_Uq7_34',
     duration: '60 mins'
@@ -64,7 +64,7 @@ export const RESEARCH_PAPER_WRITING_CLASSES: CourseClassItem[] = [
   {
     classNumber: 6,
     title: 'Primary Data Collection and Analysis',
-    topics: ['Primary Data Collection and Analysis'],
+    topics: [],
     videoUrl: 'https://youtu.be/F49kH2d6yaM',
     youtubeVideoId: 'F49kH2d6yaM',
     duration: '60 mins'
@@ -88,7 +88,7 @@ export const RESEARCH_PAPER_WRITING_CLASSES: CourseClassItem[] = [
   {
     classNumber: 9,
     title: 'Overleaf, LaTeX, Infographics Creation, Result Representation',
-    topics: ['Overleaf, LaTeX, Infographics Creation, Result Representation'],
+    topics: [],
     videoUrl: 'https://youtu.be/JqxVouHfqO8',
     youtubeVideoId: 'JqxVouHfqO8',
     duration: '70 mins'
@@ -96,7 +96,7 @@ export const RESEARCH_PAPER_WRITING_CLASSES: CourseClassItem[] = [
   {
     classNumber: 10,
     title: 'Data Interpretation and Visualization in Excel',
-    topics: ['Data Interpretation and Visualization in Excel'],
+    topics: [],
     videoUrl: 'https://youtu.be/Ase7OKP8yFM',
     youtubeVideoId: 'Ase7OKP8yFM',
     duration: '60 mins'
@@ -104,7 +104,7 @@ export const RESEARCH_PAPER_WRITING_CLASSES: CourseClassItem[] = [
   {
     classNumber: 11,
     title: 'Basic Python Class',
-    topics: ['Basic Python Class'],
+    topics: [],
     videoUrl: 'https://youtu.be/KQv-Vgp-5OU',
     youtubeVideoId: 'KQv-Vgp-5OU',
     duration: '65 mins'
@@ -112,7 +112,7 @@ export const RESEARCH_PAPER_WRITING_CLASSES: CourseClassItem[] = [
   {
     classNumber: 12,
     title: 'Advance Python Class',
-    topics: ['Advance Python Class'],
+    topics: [],
     videoUrl: 'https://youtu.be/VGyO6PQ_JZM',
     youtubeVideoId: 'VGyO6PQ_JZM',
     duration: '75 mins'
@@ -121,8 +121,8 @@ export const RESEARCH_PAPER_WRITING_CLASSES: CourseClassItem[] = [
     classNumber: 13,
     title: 'Remote Sensing, GEE & RS Normalization',
     topics: ['1. Introduction to Remote Sensing', '2. Introduction to GEE', '3. All types of RS Normalization'],
-    videoUrl: '',
-    youtubeVideoId: '',
+    videoUrl: 'https://youtu.be/hPiHnjo7rIs',
+    youtubeVideoId: 'hPiHnjo7rIs',
     duration: '60 mins'
   },
   {
