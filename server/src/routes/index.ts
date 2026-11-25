@@ -11,6 +11,7 @@ import certificateRoutes from './certificate.routes.js';
 import { catalog } from '../controllers/academy.controller.js';
 import { getSettings } from '../controllers/settings.controller.js';
 import { getMongoUri } from '../config/db.js';
+import { serveMediaAsset } from '../services/media.service.js';
 
 const router = Router();
 router.get('/health', (_req, res) => {
@@ -33,6 +34,8 @@ router.use('/me', me);
 router.use('/admin', admin);
 router.use('/enrollments', enrollments);
 router.use('/certificates', certificateRoutes);
+router.get('/media/:id', serveMediaAsset);
+router.get('/public/media/:id', serveMediaAsset);
 router.get('/courses', catalog);
 
 // Direct root aliases for public datasets (Wings, Team, Research, News)

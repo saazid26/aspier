@@ -479,8 +479,8 @@ export function WingsResearchManager() {
                 onUploaded={(url) => setEditingWing({ ...editingWing, coverImage: url })}
                 shape="banner"
                 variant="cover"
-                helperText="Recommended: 1200 × 675 px • Max 3MB"
-                maxSizeMB={3}
+                helperText="Recommended: 1200 × 675 px • 16:9 • Auto-compressed to WebP (Max 10MB)"
+                maxSizeMB={10}
               />
             </div>
 
@@ -685,8 +685,8 @@ export function WingsResearchManager() {
                 onUploaded={(url) => setEditingResearch({ ...editingResearch, coverImage: url })}
                 shape="banner"
                 variant="cover"
-                helperText="Recommended: 1200 × 675 px • Max 3MB"
-                maxSizeMB={3}
+                helperText="Recommended: 1200 × 675 px • 16:9 • Auto-compressed to WebP (Max 10MB)"
+                maxSizeMB={10}
               />
             </div>
 

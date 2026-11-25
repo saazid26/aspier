@@ -10,6 +10,7 @@ import hpp from 'hpp';
 import mongoose from 'mongoose';
 import routes from './routes/index.js';
 import certificateRoutes from './routes/certificate.routes.js';
+import { serveMediaAsset } from './services/media.service.js';
 import { env } from './config/env.js';
 import { connectDatabase, connectDB, DatabaseError, getMongoUri } from './config/db.js';
 import { fastCache } from './utils/fastCache.js';
@@ -87,7 +88,7 @@ app.use(['/api', '/api/v1'], async (req, res, next) => {
   const pathWithoutQuery = ((req.path || '').split('?')[0] || '').toLowerCase();
 
   // Enforce zero stale caching on dynamic API routes so all DB edits reflect in real time
-  if (!pathWithoutQuery.includes('/certificates/image')) {
+  if (!pathWithoutQuery.includes('/certificates/image') && !pathWithoutQuery.includes('/media/')) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -111,6 +112,8 @@ app.use(['/api', '/api/v1'], async (req, res, next) => {
 
   const isPublicGet = req.method === 'GET' && (
     pathWithoutQuery.startsWith('/public/') ||
+    pathWithoutQuery.startsWith('/media/') ||
+    pathWithoutQuery.includes('/media/') ||
     pathWithoutQuery === '/courses' ||
     pathWithoutQuery === '/settings' ||
     pathWithoutQuery.startsWith('/wings') ||
@@ -161,6 +164,7 @@ app.get('/google18d74d32a5c55233.html', (_req, res) => {
   res.header('Content-Type', 'text/html');
   res.send('google-site-verification: google18d74d32a5c55233.html');
 });
+app.get(['/media/:id', '/api/media/:id', '/api/v1/media/:id'], serveMediaAsset);
 app.use(['/api/v1/certificates', '/api/certificates', '/certificates'], certificateRoutes);
 app.use('/api/v1', routes);
 app.use('/api', routes);

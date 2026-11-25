@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, Loader2, Image as ImageIcon, UploadCloud } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
+import { optimizeImageForUpload, fileToDataUrl } from '../utils/imageOptimizer';
 
 export type SmoothImageUploaderProps = {
   value?: string;
@@ -21,85 +22,6 @@ export type SmoothImageUploaderProps = {
   showRemove?: boolean;
 };
 
-/**
- * Asynchronously resizes and optimizes image files in an offscreen canvas
- * before upload to guarantee sub-0.2s uploads and eliminate Vercel 4.5MB payload limits.
- */
-async function optimizeImageFile(file: File, maxDimension = 1024, quality = 0.85): Promise<File> {
-  // If not a raster image or already tiny SVG, return unchanged
-  if (!file.type.startsWith('image/') || file.type === 'image/svg+xml' || file.type === 'image/gif') {
-    return file;
-  }
-
-  return new Promise((resolve) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      let { width, height } = img;
-
-      // If already within dimensions and under 600KB, skip re-encoding
-      if (width <= maxDimension && height <= maxDimension && file.size < 600 * 1024) {
-        resolve(file);
-        return;
-      }
-
-      // Proportional downsampling
-      if (width > height) {
-        if (width > maxDimension) {
-          height = Math.round((height * maxDimension) / width);
-          width = maxDimension;
-        }
-      } else {
-        if (height > maxDimension) {
-          width = Math.round((width * maxDimension) / height);
-          height = maxDimension;
-        }
-      }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, width);
-      canvas.height = Math.max(1, height);
-      const ctx = canvas.getContext('2d', { alpha: true });
-
-      if (!ctx) {
-        resolve(file);
-        return;
-      }
-
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Determine optimal output format (WebP if supported, fallback to JPEG)
-      const outputMime = 'image/webp';
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            resolve(file);
-            return;
-          }
-          const baseName = file.name.replace(/\.[^/.]+$/, '');
-          const optimizedFile = new File([blob], `${baseName}.webp`, {
-            type: outputMime,
-            lastModified: Date.now()
-          });
-          resolve(optimizedFile);
-        },
-        outputMime,
-        quality
-      );
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      resolve(file);
-    };
-
-    img.src = objectUrl;
-  });
-}
 
 export function SmoothImageUploader({
   value,
@@ -204,26 +126,50 @@ export function SmoothImageUploader({
     setBusy(true);
 
     try {
-      // 2. Client-side Async Canvas Compression
-      const optimizedFile = await optimizeImageFile(rawFile, isBanner ? 1600 : 1024, 0.85);
-
-      // 3. Resilient Network Upload
-      const form = new FormData();
-      form.append('file', optimizedFile);
-
-      const response = await api.post(endpoint, form, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          ...headers
-        }
+      // 2. Client-side Async Canvas Compression (auto WebP < 300KB)
+      const optimizedFile = await optimizeImageForUpload(rawFile, {
+        maxWidth: isBanner ? 1400 : 1000,
+        maxHeight: isBanner ? 900 : 1000,
+        quality: 0.82,
+        format: 'image/webp'
       });
 
-      const uploadedUrl =
-        response.data?.data?.url ||
-        response.data?.data?.avatarUrl ||
-        response.data?.url ||
-        response.data?.avatarUrl ||
-        response.data?.data;
+      // 3. Resilient Network Upload with Multipart & JSON Fallback
+      let uploadedUrl: string | undefined;
+
+      try {
+        const form = new FormData();
+        form.append('file', optimizedFile);
+
+        const response = await api.post(endpoint, form, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            ...headers
+          }
+        });
+
+        uploadedUrl =
+          response.data?.data?.url ||
+          response.data?.data?.avatarUrl ||
+          response.data?.url ||
+          response.data?.avatarUrl ||
+          (typeof response.data?.data === 'string' ? response.data.data : undefined);
+      } catch (uploadErr) {
+        console.warn('[SmoothImageUploader] Multipart upload failed, attempting JSON payload fallback:', uploadErr);
+        // Fallback: Post base64 dataUrl directly as JSON
+        const dataUrl = await fileToDataUrl(optimizedFile);
+        const jsonResponse = await api.post(endpoint, {
+          dataUrl,
+          filename: optimizedFile.name
+        }, { headers });
+
+        uploadedUrl =
+          jsonResponse.data?.data?.url ||
+          jsonResponse.data?.data?.avatarUrl ||
+          jsonResponse.data?.url ||
+          jsonResponse.data?.avatarUrl ||
+          (typeof jsonResponse.data?.data === 'string' ? jsonResponse.data.data : undefined);
+      }
 
       if (uploadedUrl && typeof uploadedUrl === 'string') {
         clearObjectUrl();
@@ -236,20 +182,17 @@ export function SmoothImageUploader({
         notifyChange(immediateUrl);
       }
     } catch (error: any) {
-      console.warn('[SmoothImageUploader] Upload error, checking fallback:', error);
-      // Fallback: If network endpoint fails, convert optimized file to base64 dataURL
+      console.warn('[SmoothImageUploader] All network upload attempts failed, persisting local data URL:', error);
+      // Fallback: If network endpoints fail completely, convert optimized file to base64 dataURL
       try {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = reader.result as string;
-          if (base64) {
-            setPreview(base64);
-            notifyChange(base64);
-            toast.success('Image ready. Save changes to persist.');
-          }
-        };
-        const opt = await optimizeImageFile(rawFile, 800, 0.8);
-        reader.readAsDataURL(opt);
+        const opt = await optimizeImageForUpload(rawFile, { maxWidth: 800, quality: 0.8, format: 'image/webp' });
+        const base64 = await fileToDataUrl(opt);
+        if (base64) {
+          clearObjectUrl();
+          setPreview(base64);
+          notifyChange(base64);
+          toast.success('Image ready. Save changes to persist.');
+        }
       } catch {
         setPreview(value || '');
         toast.error(error.response?.data?.message || 'Upload failed. Please try again.');

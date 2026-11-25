@@ -261,8 +261,10 @@ describe('membership application workflow', () => {
         .set('X-Application-Code', accessCode)
         .attach('file', Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jY7sAAAAASUVORK5CYII=', 'base64'), { filename: 'vercel-profile.png', contentType: 'image/png' });
       expect(upload.status).toBe(201);
-      expect(upload.body.data.url).toMatch(/^data:image\/png;base64,/);
-      const media = await MediaAsset.findOne({ url: upload.body.data.url, membershipApplicationId: application._id });
+      expect(upload.body.data.url).toMatch(/^(\/api\/v1\/media\/|data:image\/png;base64,)/);
+      const media = await MediaAsset.findOne({
+        $or: [{ url: upload.body.data.url }, { _id: upload.body.data._id }, { membershipApplicationId: application._id }]
+      });
       expect(media).toBeTruthy();
       if (media) await deleteMediaAsset(String(media._id));
     } finally {

@@ -745,11 +745,25 @@ router.put('/wings/:id', audit('update', 'Wing'), async (req, res) => {
     if (mongoose.connection.readyState !== 1) {
       await connectDatabase();
     }
+    const id = String(req.params.id);
+    const body = { ...req.body };
+    delete body._id;
     let item: any = null;
     if (mongoose.connection.readyState === 1) {
-      item = await Wing.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        item = await Wing.findByIdAndUpdate(id, body, { new: true });
+      }
+      if (!item && (body.slug || id)) {
+        item = await Wing.findOneAndUpdate(
+          { $or: [{ slug: body.slug || id }, { name: body.name }] },
+          body,
+          { new: true, upsert: true }
+        );
+      }
     }
-    const saved = addOrUpdateFallbackWing({ ...req.body, _id: req.params.id });
+    fastCache.invalidate('public:wings');
+    fastCache.clear();
+    const saved = addOrUpdateFallbackWing({ ...req.body, _id: item?._id ? String(item._id) : id });
     return res.json({ success: true, data: item || saved });
   } catch (err: any) {
     const saved = addOrUpdateFallbackWing({ ...req.body, _id: req.params.id });
@@ -808,14 +822,22 @@ router.put('/research/:id', audit('update', 'Research'), async (req, res) => {
     }
     let item: any = null;
     const researchId = String(req.params.id);
+    const body = { ...req.body };
+    delete body._id;
     if (mongoose.connection.readyState === 1) {
       if (mongoose.Types.ObjectId.isValid(researchId)) {
-        item = await Research.findByIdAndUpdate(researchId, req.body, { new: true });
+        item = await Research.findByIdAndUpdate(researchId, body, { new: true });
       }
-      if (!item && req.body.slug) {
-        item = await Research.findOneAndUpdate({ slug: req.body.slug }, req.body, { new: true });
+      if (!item && (body.slug || researchId)) {
+        item = await Research.findOneAndUpdate(
+          { $or: [{ slug: body.slug || researchId }, { title: body.title }] },
+          body,
+          { new: true, upsert: true }
+        );
       }
     }
+    fastCache.invalidate('public:research');
+    fastCache.clear();
     const saved = addOrUpdateFallbackResearch({ ...req.body, _id: item?._id ? String(item._id) : researchId });
     return res.json({ success: true, data: item || saved });
   } catch (err: any) {
@@ -1170,10 +1192,17 @@ router.delete('/enrollments/:id', async (req, res) => {
 });
 const uploadMemory = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 3 * 1024 * 1024 },
-  fileFilter: (_req, file, callback) => callback(null, ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype))
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    if (!file.mimetype || file.mimetype.startsWith('image/')) {
+      callback(null, true);
+    } else {
+      callback(null, ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'].includes(file.mimetype));
+    }
+  }
 });
 router.post('/media', uploadMemory.single('file'), upload);
+router.post('/upload', uploadMemory.single('file'), upload);
 router.get('/media', mediaLibrary);
 router.delete('/media/:id', deleteMedia);
 router.get('/settings', getSettings);
