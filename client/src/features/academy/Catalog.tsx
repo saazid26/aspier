@@ -92,7 +92,6 @@ export function Catalog() {
             />
             <div className="course-card-body">
               <div className="course-card-content">
-                {course.sampleData && <span className="badge-sample">Sample course</span>}
                 <h2 className="course-card-title" title={course.title}>
                   {course.title}
                 </h2>

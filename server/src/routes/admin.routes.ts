@@ -992,6 +992,7 @@ router.post('/update-research-course-curriculum', async (req, res) => {
     course.duration = '15 Recorded Classes (Classes 0–14)';
     course.status = 'published';
     course.level = 'advanced';
+    course.sampleData = false;
     course.classes = RESEARCH_PAPER_WRITING_CLASSES as any;
     course.curriculum = RESEARCH_PAPER_WRITING_CLASSES as any;
     course.modules = RESEARCH_PAPER_WRITING_MODULES as any;

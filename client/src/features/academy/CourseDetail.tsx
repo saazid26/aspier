@@ -108,7 +108,6 @@ export function CourseDetail() {
         fallbackClassName="course-image-placeholder"
       />
 
-      {data.sampleData && <span className="badge-sample">Sample course</span>}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
         <span className="eyebrow" style={{ margin: 0 }}>{data.level || 'Advanced'} course · ASPIER Academy</span>
         <span className="badge badge-green" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
