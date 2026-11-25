@@ -229,10 +229,10 @@ export function BrandingSettings() {
           </label>
         </div>
 
-        {/* Financial & Fee Settings */}
+        {/* Student Course Payment Accounts (Students Only) */}
         <div className="card" style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: '1.25rem', marginBottom: 6 }}>Payment & Membership Accounts</h2>
-          <p className="muted" style={{ marginBottom: 16 }}>Configures merchant numbers and membership instructions shown to applicants.</p>
+          <h2 style={{ fontSize: '1.25rem', marginBottom: 6 }}>Student Course Payment Accounts (Students Only)</h2>
+          <p className="muted" style={{ marginBottom: 16 }}>Configures bKash & Nagad merchant numbers and payment instructions strictly for Aspire Academy student course enrollments. (No fees apply to Young Scholars or Supervisors.)</p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
             <label>
@@ -252,25 +252,16 @@ export function BrandingSettings() {
                 placeholder="01603012448"
               />
             </label>
-
-            <label>
-              Membership Fee (BDT)
-              <Input
-                type="number"
-                value={Number(fields.membershipFee || 1000)}
-                onChange={(e) => update('membershipFee', Number(e.target.value))}
-              />
-            </label>
           </div>
 
           <label style={{ marginTop: 12 }}>
-            Payment Instructions Notice
+            Student Course Payment Instructions
             <textarea
               className="textarea"
               rows={3}
               value={String(fields.paymentInstructions || '')}
               onChange={(e) => update('paymentInstructions', e.target.value)}
-              placeholder="Send payment via Send Money or Merchant Pay to the above number with your applicant reference."
+              placeholder="Send the course fee by bKash or Nagad, then submit the exact transaction ID for verification."
             />
           </label>
         </div>

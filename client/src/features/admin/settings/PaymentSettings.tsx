@@ -9,7 +9,6 @@ type PaymentSettingsValue = {
   bkashNumber?: string;
   nagadNumber?: string;
   paymentInstructions?: string;
-  membershipFee?: number;
 };
 
 export function PaymentSettings() {
@@ -22,25 +21,22 @@ export function PaymentSettings() {
   const update = (key: keyof PaymentSettingsValue, value: string | number) => setForm({ ...fields, [key]: value });
 
   return <>
-    <h1>Payment & membership settings</h1>
+    <h1>Student Course Payment Accounts (Students Only)</h1>
+    <p className="muted" style={{ marginBottom: 16 }}>Configures bKash & Nagad merchant numbers and payment instructions strictly for Aspire Academy student course enrollments. (No fees apply to Young Scholars or Supervisors.)</p>
     {data && <form className="form" style={{ maxWidth: 680 }} onSubmit={async (event) => {
       event.preventDefault();
       try {
         await api.put('/admin/settings', fields);
         await refetch();
-        toast.success('Payment and membership settings saved.');
+        toast.success('Student course payment settings saved.');
       } catch (error: any) {
         toast.error(error.response?.data?.message || 'Could not save payment settings');
       }
     }}>
-      <h2>Academy payment numbers</h2>
-      <label>bKash<Input value={String(fields.bkashNumber || '')} onChange={(event) => update('bkashNumber', event.target.value)}/></label>
-      <label>Nagad<Input value={String(fields.nagadNumber || '')} onChange={(event) => update('nagadNumber', event.target.value)}/></label>
-      <label>Payment instructions<textarea className="textarea" rows={3} value={String(fields.paymentInstructions || '')} onChange={(event) => update('paymentInstructions', event.target.value)}/></label>
-      <div className="admin-section-divider"/>
-      <h2>Membership billing</h2>
-      <label>Membership fee (BDT)<Input type="number" min="0" value={Number(fields.membershipFee ?? 0)} onChange={(event) => update('membershipFee', Number(event.target.value))}/></label>
-      <p className="muted">Joining ASPIER as a Supervisor or Young Scholar is completely free across all stages. Default membership fee: BDT 0.</p>
+      <h2>Academy student payment numbers</h2>
+      <label>bKash Merchant / Personal Number<Input value={String(fields.bkashNumber || '')} onChange={(event) => update('bkashNumber', event.target.value)} placeholder="01603012448"/></label>
+      <label>Nagad Number<Input value={String(fields.nagadNumber || '')} onChange={(event) => update('nagadNumber', event.target.value)} placeholder="01603012448"/></label>
+      <label>Student Course Payment Instructions<textarea className="textarea" rows={3} value={String(fields.paymentInstructions || '')} onChange={(event) => update('paymentInstructions', event.target.value)} placeholder="Send the course fee by bKash or Nagad, then submit the exact transaction ID for verification."/></label>
       <Button>Save changes</Button>
     </form>}
   </>;

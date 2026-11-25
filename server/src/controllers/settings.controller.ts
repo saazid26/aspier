@@ -16,7 +16,7 @@ export async function getSettings(_req: Request, res: Response) {
     if (mongoose.connection.readyState === 1) {
       const setting = await Setting.findOne({ singleton: 'main' }).lean().maxTimeMS(1500);
       if (setting) {
-        const data = { ...fallbackSettings, ...setting };
+        const data = { ...fallbackSettings, ...setting, membershipFee: 0 };
         fastCache.set('settings:main', data, 60);
         return res.json({ success: true, data });
       }
@@ -33,6 +33,8 @@ export async function updateSettings(req: Request, res: Response) {
       await connectDatabase();
     }
     const body = { ...req.body };
+    // Membership fees do not exist for Young Scholars or Supervisors; payment accounts are strictly for Academy Students
+    body.membershipFee = 0;
     if (body.heroImage) body.heroImage = await ensureCloudinaryUrl(body.heroImage, 'aspier/settings');
     if (body.founderPhoto) body.founderPhoto = await ensureCloudinaryUrl(body.founderPhoto, 'aspier/settings');
     if (body.aspierLogoUrl) body.aspierLogoUrl = await ensureCloudinaryUrl(body.aspierLogoUrl, 'aspier/settings');
@@ -43,8 +45,9 @@ export async function updateSettings(req: Request, res: Response) {
     res.json({ success: true, data: updated });
   } catch (err) {
     console.warn('[updateSettings] DB save fallback:', err instanceof Error ? err.message : err);
-    Object.assign(fallbackSettings, req.body);
+    delete req.body.membershipFee;
+    Object.assign(fallbackSettings, req.body, { membershipFee: 0 });
     fastCache.invalidate('settings');
-    res.json({ success: true, data: { ...fallbackSettings, ...req.body } });
+    res.json({ success: true, data: { ...fallbackSettings, ...req.body, membershipFee: 0 } });
   }
 }

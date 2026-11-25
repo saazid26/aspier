@@ -172,6 +172,7 @@ export const fallbackSettings = {
   founderGoogleScholarUrl: "https://scholar.google.com/",
   bkashNumber: "01603012448",
   nagadNumber: "01603012448",
+  paymentInstructions: "Send the course fee by bKash or Nagad, then submit the exact transaction ID for verification.",
   membershipFee: 0
 };
 
