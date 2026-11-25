@@ -1,8 +1,9 @@
 import { z } from 'zod';
-const strongPassword = z.string().min(8).max(128)
-  .regex(/[a-z]/, 'Use at least one lowercase letter')
-  .regex(/[A-Z]/, 'Use at least one uppercase letter')
-  .regex(/\d/, 'Use at least one number')
+const strongPassword = z.string()
+  .min(8, 'Password must be at least 8 characters')
+  .max(128, 'Password must not exceed 128 characters')
+  .regex(/[a-zA-Z]/, 'Use a mix of letters and numbers')
+  .regex(/\d/, 'Use a mix of letters and numbers')
   .refine((value) => !value.toLowerCase().includes('password') && !value.includes('123456'), 'Password is too common');
 export const registerSchema = z.object({
   name: z.string().trim().min(2).max(100),

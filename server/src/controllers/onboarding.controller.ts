@@ -12,12 +12,13 @@ import AuditLog from '../models/AuditLog.js';
 import { recordAudit } from '../services/audit.service.js';
 import { notifyAdmins, notifyMember } from '../services/notification.service.js';
 import { sendEmail } from '../services/email.service.js';
-import { hashPassword } from '../services/password.service.js';
+import { hashPassword, passwordStrength } from '../services/password.service.js';
 import { saveMedia } from '../services/media.service.js';
 import { slugify } from '../utils/slug.js';
 import { env } from '../config/env.js';
 import { getFallbackApplications, demoSupervisors, demoScholars, makeDemoAvatar } from '../utils/fallbackData.js';
 import { fastCache } from '../utils/fastCache.js';
+import { extractToken } from '../utils/token.js';
 
 export async function approveAndSendOnboarding(req: AuthRequest, res: Response, next: NextFunction) {
   try {
@@ -52,7 +53,13 @@ export async function approveAndSendOnboarding(req: AuthRequest, res: Response, 
     const role = application.role === 'supervisor' || application.category === 'teammate' ? 'supervisor' : 'scholar';
     const roleLabel = role === 'supervisor' ? 'Research Supervisor' : 'Young Scholar';
 
-    const baseUrl = env.CLIENT_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://aspierglobal.vercel.app');
+    const baseUrl = (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'))
+      ? process.env.CLIENT_URL.replace(/\/$/, '')
+      : (process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : (env.CLIENT_URL && !env.CLIENT_URL.includes('localhost')
+          ? env.CLIENT_URL.replace(/\/$/, '')
+          : 'https://aspierglobal.vercel.app'));
     const onboardingUrl = `${baseUrl}/onboarding?token=${token}&role=${role}`;
 
     // Send in-app notification to member (if they checked portal or have account)
@@ -138,7 +145,8 @@ export async function approveAndSendOnboarding(req: AuthRequest, res: Response, 
 
 export async function validateOnboardingToken(req: Request, res: Response, next: NextFunction) {
   try {
-    const token = String(req.query.token || '').trim();
+    const rawToken = String(req.query.token || '').trim();
+    const token = extractToken(rawToken);
     if (!token) throw new HttpError(400, 'Onboarding token is required');
 
     let application: any = null;
@@ -208,9 +216,13 @@ export async function uploadOnboardingPhoto(req: Request, res: Response, next: N
 
 export async function completeOnboarding(req: Request, res: Response, next: NextFunction) {
   try {
-    const { token, password, profile } = req.body || {};
+    const { token: rawToken, password, profile } = req.body || {};
+    const token = extractToken(rawToken);
     if (!token) throw new HttpError(400, 'Onboarding token is required');
     if (!password || password.length < 8) throw new HttpError(400, 'Password must be at least 8 characters');
+    if (password.length > 128) throw new HttpError(400, 'Password must not exceed 128 characters');
+    const passwordErrors = passwordStrength(password);
+    if (passwordErrors.length) throw new HttpError(400, passwordErrors.join('. '));
     if (!profile || !profile.name) throw new HttpError(400, 'Profile details and full name are required');
 
     let application: any = null;
@@ -230,6 +242,7 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
     }
 
     const role = application.role === 'supervisor' || application.category === 'teammate' ? 'supervisor' : 'scholar';
+    const userRole = role === 'supervisor' ? 'supervisor' : 'youngScholar';
     const passwordHash = await hashPassword(password);
     const baseSlug = slugify(profile.slug || profile.name);
 
@@ -243,11 +256,13 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
             name: profile.name,
             email: application.email.toLowerCase(),
             passwordHash,
-            role: role === 'supervisor' ? 'supervisor' : 'student',
+            role: userRole,
             isActive: true
           });
         } else {
+          user.name = profile.name || user.name;
           user.passwordHash = passwordHash;
+          user.role = userRole;
           user.isActive = true;
           await user.save();
         }

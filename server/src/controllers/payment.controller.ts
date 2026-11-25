@@ -8,6 +8,7 @@ import { HttpError } from '../middleware/error.js';
 import { activateEnrollment } from '../services/enrollment.service.js';
 import { notifyAdmins, notifyMember } from '../services/notification.service.js';
 import { sendEmail } from '../services/email.service.js';
+import { env } from '../config/env.js';
 export async function submitPayment(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { courseId, method, senderNumber, trxId, amount } = req.body;
@@ -74,6 +75,11 @@ export async function approvePayment(req: AuthRequest, res: Response, next: Next
     payment.status = 'approved'; payment.reviewedAt = new Date(); payment.reviewedBy = req.user._id; payment.enrollmentId = enrollment?._id;
     await payment.save();
     const [user, course] = await Promise.all([User.findById(payment.userId), Course.findById(payment.courseId)]);
+    const clientBase = (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'))
+      ? process.env.CLIENT_URL.replace(/\/$/, '')
+      : (env.CLIENT_URL && !env.CLIENT_URL.includes('localhost')
+        ? env.CLIENT_URL.replace(/\/$/, '')
+        : 'https://aspierglobal.vercel.app');
     if (user) {
       await notifyMember({
         userId: user._id,
@@ -85,7 +91,7 @@ export async function approvePayment(req: AuthRequest, res: Response, next: Next
       await sendEmail({
         to: user.email,
         subject: `Payment Approved: ${course?.title || 'ASPIER Academy Course'}`,
-        html: `<p>Hello ${user.name},</p><p>Your payment for <strong>${course?.title || 'your course'}</strong> has been approved!</p><p>Your enrollment is now active. You can start learning here: <a href="http://localhost:5173/student/courses">My Courses</a></p>`
+        html: `<p>Hello ${user.name},</p><p>Your payment for <strong>${course?.title || 'your course'}</strong> has been approved!</p><p>Your enrollment is now active. You can start learning here: <a href="${clientBase}/student/courses">My Courses</a></p>`
       });
     }
     res.json({ success: true, data: payment });
@@ -100,6 +106,11 @@ export async function rejectPayment(req: AuthRequest, res: Response, next: NextF
     await payment.save();
     await Enrollment.findOneAndUpdate({ userId: payment.userId, courseId: payment.courseId }, { $set: { status: 'rejected' } });
     const [user, course] = await Promise.all([User.findById(payment.userId), Course.findById(payment.courseId)]);
+    const clientBase = (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'))
+      ? process.env.CLIENT_URL.replace(/\/$/, '')
+      : (env.CLIENT_URL && !env.CLIENT_URL.includes('localhost')
+        ? env.CLIENT_URL.replace(/\/$/, '')
+        : 'https://aspierglobal.vercel.app');
     if (user) {
       await notifyMember({
         userId: user._id,
@@ -111,7 +122,7 @@ export async function rejectPayment(req: AuthRequest, res: Response, next: NextF
       await sendEmail({
         to: user.email,
         subject: `Payment Update: ${course?.title || 'ASPIER Academy Course'}`,
-        html: `<p>Hello ${user.name},</p><p>Your payment submission for <strong>${course?.title || 'your course'}</strong> could not be verified.</p><p><strong>Reason:</strong> ${payment.rejectionReason}</p><p>Please review your payment information or submit a new transaction at <a href="http://localhost:5173/student/payments">Payment History</a>.</p>`
+        html: `<p>Hello ${user.name},</p><p>Your payment submission for <strong>${course?.title || 'your course'}</strong> could not be verified.</p><p><strong>Reason:</strong> ${payment.rejectionReason}</p><p>Please review your payment information or submit a new transaction at <a href="${clientBase}/student/payments">Payment History</a>.</p>`
       });
     }
     res.json({ success: true, data: payment });

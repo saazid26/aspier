@@ -97,12 +97,19 @@ export function MembershipApplications() {
     try {
       const response = await api.post(`/admin/membership-applications/${application._id}/approve-onboarding`);
       const linkData = response.data.data;
+      const origin = (window.location.origin && !window.location.origin.includes('localhost'))
+        ? window.location.origin
+        : 'https://aspierglobal.vercel.app';
+      const cleanOnboardingUrl = (linkData.onboardingUrl && !linkData.onboardingUrl.includes('localhost'))
+        ? linkData.onboardingUrl
+        : `${origin}/onboarding?token=${linkData.token || application.onboardingToken}&role=${application.role === 'supervisor' ? 'supervisor' : 'scholar'}`;
+
       setOnboardingModal({
         applicationId: application._id,
         name: linkData.name || application.name,
         email: linkData.email || application.email,
         roleLabel: linkData.roleLabel,
-        onboardingUrl: linkData.onboardingUrl,
+        onboardingUrl: cleanOnboardingUrl,
         expiresAt: new Date(linkData.expiresAt).toLocaleDateString()
       });
       toast.success(`Approved! Secure onboarding link dispatched to ${application.email}`);
@@ -296,7 +303,9 @@ export function MembershipApplications() {
                       variant="secondary"
                       className="text-xs py-1 px-3 border-emerald-300 hover:bg-emerald-100 text-emerald-800"
                       onClick={() => {
-                        const baseUrl = window.location.origin;
+                        const baseUrl = (window.location.origin && !window.location.origin.includes('localhost'))
+                          ? window.location.origin
+                          : 'https://aspierglobal.vercel.app';
                         const role = isSupervisor ? 'supervisor' : 'scholar';
                         const url = `${baseUrl}/onboarding?token=${application.onboardingToken}&role=${role}`;
                         copyToClipboard(url);

@@ -245,7 +245,9 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
     const roleMatches = !requestedRole
       || (['admin', 'superadmin'].includes(userRoleLower) && (reqRoleLower === 'admin' || reqRoleLower === 'superadmin'))
       || reqRoleLower === userRoleLower
-      || (['learner', 'student'].includes(reqRoleLower) && ['student', 'instructor'].includes(userRoleLower));
+      || (['learner', 'student'].includes(reqRoleLower) && ['student', 'instructor'].includes(userRoleLower))
+      || (['supervisor'].includes(reqRoleLower) && ['supervisor'].includes(userRoleLower))
+      || (['youngscholar', 'scholar'].includes(reqRoleLower) && ['youngscholar', 'scholar'].includes(userRoleLower));
     if (!roleMatches) throw new HttpError(401, 'The selected role does not match this account');
 
     if (adminAccount && user.isAdmin2FAEnabled) {

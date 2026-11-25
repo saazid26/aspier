@@ -27,6 +27,7 @@ import { createTotpQr, createTotpSecret, verifyTotp } from '../services/totp.ser
 import { getFallbackApplications, addOrUpdateFallbackSupervisor, addOrUpdateFallbackScholar } from '../utils/fallbackData.js';
 import { env } from '../config/env.js';
 import { fastCache } from '../utils/fastCache.js';
+import { extractToken } from '../utils/token.js';
 
 const initialSchema = z.preprocess((value) => {
   if (!value || typeof value !== 'object') return value;
@@ -894,10 +895,15 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
       link: '/login',
       secretPayload: activationCode
     });
+    const clientBase = (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'))
+      ? process.env.CLIENT_URL.replace(/\/$/, '')
+      : (env.CLIENT_URL && !env.CLIENT_URL.includes('localhost')
+        ? env.CLIENT_URL.replace(/\/$/, '')
+        : 'https://aspierglobal.vercel.app');
     await sendEmail({
       to: application.email,
       subject: 'Your ASPIER Membership is Now Active!',
-      html: `<p>Hello ${application.name},</p><p>${publishMsg}</p><p><strong>Secret Activation Code:</strong></p><p style="font-family: monospace; font-size: 18px; font-weight: bold; background: #f3f4f6; padding: 12px; border-radius: 6px;">${activationCode}</p><p>Visit <a href="${env.CLIENT_URL}/login">${env.CLIENT_URL}/login</a> and use your activation code to finish setting up your account.</p>`
+      html: `<p>Hello ${application.name},</p><p>${publishMsg}</p><p><strong>Secret Activation Code:</strong></p><p style="font-family: monospace; font-size: 18px; font-weight: bold; background: #f3f4f6; padding: 12px; border-radius: 6px;">${activationCode}</p><p>Visit <a href="${clientBase}/login">${clientBase}/login</a> and use your activation code to finish setting up your account.</p>`
     });
     res.json({ success: true, data: { applicationId: application.id, status: application.status, profileId, profileType: application.publishedProfileType } });
   } catch (error) {
@@ -909,50 +915,105 @@ export async function activateMemberAccount(req: Request, res: Response, next: N
     try {
       const data = parseBody(z.object({
         role: z.enum(['supervisor', 'youngScholar']),
-        activationCode: z.string().min(12).max(100),
+        activationCode: z.string().min(1).max(500).transform((val) => extractToken(val)),
         email: z.string().trim().email().max(254).refine((email) => email.toLowerCase().endsWith('@gmail.com'), 'Use a Gmail address ending in @gmail.com'),
-        password: z.string().min(8).max(128),
-        confirmPassword: z.string().min(8).max(128)
+        password: z.string().min(8, 'Password must be at least 8 characters').max(128, 'Password must not exceed 128 characters'),
+        confirmPassword: z.string().min(8, 'Password must be at least 8 characters').max(128, 'Password must not exceed 128 characters')
       }).refine((body) => body.password === body.confirmPassword, { message: 'Passwords do not match' }), req.body);
       const passwordErrors = passwordStrength(data.password);
       if (passwordErrors.length) throw new HttpError(400, passwordErrors.join('. '));
-      const application = await MembershipApplication.findOne({
-        activationCodeHash: sha256(data.activationCode),
-        activationCodeUsedAt: { $exists: false },
-        status: { $in: ['published', 'completed', 'active_member'] },
-        role: data.role
-      });
-      if (!application) throw new HttpError(400, 'Secret activation code is invalid, already used, or does not match the selected role');
+
+      const cleanCode = data.activationCode;
+      const codeHash = sha256(cleanCode);
+
+      if (mongoose.connection.readyState !== 1) {
+        await connectDatabase();
+      }
+
+      let application: any = null;
+      if (mongoose.connection.readyState === 1) {
+        application = await MembershipApplication.findOne({
+          $or: [
+            { activationCodeHash: codeHash },
+            { onboardingToken: cleanCode }
+          ],
+          activationCodeUsedAt: { $exists: false }
+        });
+      }
+
+      if (!application) {
+        const fallbacks = getFallbackApplications();
+        application = fallbacks.find((a: any) =>
+          !a.activationCodeUsedAt &&
+          (a.onboardingToken === cleanCode || a.activationCode === cleanCode)
+        );
+      }
+
+      if (!application) {
+        throw new HttpError(400, 'Secret activation code or onboarding link is invalid, already used, or does not match');
+      }
+
       const email = data.email.toLowerCase();
-      if (await User.exists({ email })) throw new HttpError(409, 'This Gmail address already has an account');
-      const claim = await MembershipApplication.findOneAndUpdate(
-        { _id: application._id, activationCodeHash: sha256(data.activationCode), activationCodeUsedAt: { $exists: false } },
-        { $set: { activationCodeUsedAt: new Date() } },
-        { new: true }
-      );
-      if (!claim) throw new HttpError(409, 'Secret activation code has already been used');
-      let createdUserId: string | undefined;
-      try {
-        const user = await User.create({
+      let user: any = null;
+
+      if (mongoose.connection.readyState === 1) {
+        user = await User.findOne({ email });
+        if (user) {
+          if (['admin', 'superadmin'].includes(user.role)) {
+            throw new HttpError(403, 'Administrator accounts cannot be activated through member registration');
+          }
+          user.name = application.name || user.name;
+          user.passwordHash = await hashPassword(data.password);
+          user.role = data.role;
+          user.isActive = true;
+          await user.save();
+        } else {
+          user = await User.create({
+            name: application.name,
+            email,
+            passwordHash: await hashPassword(data.password),
+            role: data.role,
+            isActive: true
+          });
+        }
+
+        application.activationCodeUsedAt = new Date();
+        application.onboardingTokenUsed = true;
+        application.status = 'active_member';
+        application.memberUserId = user._id;
+        if (typeof application.save === 'function') {
+          await application.save().catch(() => {});
+        }
+        await Notification.updateMany({ applicationId: application._id, audience: 'member' }, { $set: { userId: user._id } }).catch(() => {});
+      } else {
+        application.activationCodeUsedAt = new Date();
+        application.onboardingTokenUsed = true;
+        application.status = 'active_member';
+        user = {
+          _id: new mongoose.Types.ObjectId(),
           name: application.name,
           email,
-          passwordHash: await hashPassword(data.password),
-          role: data.role,
-          isActive: true
-        });
-        createdUserId = String(user._id);
-        application.memberUserId = user._id;
-        await application.save();
-        await Notification.updateMany({ applicationId: application._id, audience: 'member' }, { $set: { userId: user._id } });
-        res.status(201).json({ success: true, data: { id: user.id, name: user.name, email: user.email, role: user.role } });
-      } catch (error) {
-        if (createdUserId) await User.deleteOne({ _id: createdUserId });
-        await MembershipApplication.updateOne({ _id: application._id, activationCodeUsedAt: claim.activationCodeUsedAt }, { $unset: { activationCodeUsedAt: 1 } });
-        throw error;
+          role: data.role
+        };
       }
+
+      fastCache.clear();
+
+      res.status(201).json({
+        success: true,
+        data: {
+          id: user._id || user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      });
     } catch (error) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 11000) next(new HttpError(409, 'This Gmail address already has an account'));
-      else next(error);
+      if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
+        next(new HttpError(409, 'This Gmail address already has an account'));
+      } else {
+        next(error);
+      }
     }
   }
 

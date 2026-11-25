@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { GraduationCap, Lock } from 'lucide-react';
@@ -12,6 +12,41 @@ import { startAuthentication } from '@simplewebauthn/browser';
 import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
 
 type Role = 'admin' | 'supervisor' | 'youngScholar' | 'learner';
+
+export function cleanActivationToken(val: string): string {
+  if (!val) return '';
+  const trimmed = val.trim();
+  if (trimmed.includes('token=')) {
+    try {
+      const parsed = trimmed.startsWith('http://') || trimmed.startsWith('https://')
+        ? new URL(trimmed)
+        : new URL(`https://dummy.com/${trimmed.startsWith('?') ? trimmed : '?' + trimmed}`);
+      const t = parsed.searchParams.get('token');
+      if (t) return t.trim();
+    } catch {
+      const match = trimmed.match(/token=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) return match[1].trim();
+    }
+  }
+  if (trimmed.includes('code=')) {
+    try {
+      const parsed = trimmed.startsWith('http://') || trimmed.startsWith('https://')
+        ? new URL(trimmed)
+        : new URL(`https://dummy.com/${trimmed.startsWith('?') ? trimmed : '?' + trimmed}`);
+      const c = parsed.searchParams.get('code');
+      if (c) return c.trim();
+    } catch {
+      const match = trimmed.match(/code=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) return match[1].trim();
+    }
+  }
+  if (trimmed.includes('/onboarding/')) {
+    const parts = trimmed.split('/onboarding/');
+    const seg = parts[1]?.split(/[\?#]/)[0]?.trim();
+    if (seg) return seg;
+  }
+  return trimmed;
+}
 
 export function Login() {
   const location = useLocation();
@@ -41,6 +76,22 @@ export function Login() {
   useCsrf();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const codeParam = searchParams.get('code') || searchParams.get('token') || searchParams.get('activationCode');
+    if (codeParam) {
+      setMode('activate');
+      setActivationCode(cleanActivationToken(codeParam));
+    }
+    const roleParam = searchParams.get('role');
+    if (roleParam && (roleParam === 'supervisor' || roleParam === 'youngScholar')) {
+      setRole(roleParam);
+    }
+    const emailParam = searchParams.get('email');
+    if (emailParam) {
+      setEmail(emailParam.toLowerCase());
+    }
+  }, [searchParams]);
+
   const changeRole = (value: Role) => {
     setRole(value);
     setMode('login');
@@ -58,9 +109,35 @@ export function Login() {
     setBusy(true);
     try {
       if (mode === 'activate') {
-        if (password !== confirmPassword) throw new Error('Passwords do not match');
-        await api.post('/public/membership/activate', { role, activationCode, email: email.trim().toLowerCase(), password, confirmPassword });
-        toast.success('Member account activated. Sign in with your Gmail and new password.');
+        const cleanedCode = cleanActivationToken(activationCode);
+        if (!cleanedCode) {
+          toast.error('Please enter your secret activation code or paste your activation link.');
+          setBusy(false);
+          return;
+        }
+        if (password.length < 8) {
+          toast.error('Password must be at least 8 characters.');
+          setBusy(false);
+          return;
+        }
+        if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+          toast.error('Please use a mix of letters and numbers in your password.');
+          setBusy(false);
+          return;
+        }
+        if (password !== confirmPassword) {
+          toast.error('Passwords do not match.');
+          setBusy(false);
+          return;
+        }
+        await api.post('/public/membership/activate', {
+          role,
+          activationCode: cleanedCode,
+          email: email.trim().toLowerCase(),
+          password,
+          confirmPassword
+        });
+        toast.success('Member account activated! Please sign in with your Gmail and new password.');
         setMode('login');
         setPassword('');
         setConfirmPassword('');
@@ -252,10 +329,53 @@ export function Login() {
           <button type="button" className={`button ${mode === 'login' ? 'button-primary' : 'button-secondary'}`} onClick={() => setMode('login')}>Member Login</button>
         </div>}
         {mode === 'activate' ? <>
-          <label>Secret activation code<Input required autoComplete="one-time-code" value={activationCode} onChange={(event) => setActivationCode(event.target.value)}/></label>
-          <label>Gmail ID<Input required type="email" pattern=".+@gmail\.com" title="Use an address ending in @gmail.com" value={email} onChange={(event) => setEmail(event.target.value.toLowerCase())}/></label>
-          <label>Create new password<Input required type="password" minLength={8} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)}/></label>
-          <label>Confirm password<Input required type="password" minLength={8} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)}/></label>
+          <label>Secret activation code
+            <Input
+              required
+              autoComplete="one-time-code"
+              placeholder="Paste activation code or full onboarding link"
+              value={activationCode}
+              onChange={(event) => setActivationCode(cleanActivationToken(event.target.value))}
+            />
+          </label>
+          <label>Gmail ID
+            <Input
+              required
+              type="email"
+              pattern=".+@gmail\.com"
+              title="Use an address ending in @gmail.com"
+              placeholder="yourname@gmail.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value.toLowerCase())}
+            />
+          </label>
+          <label>Create new password
+            <Input
+              required
+              type="password"
+              minLength={8}
+              maxLength={128}
+              autoComplete="new-password"
+              placeholder="Minimum 8 characters"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            <span style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 4, display: 'block' }}>
+              Use at least 8–10 characters with a mix of letters and numbers.
+            </span>
+          </label>
+          <label>Confirm password
+            <Input
+              required
+              type="password"
+              minLength={8}
+              maxLength={128}
+              autoComplete="new-password"
+              placeholder="Confirm your password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
+          </label>
         </> : <>
           <label>{memberRole ? 'Gmail ID' : 'Email'}<Input type="email" pattern={memberRole ? '.+@gmail\\.com' : undefined} value={email} onChange={(event) => setEmail(event.target.value.toLowerCase())} required/></label>
           <label>Password<Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password"/></label>

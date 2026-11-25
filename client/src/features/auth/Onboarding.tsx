@@ -8,6 +8,7 @@ import { SEO } from '../../components/common/SEO';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { ImageUploader } from '../../components/forms/ImageUploader';
+import { cleanActivationToken } from './Login';
 
 function slugify(text: string): string {
   return text
@@ -20,7 +21,7 @@ function slugify(text: string): string {
 export function Onboarding() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = searchParams.get('token') || '';
+  const token = cleanActivationToken(searchParams.get('token') || '');
   const initialRoleParam = searchParams.get('role') || '';
 
   // 1. Validate Token on Load
@@ -96,6 +97,10 @@ export function Onboarding() {
 
     if (!password || password.length < 8) {
       toast.error('Password must be at least 8 characters.');
+      return;
+    }
+    if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+      toast.error('Please use a mix of letters and numbers in your password.');
       return;
     }
     if (password !== confirmPassword) {
@@ -339,10 +344,14 @@ export function Onboarding() {
                 required
                 type="password"
                 minLength={8}
+                maxLength={128}
                 placeholder="At least 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <span style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 4, display: 'block' }}>
+                Use at least 8–10 characters with a mix of letters and numbers.
+              </span>
             </label>
             <label>
               Confirm Password
@@ -350,6 +359,7 @@ export function Onboarding() {
                 required
                 type="password"
                 minLength={8}
+                maxLength={128}
                 placeholder="Re-enter password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
