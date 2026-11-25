@@ -181,122 +181,6 @@ export async function seedAcademyData(force = false): Promise<{
         bannerUrl: makeDemoCover('Research Paper Writing'),
         sampleData: true,
         modules: defaultPaperWritingModules
-      },
-      {
-        title: 'Responsible AI Foundations',
-        slug: 'responsible-ai-foundations',
-        description: '<p>Illustrative eight-week intensive course covering machine-learning foundations, fairness, transparency, model interpretability, and responsible deployment in real-world environments.</p><ul><li>Understand data preparation and model evaluation metrics.</li><li>Identify algorithmic bias, audit datasets, and document limitations.</li><li>Communicate trustworthy AI decisions across multidisciplinary teams.</li></ul>',
-        summary: 'Machine learning foundations, algorithmic fairness, model transparency, and responsible deployment.',
-        duration: '8 weeks',
-        mode: 'Online and Live',
-        deliveryMode: 'Online and Live',
-        startDate: '2026-12-15',
-        targetAudience: 'Students and early-career researchers beginning applied artificial intelligence study.',
-        enrollmentContact: 'Contact ASPIER Academy to confirm cohort enrollment.',
-        wingId: aiWing?._id,
-        instructorId: instBySlug.get('farzana-rahman') || instructorsList[0]?._id,
-        price: 2500,
-        level: 'beginner',
-        status: 'published',
-        thumbnail: makeDemoCover('Responsible AI Foundations'),
-        bannerUrl: makeDemoCover('Responsible AI Foundations'),
-        sampleData: true,
-        modules: [
-          {
-            moduleNumber: 1,
-            title: 'Module 1: AI Systems and Society',
-            week: 'Weeks 1–2',
-            description: 'Introduction to ethical algorithmic design and societal impact of automated systems.',
-            lessons: [
-              { title: 'Session 1: What is Responsible AI?', duration: '45 mins', isFreePreview: true, videoId: 'dQw4w9WgXcQ' },
-              { title: 'Session 2: Algorithmic Bias and Fairness Audits', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' }
-            ]
-          },
-          {
-            moduleNumber: 2,
-            title: 'Module 2: Interpretability & Transparency',
-            week: 'Weeks 3–4',
-            description: 'Feature attribution, SHAP/LIME explainability, and transparent model reporting.',
-            lessons: [
-              { title: 'Session 3: Explainable Machine Learning (XAI)', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' },
-              { title: 'Session 4: Model Cards and Data Sheets', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' }
-            ]
-          }
-        ]
-      },
-      {
-        title: 'Climate Data Modeling',
-        slug: 'climate-data-modeling',
-        description: '<p>Intermediate course in climate data workflows, analysis, visualization, and uncertainty across Earth observation datasets.</p><ul><li>Read and validate Earth-observation and atmospheric datasets.</li><li>Build reproducible regional summaries and statistical climate models.</li><li>Explain model uncertainty, climate risks, and policy implications.</li></ul>',
-        summary: 'Earth observation datasets, climate data workflows, and regional vulnerability modeling.',
-        duration: '10 weeks',
-        mode: 'Online and Recorded',
-        deliveryMode: 'Online and Recorded',
-        startDate: '2027-01-12',
-        targetAudience: 'Learners with introductory statistics or environmental-science experience.',
-        enrollmentContact: 'Contact ASPIER Academy to confirm cohort enrollment.',
-        wingId: climateWing?._id,
-        instructorId: instBySlug.get('nabil-hasan') || instructorsList[1]?._id,
-        price: 3000,
-        level: 'intermediate',
-        status: 'published',
-        thumbnail: makeDemoCover('Climate Data Modeling'),
-        bannerUrl: makeDemoCover('Climate Data Modeling'),
-        sampleData: true,
-        modules: [
-          {
-            moduleNumber: 1,
-            title: 'Module 1: Earth Observation Datasets',
-            week: 'Weeks 1–3',
-            description: 'NetCDF, HDF, and satellite raster handling in Python and GIS tools.',
-            lessons: [
-              { title: 'Session 1: Working with Satellite Climatology Rasters', duration: '60 mins', isFreePreview: true, videoId: 'dQw4w9WgXcQ' },
-              { title: 'Session 2: Atmospheric Data Cleaning and Quality Control', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' }
-            ]
-          },
-          {
-            moduleNumber: 2,
-            title: 'Module 2: Regional Risk Modeling',
-            week: 'Weeks 4–7',
-            description: 'Downscaling Global Climate Models (GCMs) and flood hazard mapping.',
-            lessons: [
-              { title: 'Session 3: Statistical Downscaling Workflows', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' },
-              { title: 'Session 4: Extreme Event Risk Synthesis', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' }
-            ]
-          }
-        ]
-      },
-      {
-        title: 'Biomedical Data Essentials',
-        slug: 'biomedical-data-essentials',
-        description: '<p>Hands-on course introducing clinical, epidemiological, and genomic data with an ethics-first approach to public health analytics.</p><ul><li>Describe common biomedical and epidemiological data architectures.</li><li>Practice rigorous data-quality checks, cleaning, and normalization.</li><li>Apply privacy, HIPAA/GDPR consent, and responsible data-sharing principles.</li></ul>',
-        summary: 'Clinical data lifecycles, genomic records, and patient-privacy compliant statistical practice.',
-        duration: '9 weeks',
-        mode: 'Offline',
-        deliveryMode: 'Offline',
-        startDate: '2027-02-08',
-        targetAudience: 'Students interested in biomedical, public health, or life-science research.',
-        enrollmentContact: 'Contact ASPIER Academy to confirm cohort enrollment.',
-        wingId: bioWing?._id,
-        instructorId: instBySlug.get('samira-khan') || instructorsList[2]?._id,
-        price: 2800,
-        level: 'intermediate',
-        status: 'published',
-        thumbnail: makeDemoCover('Biomedical Data Essentials'),
-        bannerUrl: makeDemoCover('Biomedical Data Essentials'),
-        sampleData: true,
-        modules: [
-          {
-            moduleNumber: 1,
-            title: 'Module 1: Data in Modern Medicine',
-            week: 'Weeks 1–3',
-            description: 'Biomedical data lifecycle, electronic health records, and privacy regulations.',
-            lessons: [
-              { title: 'Session 1: Biomedical Data Lifecycle & Architecture', duration: '45 mins', isFreePreview: true, videoId: 'dQw4w9WgXcQ' },
-              { title: 'Session 2: Health Privacy, HIPAA, and Informed Consent', duration: '60 mins', isFreePreview: false, videoId: 'dQw4w9WgXcQ' }
-            ]
-          }
-        ]
       }
     ];
 
@@ -308,8 +192,6 @@ export async function seedAcademyData(force = false): Promise<{
   const allCourses = await Course.find();
   const courseBySlug = new Map(allCourses.map((c) => [c.slug, c]));
   const paperWritingCourse = courseBySlug.get('higher-study-research-paper-writing') || allCourses[0];
-  const aiCourse = courseBySlug.get('responsible-ai-foundations') || allCourses[1] || allCourses[0];
-  const climateCourse = courseBySlug.get('climate-data-modeling') || allCourses[2] || allCourses[0];
 
   // 4. Live Class Schedule
   const existingClassesCount = await ClassModel.countDocuments();
@@ -339,19 +221,6 @@ export async function seedAcademyData(force = false): Promise<{
           meetingUrl: 'https://meet.google.com/asp-ierr-es2',
           meetLink: 'https://meet.google.com/asp-ierr-es2',
           liveJoinUrl: 'https://meet.google.com/asp-ierr-es2',
-          mode: 'Online and Live',
-          status: 'scheduled'
-        },
-        {
-          courseId: aiCourse?._id || paperWritingCourse._id,
-          title: 'Session 1: Ethics, Bias Detection & Trustworthy AI Principles',
-          topic: 'Session 1: Ethics, Bias Detection & Trustworthy AI Principles',
-          description: 'Evaluating algorithmic fairness and model cards using open-source auditing toolkits.',
-          scheduledAt: new Date(Date.now() + 5 * 86400000),
-          durationMinutes: 60,
-          meetingUrl: 'https://meet.google.com/asp-ierr-ai1',
-          meetLink: 'https://meet.google.com/asp-ierr-ai1',
-          liveJoinUrl: 'https://meet.google.com/asp-ierr-ai1',
           mode: 'Online and Live',
           status: 'scheduled'
         },

@@ -1272,35 +1272,12 @@ router.post('/purge-dummy-and-deduplicate', purgeDummyAndDeduplicate);
 router.post('/purge-dummy-content', async (req, res, next) => {
   try {
     await connectDatabase();
-
-    // 1. Purge all News documents (dummy news/announcements)
-    const newsResult = await News.deleteMany({});
-
-    // 2. Purge all Research documents (dummy research projects across all categories)
-    const researchResult = await Research.deleteMany({});
-
-    // 3. Clear embedded research arrays on all Academic Wings
-    const wingUpdateResult = await Wing.updateMany(
-      {},
-      {
-        $set: {
-          research: [],
-          presentResearch: [],
-          pastResearch: [],
-          futureResearch: [],
-          researchItems: []
-        }
-      }
-    );
-
+    const { runFullProductionPurge } = await import('../scripts/fullProductionPurge.js');
+    const auditReport = await runFullProductionPurge();
     return res.json({
       success: true,
-      message: 'Successfully purged dummy inquiries, news, and research projects while strictly preserving team, wings, and academy course.',
-      details: {
-        deletedNewsCount: newsResult.deletedCount,
-        deletedResearchCount: researchResult.deletedCount,
-        wingsUpdatedCount: wingUpdateResult.modifiedCount
-      }
+      message: 'Full production purge completed successfully while strictly preserving Team, 10 Wings, Course, and Admin accounts.',
+      ...auditReport
     });
   } catch (error) {
     next(error);

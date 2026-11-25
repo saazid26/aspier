@@ -264,34 +264,6 @@ export const staticCourses = [
     level: "beginner",
     status: "published",
     modules: defaultDummyModules
-  },
-  {
-    _id: "60d0fe4f5311236168a109e2",
-    title: "Responsible AI Foundations",
-    slug: "responsible-ai-foundations",
-    description: "Eight-week course covering machine-learning foundations, fairness, transparency, and responsible deployment in real-world environments.",
-    duration: "8 weeks",
-    mode: "Online and Live",
-    startDate: "2026-12-15",
-    targetAudience: "Students and early-career researchers beginning applied AI study",
-    price: 2500,
-    level: "beginner",
-    status: "published",
-    modules: defaultDummyModules
-  },
-  {
-    _id: "60d0fe4f5311236168a109e3",
-    title: "Climate Data Modeling",
-    slug: "climate-data-modeling",
-    description: "Intermediate course in climate data workflows, analysis, visualization, and uncertainty across Earth observation datasets.",
-    duration: "10 weeks",
-    mode: "Online and Recorded",
-    startDate: "2027-01-12",
-    targetAudience: "Learners with introductory statistics or environmental-science experience",
-    price: 3000,
-    level: "intermediate",
-    status: "published",
-    modules: defaultDummyModules
   }
 ];
 
