@@ -352,11 +352,10 @@ export function Team() {
                   content={scholar.bio || 'Conducting focused research across ASPIER academic wings.'}
                   className="muted"
                 />
-                {(scholar.designation || scholar.affiliation) && (
-                  <p className="muted">{[scholar.designation, scholar.affiliation].filter(Boolean).join(' · ')}</p>
-                )}
                 {(scholar.education || scholar.educationalBackground) && (
-                  <p className="muted"><strong>Education:</strong> {scholar.education || scholar.educationalBackground}</p>
+                  <p className="muted scholar-education" style={{ marginTop: '8px', marginBottom: '4px', fontSize: '0.86rem' }}>
+                    <strong>Education:</strong> {scholar.education || scholar.educationalBackground}
+                  </p>
                 )}
                 {/* Conditional academic and social media profile icons */}
                 <AcademicSocialLinks member={scholar} />
