@@ -431,6 +431,11 @@ export async function seedDatabase(): Promise<void> {
   // Safely clean up any dummy student records
   await User.deleteMany({ email: { $in: ['student@aspier.org', 'nusrat.jahan@gmail.com', 'tanvir.ahmed@gmail.com', 'sumaiya.akter@gmail.com', 'rakib.hassan@gmail.com'] } });
   for (const wing of fallbackWings) {
+    const existing = await Wing.findOne({ slug: wing.slug });
+    const coverImage = (existing?.coverImage && existing.coverImage.startsWith('https://res.cloudinary.com/'))
+      ? existing.coverImage
+      : (wing.coverImage || '');
+
     const seedWing = {
       name: wing.name,
       slug: wing.slug,
@@ -440,7 +445,7 @@ export async function seedDatabase(): Promise<void> {
       objectives: wing.objectives,
       order: wing.order,
       isActive: wing.isActive !== false,
-      coverImage: wing.coverImage || makeDemoCover(wing.name)
+      coverImage
     };
     await Wing.findOneAndUpdate({ slug: wing.slug }, { $set: seedWing }, { upsert: true, new: true });
   }

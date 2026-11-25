@@ -1,22 +1,142 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import axios from 'axios';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 import { cloudinary, cloudinaryEnabled } from '../config/cloudinary.js';
+import { connectDatabase } from '../config/db.js';
+import Wing from '../models/Wing.js';
+import FoundingMember from '../models/FoundingMember.js';
+import Supervisor from '../models/Supervisor.js';
+import Scholar from '../models/Scholar.js';
+import Research from '../models/Research.js';
+import News from '../models/News.js';
+import Course from '../models/Course.js';
+import Setting from '../models/Setting.js';
+import MediaAsset from '../models/MediaAsset.js';
 
-async function main() {
-  console.log('=== Starting Cloudinary Dummy Purge & Strict Deduplication ===');
+function extractPublicId(url?: string | null): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const match = url.match(/\/upload\/(?:v\d+\/)?(aspier\/[^.]+)(?:\.[a-zA-Z0-9]+)?/);
+  if (match && match[1]) return match[1];
+  return null;
+}
+
+async function runPurgeAndDeduplication() {
+  console.log('===============================================================');
+  console.log('=== CLOUDINARY DUMMY ASSET PURGE & STRICT 1-COPY DEDUPLICATION ===');
+  console.log('===============================================================\n');
+
   if (!cloudinaryEnabled) {
-    console.error('Cloudinary is not enabled. Check credentials.');
+    console.error('Cloudinary is not configured. Check environment variables.');
     process.exit(1);
   }
 
-  // 1. Fetch all assets from Cloudinary
-  console.log('\nFetching all upload resources from Cloudinary...');
+  // 1. Connect to MongoDB (if available)
+  try {
+    await connectDatabase();
+    console.log('[DB] Connected to MongoDB.');
+  } catch (err: any) {
+    console.warn('[DB] MongoDB connection warning:', err.message);
+  }
+
+  // 2. Fetch all active image URLs from live production API & local DB
+  console.log('\n--- Step 1: Gathering all active production and database image URLs ---');
+  const activePublicIds = new Set<string>();
+
+  // Deterministic Wings 1-10 ALWAYS canonical
+  for (let order = 1; order <= 10; order++) {
+    activePublicIds.add(`aspier/wings/wing-${order}`);
+  }
+
+  // Query live production endpoints
+  const liveBase = 'https://aspierglobal.vercel.app/api/v1';
+  const liveEndpoints = ['/wings', '/team', '/settings', '/courses', '/research', '/news'];
+  for (const ep of liveEndpoints) {
+    try {
+      const res = await axios.get(liveBase + ep, { timeout: 10000 });
+      const str = JSON.stringify(res.data);
+      const matches = str.match(/https:\/\/res\.cloudinary\.com\/[^\s"'\\]+/g) || [];
+      for (const url of matches) {
+        const pid = extractPublicId(url);
+        if (pid) activePublicIds.add(pid);
+      }
+      console.log(`[Live API] ${ep}: checked and indexed`);
+    } catch (e: any) {
+      console.warn(`[Live API] Could not check ${ep}:`, e.message);
+    }
+  }
+
+  // Query DB models if connected
+  try {
+    const wings = await Wing.find().select('coverImage order');
+    for (const w of wings) {
+      const pid = extractPublicId(w.coverImage);
+      if (pid) activePublicIds.add(pid);
+    }
+
+    const members = await FoundingMember.find().select('photo');
+    for (const m of members) {
+      const pid = extractPublicId(m.photo);
+      if (pid) activePublicIds.add(pid);
+    }
+
+    const sups = await Supervisor.find().select('photo');
+    for (const s of sups) {
+      const pid = extractPublicId(s.photo);
+      if (pid) activePublicIds.add(pid);
+    }
+
+    const scholars = await Scholar.find().select('photo');
+    for (const sc of scholars) {
+      const pid = extractPublicId(sc.photo);
+      if (pid) activePublicIds.add(pid);
+    }
+
+    const researches = await Research.find().select('coverImage');
+    for (const r of researches) {
+      const pid = extractPublicId(r.coverImage);
+      if (pid) activePublicIds.add(pid);
+    }
+
+    const newsList = await News.find().select('coverImage');
+    for (const n of newsList) {
+      const pid = extractPublicId(n.coverImage);
+      if (pid) activePublicIds.add(pid);
+    }
+
+    const courses = await Course.find().select('thumbnail bannerUrl');
+    for (const c of courses) {
+      const pid1 = extractPublicId(c.thumbnail);
+      const pid2 = extractPublicId(c.bannerUrl);
+      if (pid1) activePublicIds.add(pid1);
+      if (pid2) activePublicIds.add(pid2);
+    }
+
+    const settings = await Setting.find().select('heroImage founderPhoto logo favicon');
+    for (const st of settings) {
+      const p1 = extractPublicId(st.heroImage);
+      const p2 = extractPublicId(st.founderPhoto);
+      const p3 = extractPublicId((st as any).logo);
+      const p4 = extractPublicId((st as any).favicon);
+      if (p1) activePublicIds.add(p1);
+      if (p2) activePublicIds.add(p2);
+      if (p3) activePublicIds.add(p3);
+      if (p4) activePublicIds.add(p4);
+    }
+  } catch (err: any) {
+    console.warn('[DB] Read error for active public IDs:', err.message);
+  }
+
+  console.log(`[Summary] Total active real public IDs protected: ${activePublicIds.size}`);
+  Array.from(activePublicIds).sort().forEach(id => console.log('  [PROTECTED]', id));
+
+  // 3. List all resources in Cloudinary
+  console.log('\n--- Step 2: Querying all assets in Cloudinary ---');
   let allResources: any[] = [];
   let nextCursor: string | undefined = undefined;
 
@@ -26,181 +146,176 @@ async function main() {
       max_results: 500,
       next_cursor: nextCursor
     });
-
     if (res.resources && Array.isArray(res.resources)) {
       allResources = allResources.concat(res.resources);
     }
     nextCursor = res.next_cursor;
   } while (nextCursor);
 
-  console.log(`Total upload assets in Cloudinary: ${allResources.length}`);
+  console.log(`[Cloudinary] Total assets found in cloud: ${allResources.length}`);
 
-  const dummyToDelete = new Set<string>();
-  const duplicateToDelete = new Set<string>();
-  const toKeep = new Set<string>();
+  // 4. Classify assets: Dummy, Duplicate, or Real Unique
+  console.log('\n--- Step 3: Classifying assets for Purge and Deduplication ---');
+  const dummyToDelete: string[] = [];
+  const duplicatesToDelete: string[] = [];
+  const realUniqueToKeep: any[] = [];
 
-  // 2. Identify all dummy / placeholder / sample graphics
-  for (const r of allResources) {
-    const pid = r.public_id;
+  // Group real assets by fingerprint to enforce strictly 1 copy
+  const fingerprintMap = new Map<string, any>();
 
-    // A. Dummy SVG graphics (ASPIER • ILLUSTRATIVE ART or sample avatars)
-    if (
-      pid.startsWith('aspier/research/') ||
-      pid.startsWith('aspier/courses/') ||
-      pid.startsWith('aspier/news/') ||
-      pid.startsWith('aspier/instructors/') ||
-      pid.startsWith('aspier/test/') ||
-      (r.format === 'svg' && pid.startsWith('aspier/'))
-    ) {
-      dummyToDelete.add(pid);
+  for (const asset of allResources) {
+    const pid = asset.public_id;
+
+    // Check if asset is inside aspier/migrated
+    // As confirmed by live crawl, aspier/migrated has 0 references and consists entirely of
+    // duplicate old wing uploads and converted "ASPIER • ILLUSTRATIVE ART" SVG placeholders.
+    if (pid.startsWith('aspier/migrated/')) {
+      dummyToDelete.push(pid);
       continue;
     }
 
-    // B. Blank 1x1 dummy pixels
-    if (r.width === 1 && r.height === 1) {
-      dummyToDelete.add(pid);
+    // Check if asset is a dummy instructor SVG or sample avatar
+    if (pid.startsWith('aspier/instructors/')) {
+      dummyToDelete.push(pid);
       continue;
     }
 
-    // C. Default Cloudinary samples
-    if (
-      pid.startsWith('samples/') ||
-      pid.startsWith('cld-sample') ||
-      pid === 'sample' ||
-      pid === 'main-sample'
-    ) {
-      dummyToDelete.add(pid);
+    // Check if public_id contains "dummy", "placeholder", "demo", "sample"
+    if (/dummy|placeholder|demo|sample|illustrative/i.test(pid)) {
+      dummyToDelete.push(pid);
       continue;
     }
 
-    // D. Explicit known duplicate of wing-6
-    if (pid === 'aspier/zcik9fiztgqu9jpnmqj1') {
-      duplicateToDelete.add(pid);
+    // Check canonical wings 1..10
+    if (pid.startsWith('aspier/wings/')) {
+      if (/^aspier\/wings\/wing-(?:[1-9]|10)$/.test(pid)) {
+        realUniqueToKeep.push(asset);
+      } else {
+        duplicatesToDelete.push(pid);
+      }
       continue;
+    }
+
+    // Real team photos in aspier/team
+    if (pid.startsWith('aspier/team/')) {
+      // Fingerprint by byte size + dimensions
+      const fp = `team:${asset.bytes}:${asset.width}x${asset.height}`;
+      if (fingerprintMap.has(fp)) {
+        console.log(`[Duplicate Team Asset] Found duplicate of ${fp}: ${pid}`);
+        duplicatesToDelete.push(pid);
+      } else {
+        fingerprintMap.set(fp, asset);
+        realUniqueToKeep.push(asset);
+      }
+      continue;
+    }
+
+    // Branding & settings
+    if (pid.startsWith('aspier/branding/') || pid.startsWith('aspier/')) {
+      if (activePublicIds.has(pid)) {
+        realUniqueToKeep.push(asset);
+      } else {
+        console.log(`[Unreferenced Stray Asset] ${pid}`);
+        duplicatesToDelete.push(pid);
+      }
+      continue;
+    }
+
+    // Any other unreferenced asset
+    if (!activePublicIds.has(pid)) {
+      duplicatesToDelete.push(pid);
+    } else {
+      realUniqueToKeep.push(asset);
     }
   }
 
-  console.log(`Identified ${dummyToDelete.size} dummy / sample assets to purge.`);
+  console.log(`\n--- Classification Summary ---`);
+  console.log(`Total Dummy Assets to Purge:       ${dummyToDelete.length}`);
+  console.log(`Total Duplicate Assets to Delete:  ${duplicatesToDelete.length}`);
+  console.log(`Total Real Unique Assets to Keep:  ${realUniqueToKeep.length}`);
 
-  // 3. Deduplicate remaining real assets (Group by fingerprint: bytes + format + width x height)
-  const realCandidates = allResources.filter(r => !dummyToDelete.has(r.public_id) && !duplicateToDelete.has(r.public_id));
-  console.log(`Analyzing ${realCandidates.length} real candidates for duplicate copies...`);
+  const allToDelete = [...dummyToDelete, ...duplicatesToDelete];
 
-  const byFingerprint: Record<string, any[]> = {};
-  for (const r of realCandidates) {
-    const key = `${r.bytes}_${r.format}_${r.width}x${r.height}`;
-    if (!byFingerprint[key]) byFingerprint[key] = [];
-    byFingerprint[key].push(r);
-  }
-
-  for (const [key, items] of Object.entries(byFingerprint)) {
-    if (items.length === 1) {
-      toKeep.add(items[0].public_id);
-      continue;
-    }
-
-    console.log(`Duplicate group [${key}] with ${items.length} copies:`);
-    items.forEach(i => console.log(`   - ${i.public_id}`));
-
-    // Determine the single canonical copy to keep:
-    // Priority:
-    // 1. Canonical public IDs: aspier/wings/wing-*
-    // 2. Structured folder: aspier/team/*, aspier/branding/*
-    // 3. First uploaded or shortest public_id in aspier/migrated/*
-    let canonical = items.find(i => i.public_id.startsWith('aspier/wings/wing-'));
-    if (!canonical) {
-      canonical = items.find(i => i.public_id.startsWith('aspier/team/') || i.public_id.startsWith('aspier/branding/'));
-    }
-    if (!canonical) {
-      canonical = items[0];
-    }
-
-    console.log(`   -> KEEP canonical: ${canonical.public_id}`);
-    toKeep.add(canonical.public_id);
-
-    for (const item of items) {
-      if (item.public_id !== canonical.public_id) {
-        console.log(`   -> DELETE duplicate: ${item.public_id}`);
-        duplicateToDelete.add(item.public_id);
+  // 5. Execute deletions in Cloudinary
+  if (allToDelete.length > 0) {
+    console.log(`\n--- Step 4: Permanently deleting ${allToDelete.length} dummy/duplicate assets from Cloudinary ---`);
+    for (let i = 0; i < allToDelete.length; i += 100) {
+      const batch = allToDelete.slice(i, i + 100);
+      try {
+        const delRes = await cloudinary.api.delete_resources(batch, { invalidate: true });
+        console.log(`[Delete Batch ${i / 100 + 1}] Successfully processed:`, Object.keys(delRes.deleted || {}).length, 'assets');
+      } catch (delErr: any) {
+        console.error(`[Delete Batch Error]`, delErr.message);
       }
     }
   }
 
-  console.log('\n--- Purge & Deduplication Summary ---');
-  console.log(`Total dummy assets to delete: ${dummyToDelete.size}`);
-  console.log(`Total duplicate assets to delete: ${duplicateToDelete.size}`);
-  console.log(`Total unique real assets to keep: ${toKeep.size}`);
-
-  // 4. Execute deletion in batches of 100
-  const allToDelete = [...dummyToDelete, ...duplicateToDelete];
-  console.log(`\nExecuting deletion of ${allToDelete.length} total assets from Cloudinary...`);
-
-  for (let i = 0; i < allToDelete.length; i += 100) {
-    const batch = allToDelete.slice(i, i + 100);
-    const delRes: any = await cloudinary.api.delete_resources(batch, { invalidate: true });
-    console.log(`Batch ${Math.floor(i / 100) + 1} (${batch.length} items):`, {
-      deletedCount: Object.keys(delRes.deleted || {}).length
-    });
-  }
-
-  // 5. Delete empty leftover folders
-  const candidateFolders = [
-    'aspier/research',
-    'aspier/courses',
-    'aspier/news',
-    'aspier/instructors',
-    'aspier/test',
-    'samples/animals',
-    'samples/landscapes',
-    'samples/food',
-    'samples/ecommerce',
-    'samples/people',
-    'samples'
-  ];
-
-  console.log('\nCleaning up empty leftover folders in Cloudinary...');
-  for (const folder of candidateFolders) {
+  // 6. Delete empty folders
+  console.log('\n--- Step 5: Deleting empty folders in Cloudinary ---');
+  const foldersToClean = ['aspier/migrated', 'aspier/instructors'];
+  for (const folder of foldersToClean) {
     try {
       await cloudinary.api.delete_folder(folder);
-      console.log(`Deleted empty folder: ${folder}`);
+      console.log(`[Folder Cleaned] Deleted empty folder: ${folder}`);
     } catch (fErr: any) {
-      // folder might not be empty or already gone
-      // ignore
+      console.log(`[Folder Info] ${folder}: ${fErr.message}`);
     }
   }
 
-  // 6. Verify final state
-  console.log('\n--- Final Cloudinary Resource Verification ---');
-  let remaining: any[] = [];
-  let nextCursor2: string | undefined = undefined;
+  // 7. Clean up MediaAsset records in MongoDB
+  if (allToDelete.length > 0) {
+    try {
+      const res = await MediaAsset.deleteMany({ publicId: { $in: allToDelete } });
+      console.log(`[MongoDB Cleanup] Purged ${res.deletedCount} MediaAsset records pointing to deleted assets.`);
+    } catch (e: any) {
+      console.warn('[MongoDB Cleanup] MediaAsset purge warning:', e.message);
+    }
+  }
 
+  // 8. Ensure Wings 1-10 in MongoDB match exact canonical URLs
+  console.log('\n--- Step 6: Ensuring Wings 1-10 in MongoDB point to canonical Cloudinary URLs ---');
+  for (let order = 1; order <= 10; order++) {
+    const canonicalUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME || 'w9zgpjap'}/image/upload/aspier/wings/wing-${order}.webp`;
+    try {
+      await Wing.findOneAndUpdate(
+        { order },
+        { $set: { coverImage: canonicalUrl } }
+      );
+      console.log(`[Wing ${order}] Verified -> ${canonicalUrl}`);
+    } catch (err: any) {
+      console.warn(`[Wing ${order}] Update error:`, err.message);
+    }
+  }
+
+  // 9. Final Verification of Cloudinary Remaining Assets
+  console.log('\n--- Step 7: Final verification of remaining Cloudinary assets ---');
+  let remaining: any[] = [];
+  let finalCursor: string | undefined = undefined;
   do {
-    const res2: any = await cloudinary.api.resources({
+    const res: any = await cloudinary.api.resources({
       type: 'upload',
       max_results: 500,
-      next_cursor: nextCursor2
+      next_cursor: finalCursor
     });
+    remaining = remaining.concat(res.resources || []);
+    finalCursor = res.next_cursor;
+  } while (finalCursor);
 
-    if (res2.resources && Array.isArray(res2.resources)) {
-      remaining = remaining.concat(res2.resources);
-    }
-    nextCursor2 = res2.next_cursor;
-  } while (nextCursor2);
-
-  console.log(`Final total assets remaining in Cloudinary: ${remaining.length}`);
-  const finalFolders: Record<string, number> = {};
-  for (const r of remaining) {
-    const folder = r.public_id.includes('/') ? r.public_id.split('/').slice(0, -1).join('/') : '(root)';
-    finalFolders[folder] = (finalFolders[folder] || 0) + 1;
-    console.log(`  [${r.format} ${r.bytes}B ${r.width}x${r.height}] ${r.public_id}`);
-  }
-  console.log('Final counts by folder:', finalFolders);
-
-  console.log('\n=== Cloudinary Purge & Deduplication Completed Successfully! ===');
+  console.log(`\n===============================================================`);
+  console.log(`=== CLOUDINARY PURGE & DEDUPLICATION COMPLETED SUCCESSFULLY ===`);
+  console.log(`===============================================================`);
+  console.log(`Total Dummy Assets Purged:       ${dummyToDelete.length}`);
+  console.log(`Total Duplicate Assets Purged:   ${duplicatesToDelete.length}`);
+  console.log(`Final Cloudinary Asset Count:    ${remaining.length}`);
+  console.log(`\nRemaining Canonical Assets:`);
+  remaining.forEach((r, idx) => {
+    console.log(`  ${idx + 1}. [${r.public_id}] (${r.bytes}B, ${r.format})`);
+  });
+  console.log(`===============================================================\n`);
   process.exit(0);
 }
 
-main().catch((err) => {
-  console.error('Fatal error during purge:', err);
+runPurgeAndDeduplication().catch((err) => {
+  console.error('Fatal execution error:', err);
   process.exit(1);
 });

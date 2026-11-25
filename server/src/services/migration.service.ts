@@ -54,25 +54,14 @@ async function resolveToCloudinary(
 
   // Already Cloudinary
   if (trimmed.startsWith('https://res.cloudinary.com/') || trimmed.startsWith('http://res.cloudinary.com/')) {
-    if (trimmed.includes('aspier/research/') && trimmed.endsWith('.svg')) return '';
-    if (trimmed.includes('aspier/courses/') && trimmed.endsWith('.svg')) return '';
-    if (trimmed.includes('aspier/news/') && trimmed.endsWith('.svg')) return '';
-    if (trimmed.includes('aspier/instructors/') && trimmed.endsWith('.svg')) return '';
     return trimmed;
-  }
-
-  // Never upload dummy illustrative art or dummy SVGs to Cloudinary
-  if (
-    trimmed.includes('ILLUSTRATIVE%20ART') ||
-    trimmed.includes('ILLUSTRATIVE ART') ||
-    trimmed.startsWith('data:image/svg+xml') ||
-    trimmed.includes('<svg')
-  ) {
-    return '';
   }
 
   // Base64 Data URI
   if (trimmed.startsWith('data:image/')) {
+    if (trimmed.includes('ILLUSTRATIVE%20ART') || trimmed.includes('ILLUSTRATIVE ART') || trimmed.includes('ASPIER%20%E2%80%A2%20ILLUSTRATIVE')) {
+      return trimmed;
+    }
     try {
       const res = await uploadToCloudinary(trimmed, { folder });
       return res.url;

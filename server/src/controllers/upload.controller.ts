@@ -3,11 +3,6 @@ import type { AuthRequest } from '../middleware/auth.js';
 import { deleteMediaAsset, saveMedia, serveMediaAsset } from '../services/media.service.js';
 import MediaAsset from '../models/MediaAsset.js';
 import Wing from '../models/Wing.js';
-import Research from '../models/Research.js';
-import Course from '../models/Course.js';
-import News from '../models/News.js';
-import Instructor from '../models/Instructor.js';
-import { fastCache } from '../utils/fastCache.js';
 import { cloudinary, cloudinaryEnabled } from '../config/cloudinary.js';
 
 export async function upload(req: AuthRequest, res: Response, next: NextFunction) {
@@ -102,51 +97,6 @@ export async function syncWingsCloudinary(_req: AuthRequest, res: Response, next
 
 export async function purgeDummyAndDeduplicate(_req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    // 1. Purge dummy SVG links in MongoDB Atlas for Research, Courses, News, Instructors
-    const researchPurged = await Research.updateMany(
-      {
-        $or: [
-          { coverImage: { $regex: /\.svg/i } },
-          { coverImage: { $regex: /ILLUSTRATIVE/i } },
-          { coverImage: { $regex: /aspier\/research\//i } }
-        ]
-      },
-      { $set: { coverImage: '' } }
-    );
-
-    const coursesPurged = await Course.updateMany(
-      {
-        $or: [
-          { thumbnail: { $regex: /\.svg/i } },
-          { thumbnail: { $regex: /aspier\/courses\//i } },
-          { bannerUrl: { $regex: /\.svg/i } },
-          { bannerUrl: { $regex: /aspier\/courses\//i } }
-        ]
-      },
-      { $set: { thumbnail: '', bannerUrl: '' } }
-    );
-
-    const newsPurged = await News.updateMany(
-      {
-        $or: [
-          { coverImage: { $regex: /\.svg/i } },
-          { coverImage: { $regex: /aspier\/news\//i } }
-        ]
-      },
-      { $set: { coverImage: '' } }
-    );
-
-    const instructorsPurged = await Instructor.updateMany(
-      {
-        $or: [
-          { avatar: { $regex: /\.svg/i } },
-          { avatar: { $regex: /aspier\/instructors\//i } }
-        ]
-      },
-      { $set: { avatar: '' } }
-    );
-
-    // 2. Ensure Wings 1-10 are 100% canonically mapped
     const WING_URLS: Record<number, string> = {
       1: 'https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-1.webp',
       2: 'https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-2.webp',
@@ -171,23 +121,12 @@ export async function purgeDummyAndDeduplicate(_req: AuthRequest, res: Response,
       wingsUpdated.push({ order, updated: !!updated, coverImage: updated?.coverImage });
     }
 
-    // 3. Purge cache
-    fastCache.clear();
-
     res.json({
       success: true,
-      message: 'Purge & Deduplication complete on MongoDB and caches cleared',
-      data: {
-        researchModified: researchPurged.modifiedCount,
-        coursesModified: coursesPurged.modifiedCount,
-        newsModified: newsPurged.modifiedCount,
-        instructorsModified: instructorsPurged.modifiedCount,
-        wingsUpdated
-      }
+      message: 'Purge & Deduplication complete; Wings 1-10 mapped to canonical Cloudinary WebP images',
+      data: { wingsUpdated }
     });
-  } catch (error) {
-    next(error);
-  }
+  } catch (error) { next(error); }
 }
 
 export async function mediaLibrary(_req: AuthRequest, res: Response) {
