@@ -6,6 +6,7 @@ import { recordAudit } from '../services/audit.service.js';
 import { hashPassword, passwordStrength } from '../services/password.service.js';
 import { FIXED_ADMIN_EMAIL } from '../config/env.js';
 import { connectDatabase } from '../config/db.js';
+import { ensureCloudinaryUrl } from '../services/media.service.js';
 
 export function crudFactory(model: Model<any>) {
   return {
@@ -74,6 +75,12 @@ export function crudFactory(model: Model<any>) {
         if (!body.slug && body.title) body.slug = slugify(body.title);
         if (!body.slug && body.name) body.slug = slugify(body.name);
 
+        if (body.coverImage) body.coverImage = await ensureCloudinaryUrl(body.coverImage, 'aspier');
+        if (body.photo) body.photo = await ensureCloudinaryUrl(body.photo, 'aspier');
+        if (body.thumbnail) body.thumbnail = await ensureCloudinaryUrl(body.thumbnail, 'aspier');
+        if (body.bannerUrl) body.bannerUrl = await ensureCloudinaryUrl(body.bannerUrl, 'aspier');
+        if (body.avatar) body.avatar = await ensureCloudinaryUrl(body.avatar, 'aspier');
+
         if (mongoose.connection.readyState !== 1) {
           const fallbackItem = { ...body, _id: new mongoose.Types.ObjectId().toString(), createdAt: new Date().toISOString() };
           return res.status(201).json({ success: true, data: fallbackItem });
@@ -138,6 +145,12 @@ export function crudFactory(model: Model<any>) {
           }
         }
         if (body.title && !body.slug) body.slug = slugify(body.title);
+
+        if (body.coverImage) body.coverImage = await ensureCloudinaryUrl(body.coverImage, 'aspier');
+        if (body.photo) body.photo = await ensureCloudinaryUrl(body.photo, 'aspier');
+        if (body.thumbnail) body.thumbnail = await ensureCloudinaryUrl(body.thumbnail, 'aspier');
+        if (body.bannerUrl) body.bannerUrl = await ensureCloudinaryUrl(body.bannerUrl, 'aspier');
+        if (body.avatar) body.avatar = await ensureCloudinaryUrl(body.avatar, 'aspier');
 
         if (mongoose.connection.readyState !== 1) {
           const fallbackItem = { ...body, _id: id || new mongoose.Types.ObjectId().toString(), updatedAt: new Date().toISOString() };

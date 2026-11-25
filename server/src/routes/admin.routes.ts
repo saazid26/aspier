@@ -24,6 +24,8 @@ import Notification from '../models/Notification.js';
 import ResearchApplicationModel from '../models/ResearchApplication.js';
 import MembershipApplicationModel from '../models/MembershipApplication.js';
 import { upload, mediaLibrary, deleteMedia } from '../controllers/upload.controller.js';
+import { ensureCloudinaryUrl } from '../services/media.service.js';
+import { migrateAllImagesToCloudinary } from '../services/migration.service.js';
 import { getSettings, updateSettings } from '../controllers/settings.controller.js';
 import { upsertClass, deleteClass } from '../controllers/class.controller.js';
 import ClassModel from '../models/Class.js';
@@ -159,6 +161,10 @@ router.post('/founding-members', audit('create', 'FoundingMember'), async (req, 
     }
     req.body.order = body.order;
     req.body.displayOrder = body.displayOrder;
+    if (body.photo) {
+      body.photo = await ensureCloudinaryUrl(body.photo, 'aspier/team');
+      req.body.photo = body.photo;
+    }
     if (mongoose.connection.readyState === 1) {
       item = await FoundingMember.create(body);
     }
@@ -185,6 +191,10 @@ router.put('/founding-members/:id', audit('update', 'FoundingMember'), async (re
       body.displayOrder = ord;
       req.body.order = ord;
       req.body.displayOrder = ord;
+    }
+    if (body.photo) {
+      body.photo = await ensureCloudinaryUrl(body.photo, 'aspier/team');
+      req.body.photo = body.photo;
     }
     if (mongoose.connection.readyState === 1) {
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -268,6 +278,10 @@ router.post('/supervisors', audit('create', 'Supervisor'), async (req, res) => {
     }
     req.body.order = body.order;
     req.body.displayOrder = body.displayOrder;
+    if (body.photo) {
+      body.photo = await ensureCloudinaryUrl(body.photo, 'aspier/team');
+      req.body.photo = body.photo;
+    }
     if (mongoose.connection.readyState === 1) {
       item = await Supervisor.create(body);
     }
@@ -301,6 +315,10 @@ router.put('/supervisors/:id', audit('update', 'Supervisor'), async (req, res) =
       body.displayOrder = ord;
       req.body.order = ord;
       req.body.displayOrder = ord;
+    }
+    if (body.photo) {
+      body.photo = await ensureCloudinaryUrl(body.photo, 'aspier/team');
+      req.body.photo = body.photo;
     }
     if (mongoose.connection.readyState === 1) {
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -384,6 +402,10 @@ router.post('/scholars', audit('create', 'Scholar'), async (req, res) => {
     }
     req.body.order = body.order;
     req.body.displayOrder = body.displayOrder;
+    if (body.photo) {
+      body.photo = await ensureCloudinaryUrl(body.photo, 'aspier/team');
+      req.body.photo = body.photo;
+    }
     if (mongoose.connection.readyState === 1) {
       item = await Scholar.create(body);
     }
@@ -419,6 +441,10 @@ const handleUpdateScholar = async (req: any, res: any) => {
       body.displayOrder = ord;
       req.body.order = ord;
       req.body.displayOrder = ord;
+    }
+    if (body.photo) {
+      body.photo = await ensureCloudinaryUrl(body.photo, 'aspier/team');
+      req.body.photo = body.photo;
     }
     if (mongoose.connection.readyState === 1) {
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -728,9 +754,13 @@ router.post('/wings', audit('create', 'Wing'), async (req, res) => {
     if (mongoose.connection.readyState !== 1) {
       await connectDatabase();
     }
+    const body = { ...req.body };
+    delete body._id;
+    if (body.coverImage) body.coverImage = await ensureCloudinaryUrl(body.coverImage, 'aspier/wings');
+    req.body.coverImage = body.coverImage;
     let item: any = null;
     if (mongoose.connection.readyState === 1) {
-      item = await Wing.create(req.body);
+      item = await Wing.create(body);
     }
     const saved = addOrUpdateFallbackWing(item ? item.toObject() : req.body);
     return res.status(201).json({ success: true, data: item || saved });
@@ -748,6 +778,8 @@ router.put('/wings/:id', audit('update', 'Wing'), async (req, res) => {
     const id = String(req.params.id);
     const body = { ...req.body };
     delete body._id;
+    if (body.coverImage) body.coverImage = await ensureCloudinaryUrl(body.coverImage, 'aspier/wings');
+    req.body.coverImage = body.coverImage;
     let item: any = null;
     if (mongoose.connection.readyState === 1) {
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -803,9 +835,13 @@ router.post('/research', audit('create', 'Research'), async (req, res) => {
     if (mongoose.connection.readyState !== 1) {
       await connectDatabase();
     }
+    const body = { ...req.body };
+    delete body._id;
+    if (body.coverImage) body.coverImage = await ensureCloudinaryUrl(body.coverImage, 'aspier/research');
+    req.body.coverImage = body.coverImage;
     let item: any = null;
     if (mongoose.connection.readyState === 1) {
-      item = await Research.create(req.body);
+      item = await Research.create(body);
     }
     const saved = addOrUpdateFallbackResearch(item ? item.toObject() : req.body);
     return res.status(201).json({ success: true, data: item || saved });
@@ -824,6 +860,8 @@ router.put('/research/:id', audit('update', 'Research'), async (req, res) => {
     const researchId = String(req.params.id);
     const body = { ...req.body };
     delete body._id;
+    if (body.coverImage) body.coverImage = await ensureCloudinaryUrl(body.coverImage, 'aspier/research');
+    req.body.coverImage = body.coverImage;
     if (mongoose.connection.readyState === 1) {
       if (mongoose.Types.ObjectId.isValid(researchId)) {
         item = await Research.findByIdAndUpdate(researchId, body, { new: true });
@@ -929,6 +967,31 @@ router.post('/academy/seed-sample', async (req, res) => {
     });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err?.message || 'Failed to seed sample Academy data' });
+  }
+});
+
+router.post('/migrate-images-to-cloudinary', async (req, res) => {
+  try {
+    const report = await migrateAllImagesToCloudinary();
+    fastCache.clear();
+    await recordAudit({
+      req,
+      action: 'migrate_images_to_cloudinary',
+      description: `Migrated ${report.totalAssetsMigrated} images/assets to Cloudinary and purged binary buffers`,
+      resource: 'MediaAsset'
+    }).catch(() => {});
+    return res.json({
+      success: true,
+      message: `Successfully migrated ${report.totalAssetsMigrated} images to Cloudinary and purged binary buffers.`,
+      report
+    });
+  } catch (err: any) {
+    console.error('[admin/migrate-images-to-cloudinary] error:', err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Image migration to Cloudinary failed',
+      error: String(err)
+    });
   }
 });
 
