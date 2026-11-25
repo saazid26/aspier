@@ -17,7 +17,7 @@ export function JoinForm() {
     initialData: staticWings
   });
   const wings = remoteWings && remoteWings.length > 0 ? remoteWings : staticWings;
-  const [form, setForm] = useState({ name: '', email: '', phone: '', wing: '', role: '', statement: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', wing: '', role: '', education: '', researchDomain: '', statement: '' });
   const [receipt, setReceipt] = useState<ApplicationReceipt | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -31,6 +31,7 @@ export function JoinForm() {
       sessionStorage.setItem('aspier-applicant-access', JSON.stringify(access));
       window.dispatchEvent(new Event('aspier-applicant-access'));
       setReceipt(access);
+      setForm({ name: '', email: '', phone: '', wing: '', role: '', education: '', researchDomain: '', statement: '' });
       toast.success('Your application has been submitted.');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Could not submit application');
@@ -88,6 +89,24 @@ export function JoinForm() {
       <label>Email<Input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })}/></label>
       <label>Phone<Input required value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })}/></label>
       <label>Preferred academic wing<select className="select" required value={form.wing} onChange={(event) => setForm({ ...form, wing: event.target.value })}><option value="">Select a wing</option>{wings.map((wing) => <option key={wing.slug} value={wing.name}>{wing.name}</option>)}</select></label>
+      <label>
+        Education
+        <Input
+          required
+          value={form.education}
+          onChange={(event) => setForm({ ...form, education: event.target.value })}
+          placeholder="e.g., B.Sc. (Hons) in Geography and Environmental Studies, University of Rajshahi"
+        />
+      </label>
+      <label>
+        Research Domain
+        <Input
+          required
+          value={form.researchDomain}
+          onChange={(event) => setForm({ ...form, researchDomain: event.target.value })}
+          placeholder="e.g., GIS, Remote Sensing, Climate Modeling, Hydrology (comma-separated)"
+        />
+      </label>
       <label>Statement of interest (optional)<textarea className="textarea" rows={5} maxLength={3000} value={form.statement} onChange={(event) => setForm({ ...form, statement: event.target.value })}/></label>
       <Button disabled={busy}>{busy ? 'Submitting…' : 'Submit initial application'}</Button>
     </form>

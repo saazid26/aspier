@@ -26,6 +26,7 @@ import { sendEmail } from '../services/email.service.js';
 import { createTotpQr, createTotpSecret, verifyTotp } from '../services/totp.service.js';
 import { getFallbackApplications, addOrUpdateFallbackSupervisor, addOrUpdateFallbackScholar } from '../utils/fallbackData.js';
 import { env } from '../config/env.js';
+import { fastCache } from '../utils/fastCache.js';
 
 const initialSchema = z.preprocess((value) => {
   if (!value || typeof value !== 'object') return value;
@@ -33,7 +34,9 @@ const initialSchema = z.preprocess((value) => {
   return {
     ...body,
     role: body.role ?? (body.category === 'teammate' ? 'supervisor' : body.category),
-    wing: body.wing ?? body.wingInterest
+    wing: body.wing ?? body.wingInterest,
+    education: body.education ?? body.educationalBackground,
+    researchDomain: body.researchDomain ?? (Array.isArray(body.researchDomains) ? body.researchDomains.join(', ') : body.researchDomains)
   };
 }, z.object({
   name: z.string().trim().min(2).max(120),
@@ -41,6 +44,8 @@ const initialSchema = z.preprocess((value) => {
   phone: z.string().trim().min(7).max(30),
   wing: z.string().trim().min(1).max(160),
   role: z.enum(['supervisor', 'youngScholar']),
+  education: z.string().trim().min(2).max(1000).optional(),
+  researchDomain: z.string().trim().min(1).max(1000).optional(),
   statement: z.string().trim().max(3000).optional()
 }));
 
@@ -50,7 +55,9 @@ const profileSchema = z.object({
   designation: z.string().trim().min(2).max(160),
   institution: z.string().trim().min(2).max(200),
   wing: z.string().trim().max(160).optional(),
-  educationalBackground: z.string().trim().min(2).max(3000),
+  education: z.string().trim().max(3000).optional(),
+  educationalBackground: z.string().trim().min(2).max(3000).optional(),
+  researchDomain: z.string().trim().max(1000).optional(),
   googleScholar: z.string().trim().max(500).optional().default(''),
   researchGate: z.string().trim().max(500).optional().default(''),
   orcid: z.string().trim().max(200).optional().default(''),
@@ -225,6 +232,10 @@ export async function submitInitialApplication(req: Request, res: Response, next
     if (mongoose.connection.readyState !== 1) {
       await connectDatabase();
     }
+    const cleanEdu = (data.education || '').trim();
+    const rawDomain = (data.researchDomain || '').trim();
+    const domainArray = rawDomain ? rawDomain.split(',').map((d: string) => d.trim()).filter(Boolean) : [];
+
     if (mongoose.connection.readyState === 1) {
       try {
         application = await MembershipApplication.create({
@@ -234,6 +245,10 @@ export async function submitInitialApplication(req: Request, res: Response, next
           role: data.role,
           wing: data.wing,
           wingInterest: data.wing,
+          education: cleanEdu,
+          educationalBackground: cleanEdu,
+          researchDomain: rawDomain,
+          researchDomains: domainArray,
           accessCodeHash: sha256(accessCode)
         });
       } catch (dbErr) {
@@ -253,6 +268,10 @@ export async function submitInitialApplication(req: Request, res: Response, next
         wingInterest: data.wing,
         category: data.role,
         role: data.role,
+        education: cleanEdu,
+        educationalBackground: cleanEdu,
+        researchDomain: rawDomain,
+        researchDomains: domainArray,
         statement: data.statement,
         accessCodeHash: sha256(accessCode),
         status: 'initial_pending',
@@ -311,8 +330,10 @@ export async function membershipPortal(req: Request, res: Response, next: NextFu
         status: application.status,
         designation: application.designation,
         institution: application.institution,
-        educationalBackground: application.educationalBackground,
+        education: application.education || application.educationalBackground,
+        educationalBackground: application.educationalBackground || application.education,
         bio: application.bio,
+        researchDomain: application.researchDomain || (application.researchDomains || []).join(', '),
         researchDomains: application.researchDomains || [],
         photo: application.photo,
         googleScholar: application.googleScholar,
@@ -447,7 +468,8 @@ export async function submitMembershipProfile(req: Request, res: Response, next:
         email: application.email.toLowerCase(),
         presentAddress: data.presentAddress || '',
         permanentAddress: data.permanentAddress || '',
-        educationalBackground: data.educationalBackground,
+        education: data.education || data.educationalBackground || '',
+        educationalBackground: data.education || data.educationalBackground || '',
         googleScholar: data.googleScholar || '',
         researchGate: data.researchGate || '',
         orcid: data.orcid || '',
@@ -499,7 +521,8 @@ export async function submitMembershipProfile(req: Request, res: Response, next:
         permanentAddress: data.permanentAddress || '',
         designation: data.designation,
         affiliation: data.institution,
-        educationalBackground: data.educationalBackground,
+        education: data.education || data.educationalBackground || '',
+        educationalBackground: data.education || data.educationalBackground || '',
         googleScholar: data.googleScholar || '',
         researchGate: data.researchGate || '',
         orcid: data.orcid || '',
@@ -542,7 +565,9 @@ export async function submitMembershipProfile(req: Request, res: Response, next:
       institution: data.institution,
       wing: assignedWing,
       wingInterest: assignedWing,
-      educationalBackground: data.educationalBackground,
+      education: data.education || data.educationalBackground,
+      educationalBackground: data.education || data.educationalBackground,
+      researchDomain: data.researchDomain || (Array.isArray(data.researchDomains) ? data.researchDomains.join(', ') : ''),
       googleScholar: data.googleScholar || '',
       researchGate: data.researchGate || '',
       orcid: data.orcid || '',
@@ -781,6 +806,11 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
     const wing = await Wing.findOne({ $or: [{ slug: application.wingInterest }, { name: application.wingInterest }] });
     let profileId: typeof application._id | undefined;
     try {
+      const edu = application.education || application.educationalBackground || '';
+      const domains = (Array.isArray(application.researchDomains) && application.researchDomains.length > 0)
+        ? application.researchDomains
+        : (application.researchDomain ? application.researchDomain.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+
       if (isSupervisor) {
         const profile = await Supervisor.create({
           name: application.name,
@@ -793,12 +823,13 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
           email: application.email,
           presentAddress: application.presentAddress,
           permanentAddress: application.permanentAddress,
-          educationalBackground: application.educationalBackground,
+          education: edu,
+          educationalBackground: edu,
           googleScholar: application.googleScholar,
           researchGate: application.researchGate,
           orcid: application.orcid,
           linkedin: application.linkedin,
-          researchInterests: application.researchDomains,
+          researchInterests: domains,
           socialLinks: { linkedin: application.linkedin }
         });
         profileId = profile._id;
@@ -815,12 +846,13 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
           permanentAddress: application.permanentAddress,
           designation: application.designation,
           affiliation: application.institution,
-          educationalBackground: application.educationalBackground,
+          education: edu,
+          educationalBackground: edu,
           googleScholar: application.googleScholar,
           researchGate: application.researchGate,
           orcid: application.orcid,
           linkedin: application.linkedin,
-          researchTopics: application.researchDomains,
+          researchTopics: domains,
           socialLinks: { linkedin: application.linkedin }
         });
         profileId = profile._id;
@@ -832,6 +864,7 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
       application.reviewedBy = req.user._id;
       application.reviewedAt = new Date();
       await application.save();
+      fastCache.clear();
     } catch (error) {
       if (profileId) {
         if (isSupervisor) await Supervisor.deleteOne({ _id: profileId });

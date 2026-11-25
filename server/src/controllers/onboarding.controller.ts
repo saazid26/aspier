@@ -17,6 +17,7 @@ import { saveMedia } from '../services/media.service.js';
 import { slugify } from '../utils/slug.js';
 import { env } from '../config/env.js';
 import { getFallbackApplications, demoSupervisors, demoScholars, makeDemoAvatar } from '../utils/fallbackData.js';
+import { fastCache } from '../utils/fastCache.js';
 
 export async function approveAndSendOnboarding(req: AuthRequest, res: Response, next: NextFunction) {
   try {
@@ -46,6 +47,7 @@ export async function approveAndSendOnboarding(req: AuthRequest, res: Response, 
     if (typeof application.save === 'function') {
       await application.save().catch(() => {});
     }
+    fastCache.clear();
 
     const role = application.role === 'supervisor' || application.category === 'teammate' ? 'supervisor' : 'scholar';
     const roleLabel = role === 'supervisor' ? 'Research Supervisor' : 'Young Scholar';
@@ -174,9 +176,11 @@ export async function validateOnboardingToken(req: Request, res: Response, next:
         wing: application.wing || application.wingInterest,
         designation: application.designation || (role === 'supervisor' ? 'Research Supervisor' : 'Young Scholar'),
         institution: application.institution || '',
-        educationalBackground: application.educationalBackground || '',
+        education: application.education || application.educationalBackground || '',
+        educationalBackground: application.educationalBackground || application.education || '',
         academicStatus: application.academicStatus || '',
         bio: application.bio || '',
+        researchDomain: application.researchDomain || (application.researchDomains || []).join(', '),
         researchDomains: application.researchDomains || []
       }
     });
@@ -258,11 +262,14 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
     const photo = profile.photo || makeDemoAvatar(profile.name);
 
     if (role === 'supervisor') {
-      const interests = Array.isArray(profile.researchInterests)
+      const interests = (Array.isArray(profile.researchInterests) && profile.researchInterests.length > 0)
         ? profile.researchInterests
-        : (typeof profile.researchInterests === 'string'
+        : (typeof profile.researchInterests === 'string' && profile.researchInterests.trim()
           ? profile.researchInterests.split(',').map((s: string) => s.trim()).filter(Boolean)
-          : []);
+          : (Array.isArray(application.researchDomains) && application.researchDomains.length > 0
+            ? application.researchDomains
+            : (application.researchDomain ? application.researchDomain.split(',').map((s: string) => s.trim()).filter(Boolean) : [])));
+      const supEdu = (profile.education || profile.educationalBackground || application.education || application.educationalBackground || '').trim();
 
       const supData = {
         _id: new mongoose.Types.ObjectId().toString(),
@@ -270,7 +277,8 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
         slug: baseSlug,
         designation: profile.designation || 'Research Supervisor',
         affiliation: profile.affiliation || 'ASPIER',
-        educationalBackground: profile.educationalBackground || '',
+        education: supEdu,
+        educationalBackground: supEdu,
         bio: profile.bio || '',
         photo,
         email: application.email,
@@ -306,11 +314,14 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
       }
       if (!profileDoc) profileDoc = supData;
     } else {
-      const topics = Array.isArray(profile.researchTopics)
+      const topics = (Array.isArray(profile.researchTopics) && profile.researchTopics.length > 0)
         ? profile.researchTopics
-        : (typeof profile.researchTopics === 'string'
+        : (typeof profile.researchTopics === 'string' && profile.researchTopics.trim()
           ? profile.researchTopics.split(',').map((s: string) => s.trim()).filter(Boolean)
-          : []);
+          : (Array.isArray(application.researchDomains) && application.researchDomains.length > 0
+            ? application.researchDomains
+            : (application.researchDomain ? application.researchDomain.split(',').map((s: string) => s.trim()).filter(Boolean) : [])));
+      const schEdu = (profile.education || profile.educationalBackground || application.education || application.educationalBackground || '').trim();
 
       const schData = {
         _id: new mongoose.Types.ObjectId().toString(),
@@ -319,7 +330,8 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
         cohort: profile.cohort || '2026',
         designation: profile.designation || 'Young Scholar',
         affiliation: profile.affiliation || 'ASPIER',
-        educationalBackground: profile.educationalBackground || '',
+        education: schEdu,
+        educationalBackground: schEdu,
         bio: profile.bio || '',
         photo,
         researchTopics: topics,
@@ -364,6 +376,7 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
     if (typeof application.save === 'function') {
       await application.save().catch(() => {});
     }
+    fastCache.clear();
 
     // 4. Notify Administrators of live profile
     const roleLabel = role === 'supervisor' ? 'Research Supervisor' : 'Young Scholar';

@@ -76,10 +76,10 @@ export function Onboarding() {
         (validationData.role === 'supervisor' ? 'Research Supervisor' : 'Young Scholar')
       );
       setAffiliation(validationData.institution || 'ASPIER');
-      setEducationalBackground(validationData.educationalBackground || validationData.academicStatus || '');
+      setEducationalBackground(validationData.education || validationData.educationalBackground || validationData.academicStatus || '');
       setBio(validationData.bio || '');
-      if (validationData.researchDomains && validationData.researchDomains.length > 0) {
-        setTagsInput(validationData.researchDomains.join(', '));
+      if (validationData.researchDomain || (validationData.researchDomains && validationData.researchDomains.length > 0)) {
+        setTagsInput(validationData.researchDomain || validationData.researchDomains.join(', '));
       }
     }
   }, [validationData]);
@@ -117,6 +117,7 @@ export function Onboarding() {
       slug: (slug.trim() || slugify(name)).toLowerCase(),
       designation: designation.trim(),
       affiliation: affiliation.trim(),
+      education: educationalBackground.trim(),
       educationalBackground: educationalBackground.trim(),
       bio: bio.trim(),
       photo: photo.trim(),

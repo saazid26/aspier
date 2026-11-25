@@ -24,12 +24,14 @@ type Application = {
   permanentAddress?: string;
   designation?: string;
   institution?: string;
+  education?: string;
   educationalBackground?: string;
   googleScholar?: string;
   researchGate?: string;
   orcid?: string;
   linkedin?: string;
   bio?: string;
+  researchDomain?: string;
   researchDomains?: string[];
   photo?: string;
   onboardingToken?: string;
@@ -264,6 +266,12 @@ export function MembershipApplications() {
                 <p><strong>Institution / University:</strong> {application.institution || 'Not provided'}</p>
                 {application.academicStatus && <p><strong>Academic Status:</strong> {application.academicStatus}</p>}
                 {application.designation && <p><strong>Designation:</strong> {application.designation}</p>}
+                {(application.education || application.educationalBackground) && (
+                  <p className="md:col-span-2"><strong>Education:</strong> {application.education || application.educationalBackground}</p>
+                )}
+                {(application.researchDomain || (application.researchDomains && application.researchDomains.length > 0)) && (
+                  <p className="md:col-span-2"><strong>Research Domain:</strong> {application.researchDomain || application.researchDomains?.join(', ')}</p>
+                )}
               </div>
 
               {application.statement && (
@@ -356,8 +364,8 @@ export function MembershipApplications() {
                   <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">
                     <div><dt className="text-xs text-slate-500 font-semibold">Designation</dt><dd>{application.designation || '—'}</dd></div>
                     <div><dt className="text-xs text-slate-500 font-semibold">Institution</dt><dd>{application.institution || '—'}</dd></div>
-                    <div><dt className="text-xs text-slate-500 font-semibold">Education</dt><dd>{application.educationalBackground || '—'}</dd></div>
-                    <div><dt className="text-xs text-slate-500 font-semibold">Research Domains</dt><dd>{application.researchDomains?.join(', ') || '—'}</dd></div>
+                    <div><dt className="text-xs text-slate-500 font-semibold">Education</dt><dd>{application.education || application.educationalBackground || '—'}</dd></div>
+                    <div><dt className="text-xs text-slate-500 font-semibold">Research Domains</dt><dd>{application.researchDomain || application.researchDomains?.join(', ') || '—'}</dd></div>
                   </dl>
                   {application.bio && (
                     <div className="mt-2 text-sm text-slate-600 bg-white p-3 rounded border border-slate-200">
