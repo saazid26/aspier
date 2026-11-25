@@ -17,6 +17,7 @@ import FoundingMember from '../models/FoundingMember.js';
 import News from '../models/News.js';
 import { demoResearch, demoScholars, demoSupervisors, demoFoundingMembers, makeDemoAvatar, makeDemoCover } from './seedData/demoContent.js';
 import { fallbackWings, fallbackResearchList } from './fallbackData.js';
+import { RESEARCH_PAPER_WRITING_CLASSES } from './researchCourseCurriculum.js';
 
 export async function seedAcademyData(force = false): Promise<{
   courses: number;
@@ -162,24 +163,28 @@ export async function seedAcademyData(force = false): Promise<{
 
     const dummyCourses = [
       {
-        title: 'Higher Study Oriented Basic to Advance Research Paper Writing Course',
+        title: 'Higher Study-Oriented Research Paper Writing Course',
         slug: 'higher-study-research-paper-writing',
         description: '<p>Designed for students and aspiring researchers preparing for higher studies abroad, this course guides learners from foundational research concepts through the preparation and publication of manuscripts in peer-reviewed journals. Participants learn to identify defensible research gaps, select suitable methods, analyze and visualize evidence, write clearly, and respond constructively to peer review.</p><ul><li>Develop focused research questions and testable hypotheses.</li><li>Conduct systematic literature searches using Scopus and Web of Science.</li><li>Select appropriate study designs and analytical methods.</li><li>Communicate findings with clear, publication-quality tables and figures.</li><li>Draft structured manuscripts (IMRaD) and prepare point-by-point peer review rebuttals.</li></ul>',
-        summary: 'Comprehensive 8-week structured roadmap from topic ideation to indexed journal manuscript submission.',
-        duration: '8 weeks',
-        mode: 'Online and Live',
-        deliveryMode: 'Online and Live',
-        startDate: '2026-12-20',
+        summary: 'Comprehensive 15-class structured roadmap from topic ideation to indexed journal manuscript submission.',
+        duration: '15 Recorded Classes (Classes 0–14)',
+        mode: 'Online Recorded',
+        deliveryMode: 'Online Recorded',
+        format: 'Online Recorded',
+        isRecorded: true,
+        startDate: 'Instant Access (Recorded)',
         targetAudience: 'Undergraduate and graduate students, early-career researchers, and applicants preparing for higher studies abroad.',
         enrollmentContact: 'Enroll through ASPIER Academy and contact aspier.global@gmail.com for cohort information.',
         wingId: policyWing?._id,
         instructorId: instBySlug.get('tariqul-islam') || instructorsList[0]?._id,
-        price: 2500,
+        price: 2000,
         level: 'beginner',
         status: 'published',
         thumbnail: makeDemoCover('Research Paper Writing'),
         bannerUrl: makeDemoCover('Research Paper Writing'),
         sampleData: true,
+        classes: RESEARCH_PAPER_WRITING_CLASSES,
+        curriculum: RESEARCH_PAPER_WRITING_CLASSES,
         modules: defaultPaperWritingModules
       }
     ];

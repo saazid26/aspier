@@ -62,6 +62,7 @@ import {
 } from '../utils/fallbackData.js';
 import { recordAudit } from '../services/audit.service.js';
 import { seedAcademyData } from '../utils/seed.js';
+import { RESEARCH_PAPER_WRITING_CLASSES, RESEARCH_PAPER_WRITING_MODULES } from '../utils/researchCourseCurriculum.js';
 import { fastCache } from '../utils/fastCache.js';
 import { listAdminCertificates, issueAdminCertificate, updateAdminCertificate, deleteAdminCertificate } from '../controllers/certificate.controller.js';
 
@@ -948,6 +949,78 @@ router.put('/courses/:id/curriculum', async (req, res) => {
   }
 });
 
+router.post('/update-research-course-curriculum', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+
+    let course = await Course.findOne({
+      $or: [
+        { slug: 'higher-study-research-paper-writing' },
+        { title: { $regex: /Research Paper Writing/i } }
+      ]
+    });
+
+    if (!course) {
+      course = await Course.findOne();
+    }
+
+    if (!course) {
+      course = new Course({
+        title: 'Higher Study-Oriented Research Paper Writing Course',
+        slug: 'higher-study-research-paper-writing',
+        price: 2000,
+        mode: 'Online Recorded',
+        deliveryMode: 'Online Recorded',
+        format: 'Online Recorded',
+        isRecorded: true,
+        duration: '15 Recorded Classes (Classes 0–14)',
+        level: 'advanced',
+        status: 'published',
+        description: '<p>Master academic research methodology, literature review synthesis, questionnaire design, statistical analysis, LaTeX manuscript preparation, and remote sensing with Google Earth Engine across 15 comprehensive recorded classes.</p>'
+      });
+    }
+
+    course.title = 'Higher Study-Oriented Research Paper Writing Course';
+    course.slug = 'higher-study-research-paper-writing';
+    course.price = 2000;
+    course.mode = 'Online Recorded';
+    course.deliveryMode = 'Online Recorded';
+    course.format = 'Online Recorded';
+    course.isRecorded = true;
+    course.duration = '15 Recorded Classes (Classes 0–14)';
+    course.status = 'published';
+    course.level = 'advanced';
+    course.classes = RESEARCH_PAPER_WRITING_CLASSES as any;
+    course.curriculum = RESEARCH_PAPER_WRITING_CLASSES as any;
+    course.modules = RESEARCH_PAPER_WRITING_MODULES as any;
+
+    await course.save();
+    fastCache.clear();
+
+    await recordAudit({
+      req,
+      action: 'update_research_course_curriculum',
+      description: `Configured Higher Study-Oriented Research Paper Writing Course (2000 BDT, Online Recorded, 15 classes)`,
+      resource: 'Course',
+      resourceId: String(course._id)
+    }).catch(() => {});
+
+    return res.json({
+      success: true,
+      message: 'Course updated successfully to Higher Study-Oriented Research Paper Writing Course (2,000 BDT, Online Recorded, Classes 0–14).',
+      data: course
+    });
+  } catch (err: any) {
+    console.error('Error updating research course curriculum:', err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Failed to update research course curriculum'
+    });
+  }
+});
+
 router.post('/academy/seed-sample', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -1113,12 +1186,16 @@ const handleUpdateEnrollment = async (req: any, res: any) => {
     if (!enr) return res.status(404).json({ success: false, message: 'Enrollment not found' });
 
     // Target status normalization
-    let targetStatus: 'pending' | 'active' | 'rejected' | 'expired' = enr.status;
+    let targetStatus: 'pending' | 'stage1_verified' | 'final_approved' | 'active' | 'rejected' | 'expired' = enr.status;
     if (status !== undefined) {
       const s = String(status).trim().toLowerCase();
-      if (['approved', 'active', 'completed'].includes(s)) {
+      if (['final_approved', 'final approved', 'final-approved'].includes(s)) {
+        targetStatus = 'final_approved';
+      } else if (['stage1_verified', 'stage 1 verified', 'stage-1-verified', 'stage1'].includes(s)) {
+        targetStatus = 'stage1_verified';
+      } else if (['approved', 'active', 'completed'].includes(s)) {
         targetStatus = 'active';
-      } else if (s === 'pending') {
+      } else if (['pending', 'pending payment verification'].includes(s)) {
         targetStatus = 'pending';
       } else if (['rejected', 'suspended', 'inactive'].includes(s)) {
         targetStatus = 'rejected';

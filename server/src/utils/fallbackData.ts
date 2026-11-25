@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { demoResearch, demoScholars, demoSupervisors, demoFoundingMembers, makeDemoCover, makeDemoAvatar } from './seedData/demoContent.js';
+import { RESEARCH_PAPER_WRITING_CLASSES } from './researchCourseCurriculum.js';
 
 export const fallbackWings = [
   {
@@ -228,17 +229,22 @@ const defaultDummyModules = [
 export const fallbackCourses = [
   {
     _id: "60d0fe4f5311236168a109e1",
-    title: "Higher Study Oriented Basic to Advance Research Paper Writing Course",
+    title: "Higher Study-Oriented Research Paper Writing Course",
     slug: "higher-study-research-paper-writing",
     description: "Comprehensive guidance from foundational research concepts through publication in peer-reviewed journals.",
-    duration: "8 weeks",
-    mode: "Online and Live",
-    startDate: "2026-12-20",
+    duration: "15 Recorded Classes (Classes 0–14)",
+    mode: "Online Recorded",
+    deliveryMode: "Online Recorded",
+    format: "Online Recorded",
+    isRecorded: true,
+    startDate: "Instant Access (Recorded)",
     targetAudience: "Undergraduate and graduate students preparing for higher studies abroad",
-    price: 2500,
+    price: 2000,
     level: "beginner",
     status: "published",
     thumbnail: makeDemoCover("Research Paper Writing"),
+    classes: RESEARCH_PAPER_WRITING_CLASSES,
+    curriculum: RESEARCH_PAPER_WRITING_CLASSES,
     modules: defaultDummyModules
   }
 ];

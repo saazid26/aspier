@@ -22,10 +22,14 @@ type Course = {
 
 function normalizeDeliveryMode(mode?: string) {
   if (mode === 'Online / Live') return 'Online and Live';
-  return mode || 'Online and Live';
+  if (mode === 'Online and Recorded' || mode === 'Online Recorded') return 'Online Recorded';
+  return mode || 'Online Recorded';
 }
 
-function formatStartDate(startDate?: string) {
+function formatStartDate(startDate?: string, deliveryMode?: string) {
+  if (deliveryMode === 'Online Recorded' || deliveryMode === 'Online and Recorded') {
+    return 'Instant Access (Recorded)';
+  }
   if (!startDate) return 'Starts: Upcoming Batch';
   const date = new Date(startDate);
   if (!Number.isNaN(date.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(startDate)) {
@@ -99,7 +103,7 @@ export function Catalog() {
                 </div>
               </div>
               <div className="course-card-footer">
-                <p className="course-start-date">{formatStartDate(course.startDate)}</p>
+                <p className="course-start-date">{formatStartDate(course.startDate, course.deliveryMode || course.mode)}</p>
                 <strong className="course-price">৳{course.price} BDT</strong>
               </div>
             </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Sparkles, Download, Plus, CheckCircle, Trash2, Edit2, Users, Award, ShieldCheck, Clock, ExternalLink, RefreshCw, Upload, Eye } from 'lucide-react';
+import { Sparkles, Download, Plus, CheckCircle, Trash2, Edit2, Users, Award, ShieldCheck, Clock, ExternalLink, RefreshCw, Upload, Eye, Copy } from 'lucide-react';
 import { api } from '../../../lib/api';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Button } from '../../../components/ui/Button';
@@ -516,7 +516,7 @@ export function AcademyCms() {
       trxId: enr.trxId === 'N/A' ? '' : enr.trxId || '',
       feePaid: Number(enr.feePaid || 0),
       progressPercent: Number(enr.progressPercent || 0),
-      status: enr.status === 'Approved' ? 'Active' : enr.status === 'Pending' ? 'Pending' : enr.status === 'Rejected' ? 'Inactive' : enr.status || 'Active'
+      status: enr.status === 'stage1_verified' ? 'stage1_verified' : enr.status === 'final_approved' ? 'final_approved' : ['Approved', 'active', 'Active'].includes(enr.status) ? 'Active' : ['Pending', 'pending'].includes(enr.status) ? 'pending' : enr.status === 'Rejected' ? 'Inactive' : enr.status || 'Active'
     });
     setEnrollmentModalOpen(true);
   };
@@ -1391,9 +1391,24 @@ export function AcademyCms() {
                         )}
                       </td>
                       <td>
-                        <a href={`mailto:${row.studentEmail}`} style={{ color: '#0d9488', fontSize: '0.85rem' }}>
-                          {row.studentEmail}
-                        </a>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <a href={`mailto:${row.studentEmail}`} style={{ color: '#0d9488', fontSize: '0.85rem' }}>
+                            {row.studentEmail}
+                          </a>
+                          {row.studentEmail && (
+                            <Button
+                              variant="secondary"
+                              style={{ padding: '2px 6px', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: 3 }}
+                              title="Copy student Gmail"
+                              onClick={() => {
+                                navigator.clipboard.writeText(row.studentEmail);
+                                toast.success(`Copied: ${row.studentEmail}`);
+                              }}
+                            >
+                              <Copy size={11} /> Copy Gmail
+                            </Button>
+                          )}
+                        </div>
                         {row.studentPhone && (
                           <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{row.studentPhone}</div>
                         )}
@@ -1441,13 +1456,19 @@ export function AcademyCms() {
                         )}
                       </td>
                       <td>
-                        <Badge variant={['Approved', 'Active', 'active'].includes(row.status) ? 'green' : ['Pending', 'pending'].includes(row.status) ? 'amber' : 'gray'}>
-                          {row.status}
-                        </Badge>
+                        {row.status === 'stage1_verified' || row.status === 'Stage 1 Verified' ? (
+                          <Badge variant="blue">Stage 1 Verified</Badge>
+                        ) : row.status === 'final_approved' || row.status === 'Final Approved' ? (
+                          <Badge variant="green">Final Approved (YouTube Access)</Badge>
+                        ) : (
+                          <Badge variant={['Approved', 'Active', 'active'].includes(row.status) ? 'green' : ['Pending', 'pending'].includes(row.status) ? 'amber' : 'gray'}>
+                            {row.status}
+                          </Badge>
+                        )}
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          {row.status === 'Pending' && row.recordType === 'enrollment' && (
+                          {['Pending', 'pending'].includes(row.status) && row.recordType === 'enrollment' && (
                             <Button
                               variant="secondary"
                               style={{ padding: '5px 10px', fontSize: '0.775rem', color: '#16a34a', borderColor: '#86efac', background: '#f0fdf4', display: 'inline-flex', alignItems: 'center', gap: 4 }}
@@ -1745,11 +1766,12 @@ export function AcademyCms() {
                 Class Mode
                 <select
                   className="select"
-                  value={editingCourse.mode || 'Online and Live'}
-                  onChange={(e) => setEditingCourse({ ...editingCourse, mode: e.target.value })}
+                  value={editingCourse.mode || 'Online Recorded'}
+                  onChange={(e) => setEditingCourse({ ...editingCourse, mode: e.target.value, deliveryMode: e.target.value })}
                 >
-                  <option value="Online and Live">Online and Live</option>
+                  <option value="Online Recorded">Online Recorded</option>
                   <option value="Online and Recorded">Online and Recorded</option>
+                  <option value="Online and Live">Online and Live</option>
                   <option value="In-Person Workshop">In-Person Workshop</option>
                 </select>
               </label>
@@ -2177,8 +2199,10 @@ export function AcademyCms() {
                   value={editingStudentEnrollment.status}
                   onChange={(e) => setEditingStudentEnrollment({ ...editingStudentEnrollment, status: e.target.value })}
                 >
+                  <option value="pending">Pending Payment Verification</option>
+                  <option value="stage1_verified">Stage 1 Verified (Payment Verified)</option>
+                  <option value="final_approved">Final Approved — YouTube Access Granted</option>
                   <option value="Active">Active (Full Access)</option>
-                  <option value="Pending">Pending Verification</option>
                   <option value="Completed">Completed</option>
                   <option value="Inactive">Inactive / Suspended</option>
                 </select>

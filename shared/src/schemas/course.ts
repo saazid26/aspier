@@ -1,6 +1,6 @@
 import { z } from 'zod';
 export const lessonSchema = z.object({ title: z.string().min(1).max(200), order: z.number().int().nonnegative(), youtubeVideoId: z.string().max(100).optional(), duration: z.number().nonnegative().default(0), resources: z.array(z.string()).default([]), isFreePreview: z.boolean().default(false) });
-export const courseDeliveryModes = ['Online and Live', 'Online and Recorded', 'Offline'] as const;
+export const courseDeliveryModes = ['Online and Live', 'Online and Recorded', 'Online Recorded', 'Offline'] as const;
 export const courseSchema = z.object({
   title: z.string().trim().min(2).max(200),
   description: z.string().trim().max(10000),

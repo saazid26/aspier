@@ -1,3 +1,5 @@
+import { RESEARCH_PAPER_WRITING_CLASSES } from '../features/academy/researchCourseCurriculum';
+
 export const staticWings = [
   {
     _id: "60d0fe4f5311236168a109ca",
@@ -253,16 +255,21 @@ export const defaultDummyModules = [
 export const staticCourses = [
   {
     _id: "60d0fe4f5311236168a109e1",
-    title: "Higher Study Oriented Basic to Advance Research Paper Writing Course",
+    title: "Higher Study-Oriented Research Paper Writing Course",
     slug: "higher-study-research-paper-writing",
     description: "Designed for students and aspiring researchers preparing for higher studies abroad, this course guides learners from foundational research concepts through manuscript publication in peer-reviewed journals.",
-    duration: "8 weeks",
-    mode: "Online and Live",
-    startDate: "2026-12-20",
+    duration: "15 Recorded Classes (Classes 0–14)",
+    mode: "Online Recorded",
+    deliveryMode: "Online Recorded",
+    format: "Online Recorded",
+    isRecorded: true,
+    startDate: "Instant Access (Recorded)",
     targetAudience: "Undergraduate and graduate students preparing for higher studies abroad",
-    price: 2500,
+    price: 2000,
     level: "beginner",
     status: "published",
+    classes: RESEARCH_PAPER_WRITING_CLASSES,
+    curriculum: RESEARCH_PAPER_WRITING_CLASSES,
     modules: defaultDummyModules
   }
 ];

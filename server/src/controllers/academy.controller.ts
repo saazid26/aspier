@@ -43,6 +43,9 @@ export async function courseDetail(req: AuthRequest, res: Response, next: NextFu
     if (req.user) active = Boolean(await Enrollment.findOne({ userId: req.user._id, courseId: course._id, status: 'active' }));
     if (isAdmin) active = true;
     const safe = course.toObject();
+    if (course.classes && course.classes.length > 0) {
+      (safe as any).classes = course.classes;
+    }
     if (!active) (safe as any).modules = (safe as any).modules.map((module: any) => ({ ...module, lessons: module.lessons.map((lesson: any) => ({ ...lesson, youtubeVideoId: lesson.isFreePreview ? lesson.youtubeVideoId : undefined })) }));
     res.json({ success: true, data: safe });
   } catch (error) {
