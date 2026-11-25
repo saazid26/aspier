@@ -45,8 +45,16 @@ router.get('/wings/:slug', (req, res, next) => {
   publicRoutes(req, res, next);
 });
 router.get('/team', (req, res, next) => {
-  req.url = '/founding-members';
+  req.url = '/team';
   publicRoutes(req, res, next);
+});
+router.put('/team/reorder', (req, res, next) => {
+  req.url = '/team/reorder';
+  admin(req, res, next);
+});
+router.patch('/team/reorder', (req, res, next) => {
+  req.url = '/team/reorder';
+  admin(req, res, next);
 });
 router.get('/research', (req, res, next) => {
   req.url = '/research';

@@ -228,9 +228,29 @@ router.get('/research/:slug', async (req, res) => {
   return res.json({ success: true, data: fallback });
 });
 
+router.get('/team', async (_req, res) => {
+  try {
+    const [founding, supervisors, scholars] = await Promise.all([
+      FoundingMember.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).catch(() => getFallbackFoundingMembers()),
+      Supervisor.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).catch(() => getFallbackSupervisors()),
+      Scholar.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).catch(() => getFallbackScholars())
+    ]);
+    return res.json({ success: true, data: { founding, supervisors, scholars } });
+  } catch {
+    return res.json({
+      success: true,
+      data: {
+        founding: getFallbackFoundingMembers(),
+        supervisors: getFallbackSupervisors(),
+        scholars: getFallbackScholars()
+      }
+    });
+  }
+});
+
 router.get('/founding-members', async (_req, res) => {
   try {
-    const list = await FoundingMember.find().sort({ order: 1, createdAt: 1 });
+    const list = await FoundingMember.find().sort({ order: 1, displayOrder: 1, createdAt: 1 });
     if (list && list.length > 0) return res.json({ success: true, data: list });
   } catch (err) {
     console.warn('[founding-members] fallback:', err instanceof Error ? err.message : err);
@@ -255,7 +275,7 @@ router.get('/supervisors', async (_req, res) => {
   if (cached) return res.json({ success: true, data: cached });
   try {
     if (mongoose.connection.readyState === 1) {
-      const list = await Supervisor.find().sort({ name: 1 }).lean().maxTimeMS(2000);
+      const list = await Supervisor.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).lean().maxTimeMS(2000);
       if (list && list.length > 0) {
         fastCache.set('public:supervisors', list, 60);
         return res.json({ success: true, data: list });
@@ -286,7 +306,7 @@ router.get('/scholars', async (_req, res) => {
   if (cached) return res.json({ success: true, data: cached });
   try {
     if (mongoose.connection.readyState === 1) {
-      const list = await Scholar.find().sort({ name: 1 }).lean().maxTimeMS(2000);
+      const list = await Scholar.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).lean().maxTimeMS(2000);
       if (list && list.length > 0) {
         fastCache.set('public:scholars', list, 60);
         return res.json({ success: true, data: list });

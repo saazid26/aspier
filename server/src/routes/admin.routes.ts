@@ -55,7 +55,8 @@ import {
   deleteFallbackSupervisor,
   getFallbackScholars,
   addOrUpdateFallbackScholar,
-  deleteFallbackScholar
+  deleteFallbackScholar,
+  reorderFallbackItems
 } from '../utils/fallbackData.js';
 import { recordAudit } from '../services/audit.service.js';
 import { seedAcademyData } from '../utils/seed.js';
@@ -124,7 +125,7 @@ router.get('/founding-members', audit('list', 'FoundingMember'), async (_req, re
       await connectDatabase();
     }
     if (mongoose.connection.readyState === 1) {
-      const list = await FoundingMember.find().sort({ order: 1, createdAt: 1 });
+      const list = await FoundingMember.find().sort({ order: 1, displayOrder: 1, createdAt: 1 });
       if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
     }
   } catch {}
@@ -140,6 +141,24 @@ router.post('/founding-members', audit('create', 'FoundingMember'), async (req, 
     let item: any = null;
     const body = { ...req.body };
     delete body._id;
+    if (body.order === undefined && body.displayOrder === undefined) {
+      if (mongoose.connection.readyState === 1) {
+        const last = await FoundingMember.findOne().sort({ order: -1 }).select('order displayOrder');
+        const next = last && typeof last.order === 'number' ? last.order + 1 : 0;
+        body.order = next;
+        body.displayOrder = next;
+      } else {
+        const fallbackList = getFallbackFoundingMembers();
+        body.order = fallbackList.length;
+        body.displayOrder = fallbackList.length;
+      }
+    } else {
+      const ord = body.order !== undefined ? Number(body.order) : Number(body.displayOrder);
+      body.order = ord;
+      body.displayOrder = ord;
+    }
+    req.body.order = body.order;
+    req.body.displayOrder = body.displayOrder;
     if (mongoose.connection.readyState === 1) {
       item = await FoundingMember.create(body);
     }
@@ -160,6 +179,13 @@ router.put('/founding-members/:id', audit('update', 'FoundingMember'), async (re
     const id = String(req.params.id);
     const body = { ...req.body };
     delete body._id;
+    if (body.order !== undefined || body.displayOrder !== undefined) {
+      const ord = body.order !== undefined ? Number(body.order) : Number(body.displayOrder);
+      body.order = ord;
+      body.displayOrder = ord;
+      req.body.order = ord;
+      req.body.displayOrder = ord;
+    }
     if (mongoose.connection.readyState === 1) {
       if (mongoose.Types.ObjectId.isValid(id)) {
         item = await FoundingMember.findByIdAndUpdate(id, body, { new: true });
@@ -201,7 +227,7 @@ router.get('/supervisors', audit('list', 'Supervisor'), async (_req, res) => {
       await connectDatabase();
     }
     if (mongoose.connection.readyState === 1) {
-      const list = await Supervisor.find().sort({ order: 1, createdAt: 1 });
+      const list = await Supervisor.find().sort({ order: 1, displayOrder: 1, createdAt: 1 });
       if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
     }
   } catch {}
@@ -224,6 +250,24 @@ router.post('/supervisors', audit('create', 'Supervisor'), async (req, res) => {
       req.body.education = edu;
       req.body.educationalBackground = edu;
     }
+    if (body.order === undefined && body.displayOrder === undefined) {
+      if (mongoose.connection.readyState === 1) {
+        const last = await Supervisor.findOne().sort({ order: -1 }).select('order displayOrder');
+        const next = last && typeof last.order === 'number' ? last.order + 1 : 0;
+        body.order = next;
+        body.displayOrder = next;
+      } else {
+        const fallbackList = getFallbackSupervisors();
+        body.order = fallbackList.length;
+        body.displayOrder = fallbackList.length;
+      }
+    } else {
+      const ord = body.order !== undefined ? Number(body.order) : Number(body.displayOrder);
+      body.order = ord;
+      body.displayOrder = ord;
+    }
+    req.body.order = body.order;
+    req.body.displayOrder = body.displayOrder;
     if (mongoose.connection.readyState === 1) {
       item = await Supervisor.create(body);
     }
@@ -250,6 +294,13 @@ router.put('/supervisors/:id', audit('update', 'Supervisor'), async (req, res) =
       body.educationalBackground = edu;
       req.body.education = edu;
       req.body.educationalBackground = edu;
+    }
+    if (body.order !== undefined || body.displayOrder !== undefined) {
+      const ord = body.order !== undefined ? Number(body.order) : Number(body.displayOrder);
+      body.order = ord;
+      body.displayOrder = ord;
+      req.body.order = ord;
+      req.body.displayOrder = ord;
     }
     if (mongoose.connection.readyState === 1) {
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -292,7 +343,7 @@ router.get('/scholars', audit('list', 'Scholar'), async (_req, res) => {
       await connectDatabase();
     }
     if (mongoose.connection.readyState === 1) {
-      const list = await Scholar.find().sort({ order: 1, createdAt: 1 });
+      const list = await Scholar.find().sort({ order: 1, displayOrder: 1, createdAt: 1 });
       if (list && list.length > 0) return res.json({ success: true, data: list, pagination: { page: 1, limit: 100, total: list.length, pages: 1 } });
     }
   } catch {}
@@ -308,6 +359,24 @@ router.post('/scholars', audit('create', 'Scholar'), async (req, res) => {
     let item: any = null;
     const body = { ...req.body };
     delete body._id;
+    if (body.order === undefined && body.displayOrder === undefined) {
+      if (mongoose.connection.readyState === 1) {
+        const last = await Scholar.findOne().sort({ order: -1 }).select('order displayOrder');
+        const next = last && typeof last.order === 'number' ? last.order + 1 : 0;
+        body.order = next;
+        body.displayOrder = next;
+      } else {
+        const fallbackList = getFallbackScholars();
+        body.order = fallbackList.length;
+        body.displayOrder = fallbackList.length;
+      }
+    } else {
+      const ord = body.order !== undefined ? Number(body.order) : Number(body.displayOrder);
+      body.order = ord;
+      body.displayOrder = ord;
+    }
+    req.body.order = body.order;
+    req.body.displayOrder = body.displayOrder;
     if (mongoose.connection.readyState === 1) {
       item = await Scholar.create(body);
     }
@@ -328,6 +397,13 @@ router.put('/scholars/:id', audit('update', 'Scholar'), async (req, res) => {
     const id = String(req.params.id);
     const body = { ...req.body };
     delete body._id;
+    if (body.order !== undefined || body.displayOrder !== undefined) {
+      const ord = body.order !== undefined ? Number(body.order) : Number(body.displayOrder);
+      body.order = ord;
+      body.displayOrder = ord;
+      req.body.order = ord;
+      req.body.displayOrder = ord;
+    }
     if (mongoose.connection.readyState === 1) {
       if (mongoose.Types.ObjectId.isValid(id)) {
         item = await Scholar.findByIdAndUpdate(id, body, { new: true });
@@ -360,6 +436,188 @@ router.delete('/scholars/:id', audit('delete', 'Scholar'), async (req, res) => {
   } catch {}
   deleteFallbackScholar(String(req.params.id));
   return res.json({ success: true, message: 'Scholar deleted' });
+});
+
+// Team Drag-and-Drop Reordering Endpoints (Founding Members, Supervisors, Young Scholars)
+const handleTeamReorder = async (req: any, res: any) => {
+  try {
+    const { category, orderedIds } = req.body;
+    if (!category || !Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'category and non-empty orderedIds array are required' });
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+
+    const cat = String(category).toLowerCase();
+    let Model: any = null;
+    let fallbackCat = 'scholar';
+
+    if (cat.includes('founding')) {
+      Model = FoundingMember;
+      fallbackCat = 'founding';
+    } else if (cat.includes('sup')) {
+      Model = Supervisor;
+      fallbackCat = 'supervisor';
+    } else {
+      Model = Scholar;
+      fallbackCat = 'scholar';
+    }
+
+    if (mongoose.connection.readyState === 1 && Model) {
+      const bulkOps = orderedIds.map((id: string, index: number) => ({
+        updateOne: {
+          filter: mongoose.Types.ObjectId.isValid(id)
+            ? { _id: new mongoose.Types.ObjectId(id) }
+            : { $or: [{ slug: id }, { name: id }] },
+          update: { $set: { order: index, displayOrder: index } }
+        }
+      }));
+      if (bulkOps.length > 0) {
+        await Model.bulkWrite(bulkOps);
+      }
+    }
+
+    // Also update in-memory fallback list
+    reorderFallbackItems(fallbackCat, orderedIds);
+
+    // Invalidate caches
+    fastCache.invalidate('public:founding-members');
+    fastCache.invalidate('public:supervisors');
+    fastCache.invalidate('public:scholars');
+    fastCache.clear();
+
+    return res.json({
+      success: true,
+      message: `Successfully reordered ${category} profiles`,
+      orderedCount: orderedIds.length
+    });
+  } catch (err: any) {
+    console.error('[team/reorder] error:', err);
+    return res.status(500).json({ success: false, message: err.message || 'Failed to reorder team profiles' });
+  }
+};
+
+router.put('/team/reorder', audit('update', 'Team'), handleTeamReorder);
+router.patch('/team/reorder', audit('update', 'Team'), handleTeamReorder);
+router.put('/founding-members/reorder', audit('update', 'FoundingMember'), (req, res) => {
+  req.body.category = 'founding';
+  return handleTeamReorder(req, res);
+});
+router.patch('/founding-members/reorder', audit('update', 'FoundingMember'), (req, res) => {
+  req.body.category = 'founding';
+  return handleTeamReorder(req, res);
+});
+router.put('/supervisors/reorder', audit('update', 'Supervisor'), (req, res) => {
+  req.body.category = 'supervisor';
+  return handleTeamReorder(req, res);
+});
+router.patch('/supervisors/reorder', audit('update', 'Supervisor'), (req, res) => {
+  req.body.category = 'supervisor';
+  return handleTeamReorder(req, res);
+});
+router.put('/scholars/reorder', audit('update', 'Scholar'), (req, res) => {
+  req.body.category = 'scholar';
+  return handleTeamReorder(req, res);
+});
+router.patch('/scholars/reorder', audit('update', 'Scholar'), (req, res) => {
+  req.body.category = 'scholar';
+  return handleTeamReorder(req, res);
+});
+
+router.post('/team', audit('create', 'Team'), async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const cat = String(req.body.category || req.body.role || '').toLowerCase();
+    const body = { ...req.body };
+    delete body._id;
+    if (cat.includes('founding')) {
+      if (body.order === undefined && body.displayOrder === undefined) {
+        if (mongoose.connection.readyState === 1) {
+          const last = await FoundingMember.findOne().sort({ order: -1 }).select('order displayOrder');
+          const next = last && typeof last.order === 'number' ? last.order + 1 : 0;
+          body.order = next;
+          body.displayOrder = next;
+        } else {
+          const fallbackList = getFallbackFoundingMembers();
+          body.order = fallbackList.length;
+          body.displayOrder = fallbackList.length;
+        }
+      }
+      const item = mongoose.connection.readyState === 1 ? await FoundingMember.create(body) : null;
+      const saved = addOrUpdateFallbackFoundingMember(item ? item.toObject() : req.body);
+      return res.status(201).json({ success: true, data: item || saved });
+    } else if (cat.includes('sup')) {
+      if (body.education !== undefined || body.educationalBackground !== undefined) {
+        const edu = body.education !== undefined ? body.education : body.educationalBackground;
+        body.education = edu;
+        body.educationalBackground = edu;
+        req.body.education = edu;
+        req.body.educationalBackground = edu;
+      }
+      if (body.order === undefined && body.displayOrder === undefined) {
+        if (mongoose.connection.readyState === 1) {
+          const last = await Supervisor.findOne().sort({ order: -1 }).select('order displayOrder');
+          const next = last && typeof last.order === 'number' ? last.order + 1 : 0;
+          body.order = next;
+          body.displayOrder = next;
+        } else {
+          const fallbackList = getFallbackSupervisors();
+          body.order = fallbackList.length;
+          body.displayOrder = fallbackList.length;
+        }
+      }
+      const item = mongoose.connection.readyState === 1 ? await Supervisor.create(body) : null;
+      const saved = addOrUpdateFallbackSupervisor(item ? item.toObject() : req.body);
+      return res.status(201).json({ success: true, data: item || saved });
+    } else {
+      if (body.order === undefined && body.displayOrder === undefined) {
+        if (mongoose.connection.readyState === 1) {
+          const last = await Scholar.findOne().sort({ order: -1 }).select('order displayOrder');
+          const next = last && typeof last.order === 'number' ? last.order + 1 : 0;
+          body.order = next;
+          body.displayOrder = next;
+        } else {
+          const fallbackList = getFallbackScholars();
+          body.order = fallbackList.length;
+          body.displayOrder = fallbackList.length;
+        }
+      }
+      const item = mongoose.connection.readyState === 1 ? await Scholar.create(body) : null;
+      const saved = addOrUpdateFallbackScholar(item ? item.toObject() : req.body);
+      return res.status(201).json({ success: true, data: item || saved });
+    }
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message || 'Failed to create team member' });
+  }
+});
+
+router.get('/team', audit('list', 'Team'), async (req, res) => {
+  const cat = String(req.query.category || '').toLowerCase();
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+  } catch {}
+  if (cat.includes('founding')) {
+    const list = mongoose.connection.readyState === 1 ? await FoundingMember.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }) : [];
+    return res.json({ success: true, data: list.length > 0 ? list : getFallbackFoundingMembers() });
+  } else if (cat.includes('sup')) {
+    const list = mongoose.connection.readyState === 1 ? await Supervisor.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }) : [];
+    return res.json({ success: true, data: list.length > 0 ? list : getFallbackSupervisors() });
+  } else if (cat.includes('scholar')) {
+    const list = mongoose.connection.readyState === 1 ? await Scholar.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }) : [];
+    return res.json({ success: true, data: list.length > 0 ? list : getFallbackScholars() });
+  }
+  const [founding, supervisors, scholars] = await Promise.all([
+    FoundingMember.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).catch(() => getFallbackFoundingMembers()),
+    Supervisor.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).catch(() => getFallbackSupervisors()),
+    Scholar.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).catch(() => getFallbackScholars())
+  ]);
+  return res.json({ success: true, data: { founding, supervisors, scholars } });
 });
 
 router.get('/wings', audit('list', 'Wing'), async (_req, res) => {

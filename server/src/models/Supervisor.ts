@@ -33,6 +33,7 @@ const schema = new Schema({
   },
   sampleData: { type: Boolean, default: false },
   isPublished: { type: Boolean, default: true },
-  order: { type: Number, default: 0 }
+  order: { type: Number, default: 0, index: true },
+  displayOrder: { type: Number, default: 0, index: true }
 }, { timestamps: true });
 export default model('Supervisor', schema);

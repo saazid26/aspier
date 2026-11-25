@@ -20,6 +20,7 @@ type FoundingMember = ProfileSocialMedia & {
   researchInterests?: string[];
   educationalBackground?: string;
   order?: number;
+  displayOrder?: number;
   sampleData?: boolean;
 };
 
@@ -34,6 +35,8 @@ type Supervisor = ProfileSocialMedia & {
   researchInterests?: string[];
   educationalBackground?: string;
   education?: string;
+  order?: number;
+  displayOrder?: number;
   sampleData?: boolean;
 };
 
@@ -48,6 +51,8 @@ type Scholar = ProfileSocialMedia & {
   designation?: string;
   affiliation?: string;
   educationalBackground?: string;
+  order?: number;
+  displayOrder?: number;
   sampleData?: boolean;
 };
 
@@ -124,17 +129,31 @@ export function Team() {
     founderTwitter: 'https://x.com/'
   };
 
-  const foundingMembers: FoundingMember[] = (foundingMembersQuery.data && foundingMembersQuery.data.length > 0)
-    ? foundingMembersQuery.data
-    : (staticFoundingMembers as unknown as FoundingMember[]);
+  const sortByOrder = <T extends { order?: number; displayOrder?: number }>(arr: T[]): T[] => {
+    return [...arr].sort((a, b) => {
+      const ordA = a.order ?? a.displayOrder ?? 999;
+      const ordB = b.order ?? b.displayOrder ?? 999;
+      return ordA - ordB;
+    });
+  };
 
-  const supervisors: Supervisor[] = (supervisorsQuery.data && supervisorsQuery.data.length > 0)
-    ? supervisorsQuery.data
-    : (staticSupervisors as unknown as Supervisor[]);
+  const foundingMembers: FoundingMember[] = sortByOrder(
+    (foundingMembersQuery.data && foundingMembersQuery.data.length > 0)
+      ? foundingMembersQuery.data
+      : (staticFoundingMembers as unknown as FoundingMember[])
+  );
 
-  const scholars: Scholar[] = (scholarsQuery.data && scholarsQuery.data.length > 0)
-    ? scholarsQuery.data
-    : (staticScholars as unknown as Scholar[]);
+  const supervisors: Supervisor[] = sortByOrder(
+    (supervisorsQuery.data && supervisorsQuery.data.length > 0)
+      ? supervisorsQuery.data
+      : (staticSupervisors as unknown as Supervisor[])
+  );
+
+  const scholars: Scholar[] = sortByOrder(
+    (scholarsQuery.data && scholarsQuery.data.length > 0)
+      ? scholarsQuery.data
+      : (staticScholars as unknown as Scholar[])
+  );
 
   const founderLinks: ProfileSocialMedia = {
     researchGate: founder.founderResearchGate,

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import { api } from '../../../lib/api';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Button } from '../../../components/ui/Button';
@@ -27,21 +28,103 @@ export function TeamManager() {
     queryKey: ['admin-founding-members'],
     queryFn: async () => (await api.get('/admin/founding-members')).data.data as any[]
   });
-  const foundingMembers = foundingMembersData && foundingMembersData.length > 0 ? foundingMembersData : staticFoundingMembers;
 
   // Supervisors Query
   const { data: supervisorsData, refetch: refetchSupervisors } = useQuery({
     queryKey: ['admin-supervisors'],
     queryFn: async () => (await api.get('/admin/supervisors')).data.data as any[]
   });
-  const supervisors = supervisorsData && supervisorsData.length > 0 ? supervisorsData : staticSupervisors;
 
   // Young Scholars Query
   const { data: scholarsData, refetch: refetchScholars } = useQuery({
     queryKey: ['admin-scholars'],
     queryFn: async () => (await api.get('/admin/scholars')).data.data as any[]
   });
-  const scholars = scholarsData && scholarsData.length > 0 ? scholarsData : staticScholars;
+
+  const [localFoundingMembers, setLocalFoundingMembers] = useState<any[]>([]);
+  const [localSupervisors, setLocalSupervisors] = useState<any[]>([]);
+  const [localScholars, setLocalScholars] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (foundingMembersData && foundingMembersData.length > 0) {
+      setLocalFoundingMembers(foundingMembersData);
+    } else if (staticFoundingMembers) {
+      setLocalFoundingMembers(staticFoundingMembers);
+    }
+  }, [foundingMembersData]);
+
+  useEffect(() => {
+    if (supervisorsData && supervisorsData.length > 0) {
+      setLocalSupervisors(supervisorsData);
+    } else if (staticSupervisors) {
+      setLocalSupervisors(staticSupervisors);
+    }
+  }, [supervisorsData]);
+
+  useEffect(() => {
+    if (scholarsData && scholarsData.length > 0) {
+      setLocalScholars(scholarsData);
+    } else if (staticScholars) {
+      setLocalScholars(staticScholars);
+    }
+  }, [scholarsData]);
+
+  const foundingMembers = localFoundingMembers.length > 0 ? localFoundingMembers : (foundingMembersData || staticFoundingMembers || []);
+  const supervisors = localSupervisors.length > 0 ? localSupervisors : (supervisorsData || staticSupervisors || []);
+  const scholars = localScholars.length > 0 ? localScholars : (scholarsData || staticScholars || []);
+
+  // Drag and drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dragCategory, setDragCategory] = useState<'founding' | 'supervisor' | 'scholar' | null>(null);
+
+  const handleReorder = async (category: 'founding' | 'supervisor' | 'scholar', fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    let currentList: any[] = [];
+    let setList: React.Dispatch<React.SetStateAction<any[]>> = () => {};
+
+    if (category === 'founding') {
+      currentList = [...foundingMembers];
+      setList = setLocalFoundingMembers;
+    } else if (category === 'supervisor') {
+      currentList = [...supervisors];
+      setList = setLocalSupervisors;
+    } else {
+      currentList = [...scholars];
+      setList = setLocalScholars;
+    }
+
+    if (fromIndex < 0 || fromIndex >= currentList.length || toIndex < 0 || toIndex >= currentList.length) return;
+
+    const updated = [...currentList];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+
+    // Optimistic UI update immediately (zero flicker)
+    setList(updated);
+
+    const orderedIds = updated.map((item) => String(item._id || item.id || item.slug));
+
+    try {
+      await api.put('/admin/team/reorder', { category, orderedIds });
+      toast.success('Order saved');
+
+      if (category === 'founding') {
+        await queryClient.invalidateQueries({ queryKey: ['admin-founding-members'] });
+        await queryClient.invalidateQueries({ queryKey: ['team-founding-members'] });
+      } else if (category === 'supervisor') {
+        await queryClient.invalidateQueries({ queryKey: ['admin-supervisors'] });
+        await queryClient.invalidateQueries({ queryKey: ['team-supervisors'] });
+      } else {
+        await queryClient.invalidateQueries({ queryKey: ['admin-scholars'] });
+        await queryClient.invalidateQueries({ queryKey: ['team-scholars'] });
+      }
+    } catch (err: any) {
+      setList(currentList);
+      toast.error(err.response?.data?.message || 'Could not save new order');
+    }
+  };
 
   // Founder Form State
   const [founderForm, setFounderForm] = useState<Record<string, any> | null>(null);
@@ -446,47 +529,141 @@ export function TeamManager() {
             </Button>
           </div>
 
-          <Table headers={['Photo', 'Name', 'Role / Title', 'Affiliation', 'Focus Domains', 'Actions']}>
-            {foundingMembers.map((fm) => (
-              <tr key={fm._id}>
-                <td style={{ width: 60 }}>
-                  {fm.photo ? (
-                    <img src={fm.photo} alt={fm.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#0d736e', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
-                      {fm.name?.charAt(0) || 'F'}
+          <Table headers={['Order', 'Photo', 'Name', 'Role / Title', 'Affiliation', 'Focus Domains', 'Actions']}>
+            {foundingMembers.map((fm, index) => {
+              const isDragging = dragCategory === 'founding' && draggedIndex === index;
+              const isOver = dragCategory === 'founding' && dragOverIndex === index;
+              return (
+                <tr
+                  key={fm._id || fm.slug || index}
+                  draggable
+                  onDragStart={(e) => {
+                    setDragCategory('founding');
+                    setDraggedIndex(index);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(index));
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOverIndex !== index) setDragOverIndex(index);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverIndex === index) setDragOverIndex(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragCategory === 'founding' && draggedIndex !== null && draggedIndex !== index) {
+                      handleReorder('founding', draggedIndex, index);
+                    }
+                    setDraggedIndex(null);
+                    setDragOverIndex(null);
+                    setDragCategory(null);
+                  }}
+                  onDragEnd={() => {
+                    setDraggedIndex(null);
+                    setDragOverIndex(null);
+                    setDragCategory(null);
+                  }}
+                  style={{
+                    cursor: 'grab',
+                    opacity: isDragging ? 0.45 : 1,
+                    background: isOver ? 'rgba(16, 185, 129, 0.08)' : undefined,
+                    borderTop: isOver && draggedIndex !== null && draggedIndex > index ? '2px solid #10b981' : undefined,
+                    borderBottom: isOver && draggedIndex !== null && draggedIndex < index ? '2px solid #10b981' : undefined,
+                    boxShadow: isDragging ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)' : undefined,
+                    transition: 'background 0.15s ease, opacity 0.15s ease'
+                  }}
+                >
+                  <td style={{ width: 85, whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ color: '#64748b', cursor: 'grab', display: 'inline-flex' }} title="Drag to reorder">
+                        <GripVertical size={16} />
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9', color: '#334155' }}>
+                        #{index + 1}
+                      </span>
+                      <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 1 }}>
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReorder('founding', index, index - 1);
+                          }}
+                          title="Move up"
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            padding: 0,
+                            cursor: index === 0 ? 'not-allowed' : 'pointer',
+                            opacity: index === 0 ? 0.25 : 0.7,
+                            lineHeight: 1
+                          }}
+                        >
+                          <ChevronUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === foundingMembers.length - 1}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReorder('founding', index, index + 1);
+                          }}
+                          title="Move down"
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            padding: 0,
+                            cursor: index === foundingMembers.length - 1 ? 'not-allowed' : 'pointer',
+                            opacity: index === foundingMembers.length - 1 ? 0.25 : 0.7,
+                            lineHeight: 1
+                          }}
+                        >
+                          <ChevronDown size={13} />
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </td>
-                <td><strong>{fm.name}</strong></td>
-                <td><span style={{ color: '#0d736e', fontWeight: 600 }}>{fm.role || fm.designation || 'Founding Member'}</span></td>
-                <td>{fm.affiliation || 'ASPIER'}</td>
-                <td>
-                  <span style={{ fontSize: '0.85rem', color: '#475569' }}>
-                    {Array.isArray(fm.researchInterests) ? fm.researchInterests.slice(0, 3).join(', ') : ''}
-                  </span>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setEditingFoundingMember({ ...fm });
-                        setFoundingMemberModalOpen(true);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="danger"
-                      onClick={() => handleDeleteFoundingMember(fm._id, fm.name)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td style={{ width: 60 }}>
+                    {fm.photo ? (
+                      <img src={fm.photo} alt={fm.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#0d736e', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
+                        {fm.name?.charAt(0) || 'F'}
+                      </div>
+                    )}
+                  </td>
+                  <td><strong>{fm.name}</strong></td>
+                  <td><span style={{ color: '#0d736e', fontWeight: 600 }}>{fm.role || fm.designation || 'Founding Member'}</span></td>
+                  <td>{fm.affiliation || 'ASPIER'}</td>
+                  <td>
+                    <span style={{ fontSize: '0.85rem', color: '#475569' }}>
+                      {Array.isArray(fm.researchInterests) ? fm.researchInterests.slice(0, 3).join(', ') : ''}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setEditingFoundingMember({ ...fm });
+                          setFoundingMemberModalOpen(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={() => handleDeleteFoundingMember(fm._id, fm.name)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </Table>
         </div>
       )}
@@ -524,51 +701,145 @@ export function TeamManager() {
             </Button>
           </div>
 
-          <Table headers={['Photo', 'Name', 'Designation', 'Affiliation', 'Interests', 'Actions']}>
-            {supervisors.map((sup) => (
-              <tr key={sup._id}>
-                <td style={{ width: 60 }}>
-                  {sup.photo ? (
-                    <img src={sup.photo} alt={sup.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
-                      {sup.name?.charAt(0) || 'S'}
+          <Table headers={['Order', 'Photo', 'Name', 'Designation', 'Affiliation', 'Interests', 'Actions']}>
+            {supervisors.map((sup, index) => {
+              const isDragging = dragCategory === 'supervisor' && draggedIndex === index;
+              const isOver = dragCategory === 'supervisor' && dragOverIndex === index;
+              return (
+                <tr
+                  key={sup._id || sup.slug || index}
+                  draggable
+                  onDragStart={(e) => {
+                    setDragCategory('supervisor');
+                    setDraggedIndex(index);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(index));
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOverIndex !== index) setDragOverIndex(index);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverIndex === index) setDragOverIndex(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragCategory === 'supervisor' && draggedIndex !== null && draggedIndex !== index) {
+                      handleReorder('supervisor', draggedIndex, index);
+                    }
+                    setDraggedIndex(null);
+                    setDragOverIndex(null);
+                    setDragCategory(null);
+                  }}
+                  onDragEnd={() => {
+                    setDraggedIndex(null);
+                    setDragOverIndex(null);
+                    setDragCategory(null);
+                  }}
+                  style={{
+                    cursor: 'grab',
+                    opacity: isDragging ? 0.45 : 1,
+                    background: isOver ? 'rgba(16, 185, 129, 0.08)' : undefined,
+                    borderTop: isOver && draggedIndex !== null && draggedIndex > index ? '2px solid #10b981' : undefined,
+                    borderBottom: isOver && draggedIndex !== null && draggedIndex < index ? '2px solid #10b981' : undefined,
+                    boxShadow: isDragging ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)' : undefined,
+                    transition: 'background 0.15s ease, opacity 0.15s ease'
+                  }}
+                >
+                  <td style={{ width: 85, whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ color: '#64748b', cursor: 'grab', display: 'inline-flex' }} title="Drag to reorder">
+                        <GripVertical size={16} />
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9', color: '#334155' }}>
+                        #{index + 1}
+                      </span>
+                      <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 1 }}>
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReorder('supervisor', index, index - 1);
+                          }}
+                          title="Move up"
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            padding: 0,
+                            cursor: index === 0 ? 'not-allowed' : 'pointer',
+                            opacity: index === 0 ? 0.25 : 0.7,
+                            lineHeight: 1
+                          }}
+                        >
+                          <ChevronUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === supervisors.length - 1}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReorder('supervisor', index, index + 1);
+                          }}
+                          title="Move down"
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            padding: 0,
+                            cursor: index === supervisors.length - 1 ? 'not-allowed' : 'pointer',
+                            opacity: index === supervisors.length - 1 ? 0.25 : 0.7,
+                            lineHeight: 1
+                          }}
+                        >
+                          <ChevronDown size={13} />
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </td>
-                <td><strong>{sup.name}</strong></td>
-                <td>{sup.designation || 'Supervisor'}</td>
-                <td>{sup.affiliation || 'ASPIER'}</td>
-                <td>
-                  <span style={{ fontSize: '0.85rem', color: '#475569' }}>
-                    {Array.isArray(sup.researchInterests) ? sup.researchInterests.slice(0, 3).join(', ') : ''}
-                  </span>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setEditingSupervisor({
-                          ...sup,
-                          education: sup.education || sup.educationalBackground || '',
-                          educationalBackground: sup.educationalBackground || sup.education || ''
-                        });
-                        setSupervisorModalOpen(true);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="danger"
-                      onClick={() => handleDeleteSupervisor(sup._id, sup.name)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td style={{ width: 60 }}>
+                    {sup.photo ? (
+                      <img src={sup.photo} alt={sup.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
+                        {sup.name?.charAt(0) || 'S'}
+                      </div>
+                    )}
+                  </td>
+                  <td><strong>{sup.name}</strong></td>
+                  <td>{sup.designation || 'Supervisor'}</td>
+                  <td>{sup.affiliation || 'ASPIER'}</td>
+                  <td>
+                    <span style={{ fontSize: '0.85rem', color: '#475569' }}>
+                      {Array.isArray(sup.researchInterests) ? sup.researchInterests.slice(0, 3).join(', ') : ''}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setEditingSupervisor({
+                            ...sup,
+                            education: sup.education || sup.educationalBackground || '',
+                            educationalBackground: sup.educationalBackground || sup.education || ''
+                          });
+                          setSupervisorModalOpen(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={() => handleDeleteSupervisor(sup._id, sup.name)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </Table>
         </div>
       )}
@@ -605,47 +876,141 @@ export function TeamManager() {
             </Button>
           </div>
 
-          <Table headers={['Photo', 'Name', 'Cohort', 'Designation', 'Topics', 'Actions']}>
-            {scholars.map((sch) => (
-              <tr key={sch._id}>
-                <td style={{ width: 60 }}>
-                  {sch.photo ? (
-                    <img src={sch.photo} alt={sch.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
-                      {sch.name?.charAt(0) || 'Y'}
+          <Table headers={['Order', 'Photo', 'Name', 'Cohort', 'Designation', 'Topics', 'Actions']}>
+            {scholars.map((sch, index) => {
+              const isDragging = dragCategory === 'scholar' && draggedIndex === index;
+              const isOver = dragCategory === 'scholar' && dragOverIndex === index;
+              return (
+                <tr
+                  key={sch._id || sch.slug || index}
+                  draggable
+                  onDragStart={(e) => {
+                    setDragCategory('scholar');
+                    setDraggedIndex(index);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(index));
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOverIndex !== index) setDragOverIndex(index);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverIndex === index) setDragOverIndex(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragCategory === 'scholar' && draggedIndex !== null && draggedIndex !== index) {
+                      handleReorder('scholar', draggedIndex, index);
+                    }
+                    setDraggedIndex(null);
+                    setDragOverIndex(null);
+                    setDragCategory(null);
+                  }}
+                  onDragEnd={() => {
+                    setDraggedIndex(null);
+                    setDragOverIndex(null);
+                    setDragCategory(null);
+                  }}
+                  style={{
+                    cursor: 'grab',
+                    opacity: isDragging ? 0.45 : 1,
+                    background: isOver ? 'rgba(16, 185, 129, 0.08)' : undefined,
+                    borderTop: isOver && draggedIndex !== null && draggedIndex > index ? '2px solid #10b981' : undefined,
+                    borderBottom: isOver && draggedIndex !== null && draggedIndex < index ? '2px solid #10b981' : undefined,
+                    boxShadow: isDragging ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)' : undefined,
+                    transition: 'background 0.15s ease, opacity 0.15s ease'
+                  }}
+                >
+                  <td style={{ width: 85, whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ color: '#64748b', cursor: 'grab', display: 'inline-flex' }} title="Drag to reorder">
+                        <GripVertical size={16} />
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9', color: '#334155' }}>
+                        #{index + 1}
+                      </span>
+                      <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 1 }}>
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReorder('scholar', index, index - 1);
+                          }}
+                          title="Move up"
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            padding: 0,
+                            cursor: index === 0 ? 'not-allowed' : 'pointer',
+                            opacity: index === 0 ? 0.25 : 0.7,
+                            lineHeight: 1
+                          }}
+                        >
+                          <ChevronUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === scholars.length - 1}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReorder('scholar', index, index + 1);
+                          }}
+                          title="Move down"
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            padding: 0,
+                            cursor: index === scholars.length - 1 ? 'not-allowed' : 'pointer',
+                            opacity: index === scholars.length - 1 ? 0.25 : 0.7,
+                            lineHeight: 1
+                          }}
+                        >
+                          <ChevronDown size={13} />
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </td>
-                <td><strong>{sch.name}</strong></td>
-                <td>{sch.cohort || '2026'}</td>
-                <td>{sch.designation || 'Scholar'}</td>
-                <td>
-                  <span style={{ fontSize: '0.85rem', color: '#475569' }}>
-                    {Array.isArray(sch.researchTopics) ? sch.researchTopics.slice(0, 3).join(', ') : ''}
-                  </span>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setEditingScholar({ ...sch });
-                        setScholarModalOpen(true);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="danger"
-                      onClick={() => handleDeleteScholar(sch._id, sch.name)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td style={{ width: 60 }}>
+                    {sch.photo ? (
+                      <img src={sch.photo} alt={sch.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
+                        {sch.name?.charAt(0) || 'Y'}
+                      </div>
+                    )}
+                  </td>
+                  <td><strong>{sch.name}</strong></td>
+                  <td>{sch.cohort || '2026'}</td>
+                  <td>{sch.designation || 'Scholar'}</td>
+                  <td>
+                    <span style={{ fontSize: '0.85rem', color: '#475569' }}>
+                      {Array.isArray(sch.researchTopics) ? sch.researchTopics.slice(0, 3).join(', ') : ''}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setEditingScholar({ ...sch });
+                          setScholarModalOpen(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={() => handleDeleteScholar(sch._id, sch.name)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </Table>
         </div>
       )}

@@ -469,9 +469,13 @@ export function deleteFallbackResearch(id: string): void {
 
 export function getFallbackFoundingMembers(): any[] {
   if (!(global as any)._fallbackFoundingMembers) {
-    (global as any)._fallbackFoundingMembers = [...demoFoundingMembers];
+    (global as any)._fallbackFoundingMembers = [...demoFoundingMembers].map((item: any, idx: number) => ({
+      ...item,
+      order: item.order ?? item.displayOrder ?? idx,
+      displayOrder: item.displayOrder ?? item.order ?? idx
+    }));
   }
-  return (global as any)._fallbackFoundingMembers;
+  return ((global as any)._fallbackFoundingMembers as any[]).sort((a: any, b: any) => (a.order ?? a.displayOrder ?? 0) - (b.order ?? b.displayOrder ?? 0));
 }
 
 export function addOrUpdateFallbackFoundingMember(item: any): any {
@@ -495,9 +499,13 @@ export function deleteFallbackFoundingMember(id: string): void {
 
 export function getFallbackSupervisors(): any[] {
   if (!(global as any)._fallbackSupervisors) {
-    (global as any)._fallbackSupervisors = [...demoSupervisors];
+    (global as any)._fallbackSupervisors = [...demoSupervisors].map((item: any, idx: number) => ({
+      ...item,
+      order: item.order ?? item.displayOrder ?? idx,
+      displayOrder: item.displayOrder ?? item.order ?? idx
+    }));
   }
-  return (global as any)._fallbackSupervisors;
+  return ((global as any)._fallbackSupervisors as any[]).sort((a: any, b: any) => (a.order ?? a.displayOrder ?? 0) - (b.order ?? b.displayOrder ?? 0));
 }
 
 export function addOrUpdateFallbackSupervisor(item: any): any {
@@ -521,9 +529,43 @@ export function deleteFallbackSupervisor(id: string): void {
 
 export function getFallbackScholars(): any[] {
   if (!(global as any)._fallbackScholars) {
-    (global as any)._fallbackScholars = [...demoScholars];
+    (global as any)._fallbackScholars = [...demoScholars].map((item: any, idx: number) => ({
+      ...item,
+      order: item.order ?? item.displayOrder ?? idx,
+      displayOrder: item.displayOrder ?? item.order ?? idx
+    }));
   }
-  return (global as any)._fallbackScholars;
+  return ((global as any)._fallbackScholars as any[]).sort((a: any, b: any) => (a.order ?? a.displayOrder ?? 0) - (b.order ?? b.displayOrder ?? 0));
+}
+
+export function reorderFallbackItems(category: string, orderedIds: string[]): any[] {
+  let list: any[];
+  const cat = String(category).toLowerCase();
+  if (cat.includes('founding')) list = getFallbackFoundingMembers();
+  else if (cat.includes('sup')) list = getFallbackSupervisors();
+  else list = getFallbackScholars();
+
+  const idMap = new Map<string, number>();
+  orderedIds.forEach((id, index) => {
+    idMap.set(String(id), index);
+  });
+
+  list.forEach((item) => {
+    const id = String(item._id || item.id || item.slug);
+    if (idMap.has(id)) {
+      const ord = idMap.get(id)!;
+      item.order = ord;
+      item.displayOrder = ord;
+    }
+  });
+
+  list.sort((a, b) => {
+    const ordA = a.order ?? a.displayOrder ?? 999;
+    const ordB = b.order ?? b.displayOrder ?? 999;
+    return ordA - ordB;
+  });
+
+  return list;
 }
 
 export function addOrUpdateFallbackScholar(item: any): any {
