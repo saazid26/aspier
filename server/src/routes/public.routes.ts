@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import mongoose from 'mongoose';
 import { z } from 'zod';
+import { connectDatabase } from '../config/db.js';
 import Wing from '../models/Wing.js';
 import Research from '../models/Research.js';
 import Supervisor from '../models/Supervisor.js';
@@ -230,6 +231,9 @@ router.get('/research/:slug', async (req, res) => {
 
 router.get('/team', async (_req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase().catch(() => {});
+    }
     const [founding, supervisors, scholars] = await Promise.all([
       FoundingMember.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).catch(() => getFallbackFoundingMembers()),
       Supervisor.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).catch(() => getFallbackSupervisors()),
@@ -250,6 +254,9 @@ router.get('/team', async (_req, res) => {
 
 router.get('/founding-members', async (_req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase().catch(() => {});
+    }
     const list = await FoundingMember.find().sort({ order: 1, displayOrder: 1, createdAt: 1 });
     if (list && list.length > 0) return res.json({ success: true, data: list });
   } catch (err) {
@@ -260,6 +267,9 @@ router.get('/founding-members', async (_req, res) => {
 
 router.get('/founding-members/:slug', async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase().catch(() => {});
+    }
     const item = await FoundingMember.findOne({ slug: req.params.slug });
     if (item) return res.json({ success: true, data: item });
   } catch (err) {
@@ -274,6 +284,9 @@ router.get('/supervisors', async (_req, res) => {
   const cached = fastCache.get('public:supervisors');
   if (cached) return res.json({ success: true, data: cached });
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase().catch(() => {});
+    }
     if (mongoose.connection.readyState === 1) {
       const list = await Supervisor.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).lean().maxTimeMS(2000);
       if (list && list.length > 0) {
@@ -289,6 +302,9 @@ router.get('/supervisors', async (_req, res) => {
 
 router.get('/supervisors/:slug', async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase().catch(() => {});
+    }
     if (mongoose.connection.readyState === 1) {
       const item = await Supervisor.findOne({ slug: req.params.slug }).lean().maxTimeMS(2000);
       if (item) return res.json({ success: true, data: item });
@@ -305,6 +321,9 @@ router.get('/scholars', async (_req, res) => {
   const cached = fastCache.get('public:scholars');
   if (cached) return res.json({ success: true, data: cached });
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase().catch(() => {});
+    }
     if (mongoose.connection.readyState === 1) {
       const list = await Scholar.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).lean().maxTimeMS(2000);
       if (list && list.length > 0) {
@@ -320,6 +339,9 @@ router.get('/scholars', async (_req, res) => {
 
 router.get('/scholars/:slug', async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase().catch(() => {});
+    }
     if (mongoose.connection.readyState === 1) {
       const item = await Scholar.findOne({ slug: req.params.slug }).lean().maxTimeMS(2000);
       if (item) return res.json({ success: true, data: item });

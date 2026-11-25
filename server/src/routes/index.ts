@@ -72,6 +72,14 @@ router.get('/scholars', (req, res, next) => {
   req.url = '/scholars';
   publicRoutes(req, res, next);
 });
+router.get('/founding-members', (req, res, next) => {
+  req.url = '/founding-members';
+  publicRoutes(req, res, next);
+});
+router.get('/founding-members/:slug', (req, res, next) => {
+  req.url = '/founding-members/' + req.params.slug;
+  publicRoutes(req, res, next);
+});
 
 // Resilient direct aliases for public form submissions & Academy registration
 router.post('/inquiries', (req, res, next) => {
