@@ -23,7 +23,7 @@ import Setting from '../models/Setting.js';
 import Notification from '../models/Notification.js';
 import ResearchApplicationModel from '../models/ResearchApplication.js';
 import MembershipApplicationModel from '../models/MembershipApplication.js';
-import { upload, mediaLibrary, deleteMedia } from '../controllers/upload.controller.js';
+import { upload, mediaLibrary, deleteMedia, cloudinarySignature, syncWingsCloudinary } from '../controllers/upload.controller.js';
 import { ensureCloudinaryUrl } from '../services/media.service.js';
 import { migrateAllImagesToCloudinary } from '../services/migration.service.js';
 import { getSettings, updateSettings } from '../controllers/settings.controller.js';
@@ -1266,6 +1266,8 @@ const uploadMemory = multer({
 });
 router.post('/media', uploadMemory.single('file'), upload);
 router.post('/upload', uploadMemory.single('file'), upload);
+router.post('/cloudinary-signature', cloudinarySignature);
+router.post('/sync-wings-cloudinary', syncWingsCloudinary);
 router.get('/media', mediaLibrary);
 router.delete('/media/:id', deleteMedia);
 router.get('/settings', getSettings);

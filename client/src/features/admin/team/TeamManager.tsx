@@ -393,6 +393,8 @@ export function TeamManager() {
                 value={founder.founderPhoto || ''}
                 onUploaded={(url) => updateFounder('founderPhoto', url)}
                 shape="circle"
+                folder="aspier/team"
+                publicId="aspier/team/founder"
                 helperText="Recommended: 500 × 500 px • 1:1 Circle preview • Max 2MB"
                 maxSizeMB={2}
               />
@@ -1107,6 +1109,8 @@ export function TeamManager() {
                 value={editingSupervisor.photo || ''}
                 onUploaded={(url) => setEditingSupervisor({ ...editingSupervisor, photo: url })}
                 shape="circle"
+                folder="aspier/team"
+                publicId={editingSupervisor.slug ? `aspier/team/${editingSupervisor.slug}` : undefined}
                 helperText="Square 1:1 image • Max 2MB"
                 maxSizeMB={2}
               />
@@ -1211,6 +1215,8 @@ export function TeamManager() {
                 value={editingScholar.photo || ''}
                 onUploaded={(url) => setEditingScholar({ ...editingScholar, photo: url })}
                 shape="circle"
+                folder="aspier/team"
+                publicId={editingScholar.slug ? `aspier/team/${editingScholar.slug}` : undefined}
                 helperText="Square 1:1 image • Max 2MB"
                 maxSizeMB={2}
               />
@@ -1313,6 +1319,8 @@ export function TeamManager() {
                 value={editingFoundingMember.photo || ''}
                 onUploaded={(url) => setEditingFoundingMember({ ...editingFoundingMember, photo: url })}
                 shape="circle"
+                folder="aspier/team"
+                publicId={editingFoundingMember.slug ? `aspier/team/${editingFoundingMember.slug}` : undefined}
                 helperText="Square 1:1 image • Max 2MB"
                 maxSizeMB={2}
               />

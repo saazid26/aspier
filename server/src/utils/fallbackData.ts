@@ -12,7 +12,7 @@ export const fallbackWings = [
     objectives: ["Advance accessible aeronautical research", "Develop safe and reliable UAV systems", "Connect engineering research to environmental monitoring"],
     order: 1,
     isActive: true,
-    coverImage: makeDemoCover("Aeronautical Engineering & UAV Systems")
+    coverImage: "https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-1.webp"
   },
   {
     _id: "60d0fe4f5311236168a109cb",
@@ -24,7 +24,7 @@ export const fallbackWings = [
     objectives: ["Study planetary formation and evolution", "Develop quantitative models of planetary environments", "Explore astrobiological questions through interdisciplinary research"],
     order: 2,
     isActive: true,
-    coverImage: makeDemoCover("Planetary Science & Astrobiology")
+    coverImage: "https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-2.webp"
   },
   {
     _id: "60d0fe4f5311236168a109cc",
@@ -36,7 +36,7 @@ export const fallbackWings = [
     objectives: ["Improve understanding of coupled water and atmospheric systems", "Support flood and drought risk assessment", "Inform resilient water-resource planning"],
     order: 3,
     isActive: true,
-    coverImage: makeDemoCover("Hydrology & Atmospheric Physics")
+    coverImage: "https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-3.webp"
   },
   {
     _id: "60d0fe4f5311236168a109cd",
@@ -48,7 +48,7 @@ export const fallbackWings = [
     objectives: ["Advance responsible geospatial intelligence", "Build reliable remote-sensing methods", "Apply spatial evidence to environmental challenges"],
     order: 4,
     isActive: true,
-    coverImage: makeDemoCover("Geospatial Intelligence & Remote Sensing")
+    coverImage: "https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-4.webp"
   },
   {
     _id: "60d0fe4f5311236168a109ce",
@@ -60,7 +60,7 @@ export const fallbackWings = [
     objectives: ["Understand microbial influence on geological processes", "Characterize biogeochemical cycles", "Develop computational approaches for environmental biology"],
     order: 5,
     isActive: true,
-    coverImage: makeDemoCover("Geomicrobiology & Biogeology")
+    coverImage: "https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-5.webp"
   },
   {
     _id: "60d0fe4f5311236168a109cf",
@@ -72,7 +72,7 @@ export const fallbackWings = [
     objectives: ["Improve environmental contaminant detection", "Assess chemical risks to ecosystems and communities", "Support evidence-based pollution prevention"],
     order: 6,
     isActive: true,
-    coverImage: makeDemoCover("Environmental Chemistry & Toxicology")
+    coverImage: "https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-6.webp"
   },
   {
     _id: "60d0fe4f5311236168a109d0",
@@ -84,7 +84,7 @@ export const fallbackWings = [
     objectives: ["Translate biological discovery into useful applications", "Promote responsible genetic and molecular research", "Develop interdisciplinary biotechnology capabilities"],
     order: 7,
     isActive: true,
-    coverImage: makeDemoCover("Applied Biotechnology")
+    coverImage: "https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-7.webp"
   },
   {
     _id: "60d0fe4f5311236168a109d1",
@@ -96,7 +96,7 @@ export const fallbackWings = [
     objectives: ["Improve sustainable agricultural productivity", "Strengthen soil and crop resilience", "Support safe and reliable food systems"],
     order: 8,
     isActive: true,
-    coverImage: makeDemoCover("Agricultural Sciences & Food Security")
+    coverImage: "https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-8.webp"
   },
   {
     _id: "60d0fe4f5311236168a109d2",
@@ -108,7 +108,7 @@ export const fallbackWings = [
     objectives: ["Analyze equitable and sustainable resource allocation", "Develop data-informed urban and regional planning", "Understand economic and human dimensions of environmental change"],
     order: 9,
     isActive: true,
-    coverImage: makeDemoCover("Economic Geography & Resource Management")
+    coverImage: "https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-9.webp"
   },
   {
     _id: "60d0fe4f5311236168a109d3",
@@ -120,7 +120,7 @@ export const fallbackWings = [
     objectives: ["Connect environmental evidence with practical policy", "Strengthen inclusive and accountable governance", "Evaluate legal and institutional responses to environmental challenges"],
     order: 10,
     isActive: true,
-    coverImage: makeDemoCover("Environmental Policy & Governance")
+    coverImage: "https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-10.webp"
   }
 ];
 

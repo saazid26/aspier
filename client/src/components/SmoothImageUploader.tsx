@@ -20,6 +20,8 @@ export type SmoothImageUploaderProps = {
   disabled?: boolean;
   aspectRatio?: string;
   showRemove?: boolean;
+  folder?: string;
+  publicId?: string;
 };
 
 
@@ -38,7 +40,9 @@ export function SmoothImageUploader({
   label,
   disabled = false,
   aspectRatio,
-  showRemove = true
+  showRemove = true,
+  folder,
+  publicId
 }: SmoothImageUploaderProps) {
   const [busy, setBusy] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -126,11 +130,13 @@ export function SmoothImageUploader({
     setBusy(true);
 
     try {
-      // 2. Client-side Async Canvas Compression (auto WebP < 300KB)
+      // 2. Client-side Async Canvas Compression (auto WebP < 250KB)
+      const targetMaxWidth = isBanner ? 1400 : 600;
+      const targetMaxHeight = isBanner ? 900 : 600;
       const optimizedFile = await optimizeImageForUpload(rawFile, {
-        maxWidth: isBanner ? 1400 : 1000,
-        maxHeight: isBanner ? 900 : 1000,
-        quality: 0.82,
+        maxWidth: targetMaxWidth,
+        maxHeight: targetMaxHeight,
+        quality: 0.85,
         format: 'image/webp'
       });
 
@@ -140,10 +146,11 @@ export function SmoothImageUploader({
       try {
         const form = new FormData();
         form.append('file', optimizedFile);
+        if (folder) form.append('folder', folder);
+        if (publicId) form.append('publicId', publicId);
 
         const response = await api.post(endpoint, form, {
           headers: {
-            'Content-Type': 'multipart/form-data',
             ...headers
           }
         });
@@ -160,7 +167,9 @@ export function SmoothImageUploader({
         const dataUrl = await fileToDataUrl(optimizedFile);
         const jsonResponse = await api.post(endpoint, {
           dataUrl,
-          filename: optimizedFile.name
+          filename: optimizedFile.name,
+          folder,
+          publicId
         }, { headers });
 
         uploadedUrl =

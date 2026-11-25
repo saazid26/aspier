@@ -479,6 +479,8 @@ export function WingsResearchManager() {
                 onUploaded={(url) => setEditingWing({ ...editingWing, coverImage: url })}
                 shape="banner"
                 variant="cover"
+                folder="aspier/wings"
+                publicId={`aspier/wings/wing-${editingWing.order || 1}`}
                 helperText="Recommended: 1200 × 675 px • 16:9 • Auto-compressed to WebP (Max 10MB)"
                 maxSizeMB={10}
               />
@@ -685,6 +687,8 @@ export function WingsResearchManager() {
                 onUploaded={(url) => setEditingResearch({ ...editingResearch, coverImage: url })}
                 shape="banner"
                 variant="cover"
+                folder="aspier/research"
+                publicId={editingResearch.slug ? `aspier/research/${editingResearch.slug}` : undefined}
                 helperText="Recommended: 1200 × 675 px • 16:9 • Auto-compressed to WebP (Max 10MB)"
                 maxSizeMB={10}
               />

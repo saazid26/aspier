@@ -9,12 +9,21 @@ import { connectDatabase } from '../config/db.js';
 
 export type FileUploadInput = Express.Multer.File | { dataUrl: string; filename?: string; mimeType?: string };
 
+export interface UploadToCloudinaryOptions {
+  folder?: string;
+  filename?: string;
+  mimeType?: string;
+  publicId?: string;
+  overwrite?: boolean;
+  invalidate?: boolean;
+}
+
 /**
  * Uploads a Buffer or Base64 data URL directly to Cloudinary (folder: aspier, format: webp, quality: auto).
  */
 export async function uploadToCloudinary(
   bufferOrDataUrl: Buffer | string,
-  options: { folder?: string; filename?: string; mimeType?: string } = {}
+  options: UploadToCloudinaryOptions = {}
 ): Promise<{ url: string; publicId: string }> {
   const folder = options.folder || 'aspier';
   let dataUri: string;
@@ -37,9 +46,15 @@ export async function uploadToCloudinary(
   }
 
   const uploadOptions: any = {
-    folder,
-    resource_type: 'image'
+    resource_type: 'image',
+    overwrite: options.overwrite ?? true,
+    invalidate: options.invalidate ?? true
   };
+  if (options.publicId) {
+    uploadOptions.public_id = options.publicId;
+  } else {
+    uploadOptions.folder = folder;
+  }
   if (!isSvg) {
     uploadOptions.format = 'webp';
     uploadOptions.quality = 'auto';
@@ -115,7 +130,8 @@ export async function ensureCloudinaryUrl(urlOrBase64?: string, folder = 'aspier
 export async function saveMedia(
   fileOrData: FileUploadInput,
   uploadedBy?: string,
-  membershipApplicationId?: string
+  membershipApplicationId?: string,
+  options: UploadToCloudinaryOptions = {}
 ) {
   let buffer: Buffer;
   let filename: string;
@@ -147,7 +163,14 @@ export async function saveMedia(
   let publicId = '';
 
   try {
-    const uploaded = await uploadToCloudinary(buffer, { folder: 'aspier', filename, mimeType });
+    const uploaded = await uploadToCloudinary(buffer, {
+      folder: options.folder || 'aspier',
+      filename,
+      mimeType,
+      publicId: options.publicId,
+      overwrite: options.overwrite ?? true,
+      invalidate: options.invalidate ?? true
+    });
     url = uploaded.url;
     publicId = uploaded.publicId;
   } catch (cErr) {
