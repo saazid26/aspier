@@ -3,6 +3,11 @@ import type { AuthRequest } from '../middleware/auth.js';
 import { deleteMediaAsset, saveMedia, serveMediaAsset } from '../services/media.service.js';
 import MediaAsset from '../models/MediaAsset.js';
 import Wing from '../models/Wing.js';
+import Research from '../models/Research.js';
+import Course from '../models/Course.js';
+import News from '../models/News.js';
+import Instructor from '../models/Instructor.js';
+import { fastCache } from '../utils/fastCache.js';
 import { cloudinary, cloudinaryEnabled } from '../config/cloudinary.js';
 
 export async function upload(req: AuthRequest, res: Response, next: NextFunction) {
@@ -93,6 +98,96 @@ export async function syncWingsCloudinary(_req: AuthRequest, res: Response, next
 
     res.json({ success: true, message: 'Wings 1-10 synced with Cloudinary', data: results });
   } catch (error) { next(error); }
+}
+
+export async function purgeDummyAndDeduplicate(_req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    // 1. Purge dummy SVG links in MongoDB Atlas for Research, Courses, News, Instructors
+    const researchPurged = await Research.updateMany(
+      {
+        $or: [
+          { coverImage: { $regex: /\.svg/i } },
+          { coverImage: { $regex: /ILLUSTRATIVE/i } },
+          { coverImage: { $regex: /aspier\/research\//i } }
+        ]
+      },
+      { $set: { coverImage: '' } }
+    );
+
+    const coursesPurged = await Course.updateMany(
+      {
+        $or: [
+          { thumbnail: { $regex: /\.svg/i } },
+          { thumbnail: { $regex: /aspier\/courses\//i } },
+          { bannerUrl: { $regex: /\.svg/i } },
+          { bannerUrl: { $regex: /aspier\/courses\//i } }
+        ]
+      },
+      { $set: { thumbnail: '', bannerUrl: '' } }
+    );
+
+    const newsPurged = await News.updateMany(
+      {
+        $or: [
+          { coverImage: { $regex: /\.svg/i } },
+          { coverImage: { $regex: /aspier\/news\//i } }
+        ]
+      },
+      { $set: { coverImage: '' } }
+    );
+
+    const instructorsPurged = await Instructor.updateMany(
+      {
+        $or: [
+          { avatar: { $regex: /\.svg/i } },
+          { avatar: { $regex: /aspier\/instructors\//i } }
+        ]
+      },
+      { $set: { avatar: '' } }
+    );
+
+    // 2. Ensure Wings 1-10 are 100% canonically mapped
+    const WING_URLS: Record<number, string> = {
+      1: 'https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-1.webp',
+      2: 'https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-2.webp',
+      3: 'https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-3.webp',
+      4: 'https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-4.webp',
+      5: 'https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-5.webp',
+      6: 'https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-6.webp',
+      7: 'https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-7.webp',
+      8: 'https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-8.webp',
+      9: 'https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-9.webp',
+      10: 'https://res.cloudinary.com/w9zgpjap/image/upload/aspier/wings/wing-10.webp'
+    };
+
+    const wingsUpdated = [];
+    for (const [orderStr, url] of Object.entries(WING_URLS)) {
+      const order = Number(orderStr);
+      const updated = await Wing.findOneAndUpdate(
+        { order },
+        { $set: { coverImage: url } },
+        { new: true }
+      );
+      wingsUpdated.push({ order, updated: !!updated, coverImage: updated?.coverImage });
+    }
+
+    // 3. Purge cache
+    fastCache.clear();
+
+    res.json({
+      success: true,
+      message: 'Purge & Deduplication complete on MongoDB and caches cleared',
+      data: {
+        researchModified: researchPurged.modifiedCount,
+        coursesModified: coursesPurged.modifiedCount,
+        newsModified: newsPurged.modifiedCount,
+        instructorsModified: instructorsPurged.modifiedCount,
+        wingsUpdated
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function mediaLibrary(_req: AuthRequest, res: Response) {

@@ -76,11 +76,28 @@ export async function ensureCloudinaryUrl(urlOrBase64?: string, folder = 'aspier
   if (!urlOrBase64 || typeof urlOrBase64 !== 'string') return '';
   const trimmed = urlOrBase64.trim();
   if (!trimmed) return '';
-  if (trimmed.startsWith('https://res.cloudinary.com/') || trimmed.startsWith('http://res.cloudinary.com/')) return trimmed;
+  if (trimmed.startsWith('https://res.cloudinary.com/') || trimmed.startsWith('http://res.cloudinary.com/')) {
+    // If it points to an old purged dummy SVG, do not return broken URL
+    if (trimmed.includes('aspier/research/') && trimmed.endsWith('.svg')) return '';
+    if (trimmed.includes('aspier/courses/') && trimmed.endsWith('.svg')) return '';
+    if (trimmed.includes('aspier/news/') && trimmed.endsWith('.svg')) return '';
+    if (trimmed.includes('aspier/instructors/') && trimmed.endsWith('.svg')) return '';
+    return trimmed;
+  }
+
+  // STRICT: Do NOT upload dummy illustrative art, sample graphics, or raw SVGs to Cloudinary!
+  if (
+    trimmed.includes('ILLUSTRATIVE%20ART') ||
+    trimmed.includes('ILLUSTRATIVE ART') ||
+    trimmed.startsWith('data:image/svg+xml') ||
+    trimmed.includes('<svg')
+  ) {
+    return '';
+  }
 
   if (trimmed.startsWith('data:image/')) {
     try {
-      const res = await uploadToCloudinary(trimmed, { folder });
+      const res = await uploadToCloudinary(trimmed, { folder, overwrite: true, invalidate: true });
       return res.url;
     } catch (err) {
       console.warn('[ensureCloudinaryUrl] Failed to upload base64 to Cloudinary:', err);

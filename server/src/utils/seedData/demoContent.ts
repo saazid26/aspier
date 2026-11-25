@@ -6,31 +6,14 @@ const escapeXml = (value: string) => value.replace(/[<>&'"]/g, (character) => ({
   '"': '&quot;'
 }[character] || character));
 
-export function makeDemoCover(title: string): string {
-  const safeTitle = escapeXml(title);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
-    <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0d736e"/><stop offset=".58" stop-color="#153a54"/><stop offset="1" stop-color="#205b76"/></linearGradient></defs>
-    <rect width="800" height="450" fill="url(#bg)"/>
-    <circle cx="640" cy="92" r="152" fill="#8de0c9" opacity=".14"/>
-    <circle cx="640" cy="92" r="104" fill="none" stroke="#d7fff4" stroke-width="2" opacity=".3"/>
-    <path d="M0 348C138 284 236 408 370 345s238-85 430-14v119H0z" fill="#082c43" opacity=".55"/>
-    <text x="54" y="346" fill="#b9f1e4" font-family="Arial,sans-serif" font-size="17" font-weight="700" letter-spacing="4">ASPIER • ILLUSTRATIVE ART</text>
-    <text x="54" y="390" fill="#fff" font-family="Arial,sans-serif" font-size="25" font-weight="700">${safeTitle}</text>
-  </svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+export function makeDemoCover(_title?: string): string {
+  // STRICT: Do not generate dummy "ASPIER • ILLUSTRATIVE ART" graphics.
+  return '';
 }
 
-export function makeDemoAvatar(initials: string): string {
-  const safeInitials = escapeXml(initials.slice(0, 3).toUpperCase());
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
-    <defs><linearGradient id="avatar" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d5f3e8"/><stop offset="1" stop-color="#b9dbe5"/></linearGradient></defs>
-    <rect width="400" height="400" rx="36" fill="url(#avatar)"/>
-    <circle cx="200" cy="150" r="72" fill="#f3c9a8"/>
-    <path d="M123 149c2-66 37-99 78-99 46 0 78 39 78 99-26-19-52-28-78-28s-52 9-78 28" fill="#294a58"/>
-    <path d="M65 400c7-100 55-151 135-151s128 51 135 151" fill="#147d76"/>
-    <text x="200" y="350" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="38" font-weight="700">${safeInitials}</text>
-  </svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+export function makeDemoAvatar(_initials?: string): string {
+  // STRICT: Do not generate dummy avatar graphics. Client displays standard UI initials fallback.
+  return '';
 }
 
 const sampleProject = (
