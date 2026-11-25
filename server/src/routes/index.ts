@@ -48,12 +48,24 @@ router.get('/team', (req, res, next) => {
   req.url = '/team';
   publicRoutes(req, res, next);
 });
+router.post('/team', (req, res, next) => {
+  req.url = '/team';
+  admin(req, res, next);
+});
 router.put('/team/reorder', (req, res, next) => {
   req.url = '/team/reorder';
   admin(req, res, next);
 });
 router.patch('/team/reorder', (req, res, next) => {
   req.url = '/team/reorder';
+  admin(req, res, next);
+});
+router.put('/team/:id', (req, res, next) => {
+  req.url = '/team/' + req.params.id;
+  admin(req, res, next);
+});
+router.patch('/team/:id', (req, res, next) => {
+  req.url = '/team/' + req.params.id;
   admin(req, res, next);
 });
 router.get('/research', (req, res, next) => {

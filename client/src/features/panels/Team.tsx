@@ -50,6 +50,7 @@ type Scholar = ProfileSocialMedia & {
   researchTopics?: string[];
   designation?: string;
   affiliation?: string;
+  education?: string;
   educationalBackground?: string;
   order?: number;
   displayOrder?: number;
@@ -354,8 +355,8 @@ export function Team() {
                 {(scholar.designation || scholar.affiliation) && (
                   <p className="muted">{[scholar.designation, scholar.affiliation].filter(Boolean).join(' · ')}</p>
                 )}
-                {scholar.educationalBackground && (
-                  <p className="muted"><strong>Education:</strong> {scholar.educationalBackground}</p>
+                {(scholar.education || scholar.educationalBackground) && (
+                  <p className="muted"><strong>Education:</strong> {scholar.education || scholar.educationalBackground}</p>
                 )}
                 {/* Conditional academic and social media profile icons */}
                 <AcademicSocialLinks member={scholar} />

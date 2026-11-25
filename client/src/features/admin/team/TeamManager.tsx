@@ -278,8 +278,11 @@ export function TeamManager() {
     e.preventDefault();
     setSavingScholar(true);
     try {
+      const eduValue = (editingScholar.education || editingScholar.educationalBackground || '').trim();
       const payload = {
         ...editingScholar,
+        education: eduValue,
+        educationalBackground: eduValue,
         researchTopics: cleanTags(editingScholar.researchTopics)
       };
       const targetId = editingScholar._id || editingScholar.slug;
@@ -857,6 +860,8 @@ export function TeamManager() {
                   cohort: '2026',
                   designation: 'Young Scholar',
                   affiliation: '',
+                  education: '',
+                  educationalBackground: '',
                   bio: '',
                   photo: '',
                   researchTopics: [],
@@ -994,7 +999,11 @@ export function TeamManager() {
                       <Button
                         variant="secondary"
                         onClick={() => {
-                          setEditingScholar({ ...sch });
+                          setEditingScholar({
+                            ...sch,
+                            education: sch.education || sch.educationalBackground || '',
+                            educationalBackground: sch.education || sch.educationalBackground || ''
+                          });
                           setScholarModalOpen(true);
                         }}
                       >
@@ -1182,6 +1191,19 @@ export function TeamManager() {
                 placeholder="Machine Learning, Remote Sensing, Atmospheric Modeling"
               />
             </div>
+
+            <label style={{ display: 'block', marginTop: 12 }}>
+              <span style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Education</span>
+              <Input
+                value={editingScholar.education || editingScholar.educationalBackground || ''}
+                onChange={(e) => setEditingScholar({
+                  ...editingScholar,
+                  education: e.target.value,
+                  educationalBackground: e.target.value
+                })}
+                placeholder="e.g., B.Sc. in Computer Science and Engineering, University of Dhaka"
+              />
+            </label>
 
             <div className="settings-image-field" style={{ marginTop: 16 }}>
               <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Scholar Photo (1:1 Circle)</label>

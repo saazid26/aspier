@@ -359,6 +359,13 @@ router.post('/scholars', audit('create', 'Scholar'), async (req, res) => {
     let item: any = null;
     const body = { ...req.body };
     delete body._id;
+    if (body.education !== undefined || body.educationalBackground !== undefined) {
+      const edu = body.education !== undefined ? body.education : body.educationalBackground;
+      body.education = edu;
+      body.educationalBackground = edu;
+      req.body.education = edu;
+      req.body.educationalBackground = edu;
+    }
     if (body.order === undefined && body.displayOrder === undefined) {
       if (mongoose.connection.readyState === 1) {
         const last = await Scholar.findOne().sort({ order: -1 }).select('order displayOrder');
@@ -380,6 +387,8 @@ router.post('/scholars', audit('create', 'Scholar'), async (req, res) => {
     if (mongoose.connection.readyState === 1) {
       item = await Scholar.create(body);
     }
+    fastCache.invalidate('public:scholars');
+    fastCache.clear();
     const saved = addOrUpdateFallbackScholar(item ? item.toObject() : req.body);
     return res.status(201).json({ success: true, data: item || saved });
   } catch (err: any) {
@@ -388,7 +397,7 @@ router.post('/scholars', audit('create', 'Scholar'), async (req, res) => {
   }
 });
 
-router.put('/scholars/:id', audit('update', 'Scholar'), async (req, res) => {
+const handleUpdateScholar = async (req: any, res: any) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       await connectDatabase();
@@ -397,6 +406,13 @@ router.put('/scholars/:id', audit('update', 'Scholar'), async (req, res) => {
     const id = String(req.params.id);
     const body = { ...req.body };
     delete body._id;
+    if (body.education !== undefined || body.educationalBackground !== undefined) {
+      const edu = body.education !== undefined ? body.education : body.educationalBackground;
+      body.education = edu;
+      body.educationalBackground = edu;
+      req.body.education = edu;
+      req.body.educationalBackground = edu;
+    }
     if (body.order !== undefined || body.displayOrder !== undefined) {
       const ord = body.order !== undefined ? Number(body.order) : Number(body.displayOrder);
       body.order = ord;
@@ -412,13 +428,18 @@ router.put('/scholars/:id', audit('update', 'Scholar'), async (req, res) => {
         item = await Scholar.findOneAndUpdate({ $or: [{ slug: body.slug || id }, { name: body.name }] }, body, { new: true, upsert: true });
       }
     }
+    fastCache.invalidate('public:scholars');
+    fastCache.clear();
     const saved = addOrUpdateFallbackScholar({ ...req.body, _id: item?._id ? String(item._id) : id });
     return res.json({ success: true, data: item || saved });
   } catch (err: any) {
     const saved = addOrUpdateFallbackScholar({ ...req.body, _id: String(req.params.id) });
     return res.json({ success: true, data: saved });
   }
-});
+};
+
+router.put('/scholars/:id', audit('update', 'Scholar'), handleUpdateScholar);
+router.patch('/scholars/:id', audit('update', 'Scholar'), handleUpdateScholar);
 
 router.delete('/scholars/:id', audit('delete', 'Scholar'), async (req, res) => {
   try {
@@ -571,9 +592,17 @@ router.post('/team', audit('create', 'Team'), async (req, res) => {
         }
       }
       const item = mongoose.connection.readyState === 1 ? await Supervisor.create(body) : null;
+      fastCache.clear();
       const saved = addOrUpdateFallbackSupervisor(item ? item.toObject() : req.body);
       return res.status(201).json({ success: true, data: item || saved });
     } else {
+      if (body.education !== undefined || body.educationalBackground !== undefined) {
+        const edu = body.education !== undefined ? body.education : body.educationalBackground;
+        body.education = edu;
+        body.educationalBackground = edu;
+        req.body.education = edu;
+        req.body.educationalBackground = edu;
+      }
       if (body.order === undefined && body.displayOrder === undefined) {
         if (mongoose.connection.readyState === 1) {
           const last = await Scholar.findOne().sort({ order: -1 }).select('order displayOrder');
@@ -587,6 +616,7 @@ router.post('/team', audit('create', 'Team'), async (req, res) => {
         }
       }
       const item = mongoose.connection.readyState === 1 ? await Scholar.create(body) : null;
+      fastCache.clear();
       const saved = addOrUpdateFallbackScholar(item ? item.toObject() : req.body);
       return res.status(201).json({ success: true, data: item || saved });
     }
@@ -594,6 +624,65 @@ router.post('/team', audit('create', 'Team'), async (req, res) => {
     return res.status(400).json({ success: false, message: err.message || 'Failed to create team member' });
   }
 });
+
+const handleUpdateTeamMember = async (req: any, res: any) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const id = String(req.params.id);
+    const cat = String(req.body.category || req.body.role || '').toLowerCase();
+    const body = { ...req.body };
+    delete body._id;
+
+    if (body.education !== undefined || body.educationalBackground !== undefined) {
+      const edu = body.education !== undefined ? body.education : body.educationalBackground;
+      body.education = edu;
+      body.educationalBackground = edu;
+      req.body.education = edu;
+      req.body.educationalBackground = edu;
+    }
+    if (body.order !== undefined || body.displayOrder !== undefined) {
+      const ord = body.order !== undefined ? Number(body.order) : Number(body.displayOrder);
+      body.order = ord;
+      body.displayOrder = ord;
+      req.body.order = ord;
+      req.body.displayOrder = ord;
+    }
+
+    let item: any = null;
+    if (cat.includes('founding')) {
+      if (mongoose.connection.readyState === 1) {
+        if (mongoose.Types.ObjectId.isValid(id)) item = await FoundingMember.findByIdAndUpdate(id, body, { new: true });
+        if (!item && (body.slug || id)) item = await FoundingMember.findOneAndUpdate({ $or: [{ slug: body.slug || id }, { name: body.name }] }, body, { new: true, upsert: true });
+      }
+      fastCache.clear();
+      const saved = addOrUpdateFallbackFoundingMember({ ...req.body, _id: item?._id ? String(item._id) : id });
+      return res.json({ success: true, data: item || saved });
+    } else if (cat.includes('sup')) {
+      if (mongoose.connection.readyState === 1) {
+        if (mongoose.Types.ObjectId.isValid(id)) item = await Supervisor.findByIdAndUpdate(id, body, { new: true });
+        if (!item && (body.slug || id)) item = await Supervisor.findOneAndUpdate({ $or: [{ slug: body.slug || id }, { name: body.name }] }, body, { new: true, upsert: true });
+      }
+      fastCache.clear();
+      const saved = addOrUpdateFallbackSupervisor({ ...req.body, _id: item?._id ? String(item._id) : id });
+      return res.json({ success: true, data: item || saved });
+    } else {
+      if (mongoose.connection.readyState === 1) {
+        if (mongoose.Types.ObjectId.isValid(id)) item = await Scholar.findByIdAndUpdate(id, body, { new: true });
+        if (!item && (body.slug || id)) item = await Scholar.findOneAndUpdate({ $or: [{ slug: body.slug || id }, { name: body.name }] }, body, { new: true, upsert: true });
+      }
+      fastCache.clear();
+      const saved = addOrUpdateFallbackScholar({ ...req.body, _id: item?._id ? String(item._id) : id });
+      return res.json({ success: true, data: item || saved });
+    }
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message || 'Failed to update team member' });
+  }
+};
+
+router.put('/team/:id', audit('update', 'Team'), handleUpdateTeamMember);
+router.patch('/team/:id', audit('update', 'Team'), handleUpdateTeamMember);
 
 router.get('/team', audit('list', 'Team'), async (req, res) => {
   const cat = String(req.query.category || '').toLowerCase();
