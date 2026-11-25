@@ -18,19 +18,34 @@ export async function uploadToCloudinary(
 ): Promise<{ url: string; publicId: string }> {
   const folder = options.folder || 'aspier';
   let dataUri: string;
+  let isSvg = false;
   if (Buffer.isBuffer(bufferOrDataUrl)) {
     const mime = options.mimeType || 'image/webp';
+    isSvg = mime.includes('svg');
     dataUri = `data:${mime};base64,${bufferOrDataUrl.toString('base64')}`;
   } else {
     dataUri = bufferOrDataUrl;
+    if (dataUri.startsWith('data:image/svg+xml')) {
+      isSvg = true;
+      if (!dataUri.includes(';base64,')) {
+        try {
+          const rawSvg = decodeURIComponent(dataUri.replace(/^data:image\/svg\+xml;[^,]*,/, ''));
+          dataUri = 'data:image/svg+xml;base64,' + Buffer.from(rawSvg).toString('base64');
+        } catch {}
+      }
+    }
   }
 
-  const uploaded = await cloudinary.uploader.upload(dataUri, {
+  const uploadOptions: any = {
     folder,
-    resource_type: 'image',
-    format: 'webp',
-    quality: 'auto'
-  });
+    resource_type: 'image'
+  };
+  if (!isSvg) {
+    uploadOptions.format = 'webp';
+    uploadOptions.quality = 'auto';
+  }
+
+  const uploaded = await cloudinary.uploader.upload(dataUri, uploadOptions);
 
   return {
     url: uploaded.secure_url,
