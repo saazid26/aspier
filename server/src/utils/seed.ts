@@ -490,31 +490,7 @@ export async function seedDatabase(): Promise<void> {
   // Seed Academy Collections
   await seedAcademyData(false);
 
-  for (const r of demoResearch) {
-    const wingId = wingIdsBySlug.get(r.wingSlug) || wingIdsBySlug.get('geospatial-intelligence-remote-sensing');
-    const fallbackMatch = fallbackResearchList.find((f) => f.slug === r.slug);
-    const researchDoc = {
-      ...((fallbackMatch && fallbackMatch._id) ? { _id: fallbackMatch._id } : {}),
-      title: r.title,
-      slug: r.slug,
-      wingId,
-      category: r.category,
-      abstract: r.abstract,
-      content: r.content,
-      objectives: r.objectives,
-      publicationUrl: r.publicationUrl || '',
-      doiUrl: r.doiUrl || '',
-      showReadPaperButton: r.showReadPaperButton !== false,
-      status: r.status || 'published',
-      authors: r.authors || ['ASPIER Research Wing Group'],
-      supervisors: r.supervisors || ['ASPIER Senior Research Supervisors'],
-      publishedAt: r.publishedAt || new Date(),
-      featured: r.featured || false,
-      sampleData: true,
-      coverImage: r.coverImage || makeDemoCover(r.title)
-    };
-    await Research.updateOne({ slug: r.slug }, { $setOnInsert: researchDoc }, { upsert: true });
-  }
+  // Research projects and News seeding disabled: Clean state preserved.
   if (await FoundingMember.countDocuments() === 0) await FoundingMember.create(demoFoundingMembers);
   if (await Supervisor.countDocuments() === 0) await Supervisor.create(demoSupervisors.map(({ wingSlug, ...supervisor }) => ({
     ...supervisor,
@@ -524,11 +500,6 @@ export async function seedDatabase(): Promise<void> {
     ...scholar,
     wingId: wingIdsBySlug.get(wingSlug)
   })));
-  if (await News.countDocuments() === 0) await News.create([
-    { title: 'Sample: ASPIER Research Scholar Applications', slug: 'sample-research-scholar-applications', excerpt: '<p>Illustrative announcement for an editable scholar application campaign across the academic wings.</p>', content: '<p>This sample announcement demonstrates the news layout. Replace dates, eligibility, and application links with verified current information before publishing.</p>', coverImage: makeDemoCover('Research Scholar Applications'), category: 'Announcements', isAnnouncement: true, sampleData: true, publishedAt: new Date() },
-    { title: 'Sample: Academy Cohort Registration', slug: 'sample-academy-registration', excerpt: '<p>Explore sample learning tracks in responsible AI, climate data, and biomedical data practice.</p>', content: '<p>This sample announcement demonstrates the academy news layout. Confirm course availability, fees, dates, and registration instructions before publishing.</p>', coverImage: makeDemoCover('Academy Cohort Registration'), category: 'Academy', isAnnouncement: true, sampleData: true, publishedAt: new Date() },
-    { title: 'Sample: Open Research Methods Showcase', slug: 'sample-open-research-showcase', excerpt: '<p>A sample news item highlighting reproducibility, open methods, and collaborative inquiry.</p>', content: '<p>This illustrative article is editable from the Admin panel. Replace it with verified publication details and links before publishing.</p>', coverImage: makeDemoCover('Open Research Methods'), category: 'News', isAnnouncement: false, sampleData: true, publishedAt: new Date() }
-  ]);
   console.log('[seed] ASPIER seed data is ready');
 }
 

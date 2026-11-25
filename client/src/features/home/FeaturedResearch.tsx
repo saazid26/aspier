@@ -28,20 +28,26 @@ export function FeaturedResearch() {
   return <section className="section featured-research-section">
     <div className="container featured-research-container">
       <div className="section-head featured-research-head"><div><span className="eyebrow">Featured research</span><h2>Current inquiry</h2></div></div>
-      <div className="grid featured-research-grid">{featured.map((item) => <Link className="card image-card research-card" key={item._id} to={`/research/${item.slug}`}>
-        <CoverMedia
-          src={item.coverImage}
-          alt={`${item.title} cover`}
-          fallbackLabel="Current inquiry"
-          className="research-card-image"
-          fallbackClassName="research-cover-placeholder research-cover-ongoing"
-        />
-        <div className="research-card-body">
-          {item.sampleData ? <span className="badge-sample">Sample research</span> : <span className="eyebrow">Current inquiry</span>}
-          <h3>{item.title}</h3>
-          <RichTextContent className="muted" content={item.abstract}/>
+      {featured.length === 0 ? (
+        <div className="card" style={{ padding: '2.5rem', textAlign: 'center', background: 'var(--surface-muted, #f8fafc)' }}>
+          <p className="muted" style={{ margin: 0, fontSize: '1rem' }}>No active inquiries published yet.</p>
         </div>
-      </Link>)}</div>
+      ) : (
+        <div className="grid featured-research-grid">{featured.map((item) => <Link className="card image-card research-card" key={item._id} to={`/research/${item.slug}`}>
+          <CoverMedia
+            src={item.coverImage}
+            alt={`${item.title} cover`}
+            fallbackLabel="Current inquiry"
+            className="research-card-image"
+            fallbackClassName="research-cover-placeholder research-cover-ongoing"
+          />
+          <div className="research-card-body">
+            {item.sampleData ? <span className="badge-sample">Sample research</span> : <span className="eyebrow">Current inquiry</span>}
+            <h3>{item.title}</h3>
+            <RichTextContent className="muted" content={item.abstract}/>
+          </div>
+        </Link>)}</div>
+      )}
     </div>
   </section>;
 }

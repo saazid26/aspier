@@ -30,12 +30,18 @@ export function NewsList() {
     <div className="container">
       <h1>News & announcements</h1>
       {isError && data.length === 0 && <p role="alert">Could not load news. Please try again later.</p>}
-      {!data.length && <p className="muted">No news has been published yet.</p>}
-      <div className="grid announcement-grid news-grid">{data.map((item) => <Link className="card image-card news-card" key={item._id} to={`/news/${item.slug}`}>
-        <CoverMedia src={item.coverImage} alt={`${item.title} cover`} fallbackLabel={item.category || 'News & announcements'} className="news-card-media" imageClassName="card-cover" fallbackClassName="news-cover-placeholder"/>
-        {item.sampleData && <span className="badge-sample">Sample announcement</span>}
-        <h3>{item.title}</h3><RichTextContent className="muted" content={item.excerpt || ''}/>
-      </Link>)}</div>
+      {!data.length && (
+        <div className="card" style={{ padding: '2.5rem', textAlign: 'center', background: 'var(--surface-muted, #f8fafc)', marginTop: '1.5rem' }}>
+          <p className="muted" style={{ margin: 0, fontSize: '1rem' }}>No announcements published yet.</p>
+        </div>
+      )}
+      {data.length > 0 && (
+        <div className="grid announcement-grid news-grid">{data.map((item) => <Link className="card image-card news-card" key={item._id} to={`/news/${item.slug}`}>
+          <CoverMedia src={item.coverImage} alt={`${item.title} cover`} fallbackLabel={item.category || 'News & announcements'} className="news-card-media" imageClassName="card-cover" fallbackClassName="news-cover-placeholder"/>
+          {item.sampleData && <span className="badge-sample">Sample announcement</span>}
+          <h3>{item.title}</h3><RichTextContent className="muted" content={item.excerpt || ''}/>
+        </Link>)}</div>
+      )}
     </div>
   </section>;
 }

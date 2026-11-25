@@ -273,30 +273,7 @@ export const fallbackCourses = [
   }
 ];
 
-export const fallbackNews = [
-  {
-    _id: "60d0fe4f5311236168a109f1",
-    title: "ASPIER Academic Wings and Research Fellowships 2026 Announced",
-    slug: "aspier-academic-wings-fellowships-2026",
-    excerpt: "ASPIER announces the opening of ten interdisciplinary research wings spanning aeronautics, planetary science, hydrology, and environmental policy.",
-    content: "<p>ASPIER announces the opening of ten interdisciplinary research wings spanning aeronautics, planetary science, hydrology, and environmental policy.</p>",
-    category: "announcement",
-    isAnnouncement: true,
-    publishedAt: new Date().toISOString(),
-    coverImage: makeDemoCover("ASPIER Fellowships 2026")
-  },
-  {
-    _id: "60d0fe4f5311236168a109f2",
-    title: "Winter Research Paper Writing Course Applications Now Open",
-    slug: "winter-research-writing-course-open",
-    excerpt: "Enrollment is now live for the Higher Study Oriented Basic to Advance Research Paper Writing Course at ASPIER Academy.",
-    content: "<p>Enrollment is now live for the Higher Study Oriented Basic to Advance Research Paper Writing Course at ASPIER Academy.</p>",
-    category: "academy",
-    isAnnouncement: true,
-    publishedAt: new Date().toISOString(),
-    coverImage: makeDemoCover("Research Paper Writing Course")
-  }
-];
+export const fallbackNews: any[] = [];
 
 export { demoResearch, demoSupervisors, demoScholars, demoFoundingMembers, makeDemoAvatar };
 
@@ -409,11 +386,7 @@ export function getFallbackApplications(): any[] {
 
 const wingIdMap = new Map(fallbackWings.map((w) => [w.slug, w._id]));
 
-export const fallbackResearchList = demoResearch.map((r, idx) => ({
-  _id: `60d0fe4f5311236168a10b${(idx + 1).toString(16).padStart(2, '0')}`,
-  ...r,
-  wingId: wingIdMap.get(r.wingSlug) || (fallbackWings[0] ? fallbackWings[0]._id : '60d0fe4f5311236168a109ca')
-}));
+export const fallbackResearchList: any[] = [];
 
 export function getFallbackWings(): any[] {
   if (!(global as any)._fallbackWings) {

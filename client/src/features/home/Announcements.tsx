@@ -35,38 +35,44 @@ export function Announcements() {
             View all announcements
           </Link>
         </div>
-        <div className="grid announcement-grid">
-          {data.slice(0, 3).map((item) => {
-            const targetUrl = `/announcements/${item.slug || item._id}`;
-            return (
-              <Link
-                className="card image-card news-card announcement-card"
-                key={item._id}
-                to={targetUrl}
-              >
-                <CoverMedia
-                  src={item.coverImage}
-                  alt={`${item.title} cover`}
-                  fallbackLabel={item.category || 'ASPIER announcement'}
-                  className="news-card-media announcement-card-media"
-                  fallbackClassName="news-cover-placeholder"
-                />
-                <div className="announcement-card-body">
-                  <div className="announcement-card-content">
-                    {item.category && <span className="announcement-category-tag">{item.category}</span>}
-                    <h3>{item.title}</h3>
-                    <RichTextContent className="muted" content={item.excerpt || ''} />
+        {data.length === 0 ? (
+          <div className="card" style={{ padding: '2.5rem', textAlign: 'center', background: 'var(--surface-muted, #f8fafc)' }}>
+            <p className="muted" style={{ margin: 0, fontSize: '1rem' }}>No announcements published yet.</p>
+          </div>
+        ) : (
+          <div className="grid announcement-grid">
+            {data.slice(0, 3).map((item) => {
+              const targetUrl = `/announcements/${item.slug || item._id}`;
+              return (
+                <Link
+                  className="card image-card news-card announcement-card"
+                  key={item._id}
+                  to={targetUrl}
+                >
+                  <CoverMedia
+                    src={item.coverImage}
+                    alt={`${item.title} cover`}
+                    fallbackLabel={item.category || 'ASPIER announcement'}
+                    className="news-card-media announcement-card-media"
+                    fallbackClassName="news-cover-placeholder"
+                  />
+                  <div className="announcement-card-body">
+                    <div className="announcement-card-content">
+                      {item.category && <span className="announcement-category-tag">{item.category}</span>}
+                      <h3>{item.title}</h3>
+                      <RichTextContent className="muted" content={item.excerpt || ''} />
+                    </div>
+                    <div className="announcement-card-footer">
+                      <span className="button button-secondary button-sm announcement-view-btn">
+                        View Details &rarr;
+                      </span>
+                    </div>
                   </div>
-                  <div className="announcement-card-footer">
-                    <span className="button button-secondary button-sm announcement-view-btn">
-                      View Details &rarr;
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );

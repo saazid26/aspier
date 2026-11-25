@@ -1269,6 +1269,43 @@ router.post('/upload', uploadMemory.single('file'), upload);
 router.post('/cloudinary-signature', cloudinarySignature);
 router.post('/sync-wings-cloudinary', syncWingsCloudinary);
 router.post('/purge-dummy-and-deduplicate', purgeDummyAndDeduplicate);
+router.post('/purge-dummy-content', async (req, res, next) => {
+  try {
+    await connectDatabase();
+
+    // 1. Purge all News documents (dummy news/announcements)
+    const newsResult = await News.deleteMany({});
+
+    // 2. Purge all Research documents (dummy research projects across all categories)
+    const researchResult = await Research.deleteMany({});
+
+    // 3. Clear embedded research arrays on all Academic Wings
+    const wingUpdateResult = await Wing.updateMany(
+      {},
+      {
+        $set: {
+          research: [],
+          presentResearch: [],
+          pastResearch: [],
+          futureResearch: [],
+          researchItems: []
+        }
+      }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Successfully purged dummy inquiries, news, and research projects while strictly preserving team, wings, and academy course.',
+      details: {
+        deletedNewsCount: newsResult.deletedCount,
+        deletedResearchCount: researchResult.deletedCount,
+        wingsUpdatedCount: wingUpdateResult.modifiedCount
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 router.get('/media', mediaLibrary);
 router.delete('/media/:id', deleteMedia);
 router.get('/settings', getSettings);
