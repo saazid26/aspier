@@ -217,6 +217,13 @@ router.post('/supervisors', audit('create', 'Supervisor'), async (req, res) => {
     let item: any = null;
     const body = { ...req.body };
     delete body._id;
+    if (body.education !== undefined || body.educationalBackground !== undefined) {
+      const edu = body.education !== undefined ? body.education : body.educationalBackground;
+      body.education = edu;
+      body.educationalBackground = edu;
+      req.body.education = edu;
+      req.body.educationalBackground = edu;
+    }
     if (mongoose.connection.readyState === 1) {
       item = await Supervisor.create(body);
     }
@@ -237,6 +244,13 @@ router.put('/supervisors/:id', audit('update', 'Supervisor'), async (req, res) =
     const id = String(req.params.id);
     const body = { ...req.body };
     delete body._id;
+    if (body.education !== undefined || body.educationalBackground !== undefined) {
+      const edu = body.education !== undefined ? body.education : body.educationalBackground;
+      body.education = edu;
+      body.educationalBackground = edu;
+      req.body.education = edu;
+      req.body.educationalBackground = edu;
+    }
     if (mongoose.connection.readyState === 1) {
       if (mongoose.Types.ObjectId.isValid(id)) {
         item = await Supervisor.findByIdAndUpdate(id, body, { new: true });

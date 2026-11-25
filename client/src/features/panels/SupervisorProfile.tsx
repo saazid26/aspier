@@ -27,7 +27,7 @@ export function SupervisorProfile() {
           ))}
         </div>
       )}
-      {data.educationalBackground && <p><strong>Education:</strong> {data.educationalBackground}</p>}
+      {(data.education || data.educationalBackground) && <p><strong>Education:</strong> {data.education || data.educationalBackground}</p>}
       <RichTextContent className="muted" content={data.bio || ''} />
       <AcademicSocialLinks member={data} className="profile-detail-social-links" />
     </main>

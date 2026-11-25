@@ -147,8 +147,11 @@ export function TeamManager() {
     e.preventDefault();
     setSavingSupervisor(true);
     try {
+      const eduValue = (editingSupervisor.education || editingSupervisor.educationalBackground || '').trim();
       const payload = {
         ...editingSupervisor,
+        education: eduValue,
+        educationalBackground: eduValue,
         researchInterests: cleanTags(editingSupervisor.researchInterests)
       };
       const targetId = editingSupervisor._id || editingSupervisor.slug;
@@ -503,6 +506,7 @@ export function TeamManager() {
                   bio: '',
                   photo: '',
                   researchInterests: [],
+                  education: '',
                   educationalBackground: '',
                   researchGate: '',
                   googleScholar: '',
@@ -545,7 +549,11 @@ export function TeamManager() {
                     <Button
                       variant="secondary"
                       onClick={() => {
-                        setEditingSupervisor({ ...sup });
+                        setEditingSupervisor({
+                          ...sup,
+                          education: sup.education || sup.educationalBackground || '',
+                          educationalBackground: sup.educationalBackground || sup.education || ''
+                        });
                         setSupervisorModalOpen(true);
                       }}
                     >
@@ -705,6 +713,19 @@ export function TeamManager() {
                 placeholder="Hydrology, Groundwater, Climate Change, Earth Systems"
               />
             </div>
+
+            <label style={{ display: 'block', marginTop: 12 }}>
+              Education
+              <Input
+                value={editingSupervisor.education || editingSupervisor.educationalBackground || ''}
+                onChange={(e) => setEditingSupervisor({
+                  ...editingSupervisor,
+                  education: e.target.value,
+                  educationalBackground: e.target.value
+                })}
+                placeholder="e.g., Ph.D. in Environmental Engineering, M.Sc. in Water Resources Engineering"
+              />
+            </label>
 
             <div className="settings-image-field" style={{ marginTop: 16 }}>
               <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Supervisor Photo (1:1 Circle)</label>

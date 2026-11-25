@@ -33,6 +33,7 @@ type Supervisor = ProfileSocialMedia & {
   photo?: string;
   researchInterests?: string[];
   educationalBackground?: string;
+  education?: string;
   sampleData?: boolean;
 };
 
@@ -287,8 +288,8 @@ export function Team() {
                   content={supervisor.bio || 'ASPIER supervisor advancing interdisciplinary research.'}
                   className="muted"
                 />
-                {supervisor.educationalBackground && (
-                  <p className="muted"><strong>Education:</strong> {supervisor.educationalBackground}</p>
+                {(supervisor.education || supervisor.educationalBackground) && (
+                  <p className="muted"><strong>Education:</strong> {supervisor.education || supervisor.educationalBackground}</p>
                 )}
                 {/* Conditional academic and social media profile icons */}
                 <AcademicSocialLinks member={supervisor} />

@@ -11,6 +11,7 @@ const schema = new Schema({
   presentAddress: String,
   permanentAddress: String,
   educationalBackground: String,
+  education: String,
   googleScholar: String,
   researchGate: String,
   orcid: String,

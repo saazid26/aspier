@@ -177,9 +177,9 @@ export function ResearchDetail() {
                     className="muted"
                   />
                 )}
-                {member.educationalBackground && (
+                {(member.education || member.educationalBackground) && (
                   <p className="muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                    <strong>Education:</strong> {member.educationalBackground}
+                    <strong>Education:</strong> {member.education || member.educationalBackground}
                   </p>
                 )}
                 {/* Academic & Social Media Links */}
