@@ -130,8 +130,8 @@ export function SmoothImageUploader({
     setBusy(true);
 
     try {
-      // 2. Client-side Async Canvas Compression (auto WebP < 250KB)
-      const targetMaxWidth = isBanner ? 1400 : 600;
+      // 2. Client-side Async Canvas Compression (preserve 16:9 aspect ratio up to 1280px wide for banners)
+      const targetMaxWidth = isBanner ? 1280 : 600;
       const targetMaxHeight = isBanner ? 900 : 600;
       const optimizedFile = await optimizeImageForUpload(rawFile, {
         maxWidth: targetMaxWidth,

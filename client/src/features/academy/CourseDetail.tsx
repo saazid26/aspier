@@ -104,7 +104,8 @@ export function CourseDetail() {
         src={data.thumbnail}
         alt={`${data.title} course banner`}
         fallbackLabel={data.title}
-        className="research-detail-cover course-detail-cover"
+        className="course-detail-hero-cover"
+        imageClassName="course-detail-hero-img"
         fallbackClassName="course-image-placeholder"
       />
 

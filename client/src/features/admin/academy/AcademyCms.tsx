@@ -1578,7 +1578,7 @@ export function AcademyCms() {
                 onUploaded={(url) => setEditingCourse({ ...editingCourse, thumbnail: url, bannerUrl: url })}
                 shape="banner"
                 variant="cover"
-                helperText="Recommended: 1200 × 675 px • 16:9 Aspect Ratio • Max 3MB"
+                helperText="Recommended Size: 1280 × 720 px (16:9 Aspect Ratio, WebP/PNG/JPG) — Fits both Course Cards and Detail Pages with zero cropping."
                 maxSizeMB={3}
               />
             </div>
