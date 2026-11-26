@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { formatCourseFee } from '../../lib/format';
 import { SEO } from '../../components/common/SEO';
+import { usePageSEO } from '../../hooks/usePageSEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { CoverMedia } from '../../components/common/CoverMedia';
 import { staticCourses } from '../../lib/staticData';
@@ -65,14 +66,20 @@ export function Catalog() {
   }
 
   const data = remoteData && remoteData.length > 0 ? remoteData : (staticCourses as Course[]);
+  usePageSEO({
+    title: 'ASPIER Academy — Research Courses & Training | ASPIER Global',
+    description:
+      'Enroll in live and recorded research courses at ASPIER Academy. Learn research paper writing, AI productivity, and scientific methodology with ASPIER Global.',
+    path: '/academy'
+  });
 
   return (
     <main className="container section academy-catalog">
       <SEO
-        title="ASPIER Academy | Research Training, Scientific Writing & Technical Courses"
+        title="ASPIER Academy — Research Courses & Training | ASPIER Global"
         exact
-        description="Master scientific paper writing, geospatial data modeling, and machine learning research with ASPIER Academy courses taught by active researchers."
-        keywords="ASPIER Academy, ASPIER Academy courses, ASPIER Academy student portal, Higher Study Oriented Basic to Advance Research Paper Writing Course, Responsible AI Foundations, Climate Data Modeling, Research Training Bangladesh, scientific writing course, research training, academic writing Bangladesh, scientific research academy"
+        description="Enroll in live and recorded research courses at ASPIER Academy. Learn research paper writing, AI productivity, and scientific methodology with ASPIER Global."
+        keywords="ASPIER Academy, ASPIER courses, ASPIER research course, ASPIER online course, ASPIER Global, Higher Study Oriented Basic to Advance Research Paper Writing Course, Advanced AI Productivity Masterclass, Research Training Bangladesh"
         canonicalPath="/academy"
         coursesList={data.map((c) => ({
           name: c.title,

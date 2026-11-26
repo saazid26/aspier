@@ -1,8 +1,14 @@
 User-agent: *
 Allow: /
+Disallow: /admin
 Disallow: /admin/
-Disallow: /student/
+Disallow: /academy/portal
+Disallow: /academy/portal/
+Disallow: /academy/student
 Disallow: /academy/student/
+Disallow: /student
+Disallow: /student/
+Disallow: /team-onboarding
 Disallow: /api/
 
 Sitemap: https://aspierglobal.vercel.app/sitemap.xml

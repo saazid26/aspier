@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { SEO } from '../../components/common/SEO';
+import { usePageSEO } from '../../hooks/usePageSEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { CoverMedia } from '../../components/common/CoverMedia';
 import { staticWings } from '../../lib/staticData';
@@ -16,6 +17,28 @@ type Wing = {
   shortDescription?: string;
 };
 
+function WingsPageSEO() {
+  usePageSEO({
+    title: 'ASPIER Research Wings — 10 Specialized Academic Wings | ASPIER Global',
+    description:
+      'Explore the 10 specialized research wings of ASPIER Global covering geospatial intelligence, hydrology, biotechnology, engineering, and interdisciplinary sciences.',
+    path: '/wings'
+  });
+  return (
+    <SEO
+      title="ASPIER Research Wings — 10 Specialized Academic Wings | ASPIER Global"
+      exact
+      description="Explore the 10 specialized research wings of ASPIER Global covering geospatial intelligence, hydrology, biotechnology, engineering, and interdisciplinary sciences."
+      keywords="ASPIER wings, ASPIER Research, ASPIER Global, ASPIER Academic Wings, Aeronautical Engineering and UAV Systems, Spatial Data and Remote Sensing, Planetary Science, Hydrology, Biotechnology, ASPIER Bangladesh"
+      canonicalPath="/wings"
+      breadcrumbs={[
+        { name: 'Home', path: '/' },
+        { name: 'Wings', path: '/wings' }
+      ]}
+    />
+  );
+}
+
 export function WingsGrid() {
   const location = useLocation();
   const isWingsPage = location.pathname === '/wings';
@@ -28,19 +51,7 @@ export function WingsGrid() {
   const data = remoteData && remoteData.length > 0 ? remoteData : (staticWings as Wing[]);
 
   return <section className="section">
-    {isWingsPage && (
-      <SEO
-        title="Academic Wings & Research Programs | ASPIER"
-        exact
-        description="Explore ASPIER's 10 Academic Wings spanning aeronautics, planetary science, spatial analytics, climate modeling, and autonomous research initiatives."
-        keywords="ASPIER Academic Wings, ASPIER wings, Aeronautical Engineering and UAV Systems, Spatial Data and Remote Sensing, Planetary Science and Astrobiology, Hydrology and Atmospheric Physics, Environmental Research Institute, ASPIER research wings, ASPIER Young Scholars, ASPIER Research Mate"
-        canonicalPath="/wings"
-        breadcrumbs={[
-          { name: 'Home', path: '/' },
-          { name: 'Wings', path: '/wings' }
-        ]}
-      />
-    )}
+    {isWingsPage && <WingsPageSEO />}
     <div className="container">
       <div className="section-head"><div><span className="eyebrow">ASPIER Academic Wings</span><h1>Explore disciplines</h1></div></div>
       {isError && data.length === 0 && <p role="alert">Could not load academic wings. Please refresh to try again.</p>}

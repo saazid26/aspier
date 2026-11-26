@@ -36,11 +36,11 @@ export type SeoHeadProps = {
   googleSiteVerification?: string;
 };
 
-const DEFAULT_TITLE = 'ASPIER | Aeronautical, Spatial, Planetary Institution for Environmental Research';
+const DEFAULT_TITLE = 'ASPIER Global — ASPIER Research, ASPIER Academy & Young Scholars';
 const DEFAULT_DESCRIPTION =
-  'ASPIER (Aeronautical, Spatial, Planetary Institution for Environmental Research) is an autonomous research institution and academy advancing aeronautical engineering, spatial remote sensing, planetary science, environmental data science, and higher-study research training.';
+  'Official website of ASPIER Global (ASPIER) — explore ASPIER Academy research courses, 10 specialized research wings, research supervisors, and Young Scholar opportunities in Bangladesh and worldwide.';
 const DEFAULT_KEYWORDS =
-  'ASPIER, ASPIER Global, ASPIER Academy, Aeronautical, Spatial, Planetary Institution for Environmental Research, Aeronautical Spatial Planetary Institution for Environmental Research, ASPIER Research Institute, aspierglobal, ASPIER Academy courses, ASPIER Academy student portal, Higher Study Oriented Basic to Advance Research Paper Writing Course, Responsible AI Foundations, Climate Data Modeling, Research Training Bangladesh, ASPIER Academic Wings, ASPIER Research Mate, ASPIER Young Scholars, ASPIER Research Supervisors, Aeronautical Engineering and UAV Systems, Spatial Data and Remote Sensing, Planetary Science, Environmental Research Institute';
+  'ASPIER, ASPIER Global, ASPIER Academy, ASPIER Research, ASPIER Bangladesh, ASPIER courses, ASPIER team, ASPIER Young Scholar, ASPIER supervisors, ASPIER research wings, aspierglobal, ASPIER official website, ASPIER research course, ASPIER online course';
 
 const DEFAULT_IMAGE = 'https://aspierglobal.vercel.app/aspier-logo.png';
 const BASE_URL =
@@ -146,11 +146,7 @@ export function SeoHead({
     setMetaTag('property', 'og:description', finalDesc);
     setMetaTag('property', 'og:type', ogType);
     setMetaTag('property', 'og:url', finalUrl);
-    setMetaTag(
-      'property',
-      'og:site_name',
-      'ASPIER — Aeronautical, Spatial, Planetary Institution for Environmental Research'
-    );
+    setMetaTag('property', 'og:site_name', 'ASPIER Global');
     setMetaTag('property', 'og:image', ogImage);
 
     // Twitter Card

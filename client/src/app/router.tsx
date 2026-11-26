@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
 import { StudentAuthGate } from '../features/auth/StudentAuthGate';
 import { SEO } from '../components/common/SEO';
+import { usePageSEO } from '../hooks/usePageSEO';
 import { PublicLayout } from './layouts/PublicLayout';
 import { AcademyLayout } from './layouts/AcademyLayout';
 import { StudentLayout } from './layouts/StudentLayout';
@@ -110,13 +111,22 @@ function Home(){
     queryKey: ['public-settings'],
     queryFn: async () => (await api.get('/public/settings')).data.data
   });
+  const homeTitle = settings?.siteTitle || 'ASPIER Global — ASPIER Research, ASPIER Academy & Young Scholars';
+  const homeDescription =
+    settings?.seoDescription ||
+    'Official website of ASPIER Global (ASPIER) — explore ASPIER Academy courses, 10 specialized research wings, supervisors, and Young Scholar mentorship.';
+  usePageSEO({
+    title: homeTitle,
+    description: homeDescription,
+    path: '/'
+  });
   return (
     <>
       <SEO
-        title={settings?.siteTitle || 'ASPIER | Aeronautical, Spatial, Planetary Institution for Environmental Research'}
+        title={homeTitle}
         exact
-        description={settings?.seoDescription || 'ASPIER (Aeronautical, Spatial, Planetary Institution for Environmental Research) advances multidisciplinary science across aerospace systems, satellite remote sensing, planetary exploration, and environmental modeling.'}
-        keywords="ASPIER, ASPIER Global, ASPIER Academy, Aeronautical, Spatial, Planetary Institution for Environmental Research, Aeronautical Spatial Planetary Institution for Environmental Research, ASPIER Research Institute, aspierglobal, ASPIER Academy courses, ASPIER Academy student portal, Higher Study Oriented Basic to Advance Research Paper Writing Course, Responsible AI Foundations, Climate Data Modeling, Research Training Bangladesh, ASPIER Academic Wings, ASPIER Research Mate, ASPIER Young Scholars, ASPIER Research Supervisors, Aeronautical Engineering and UAV Systems, Spatial Data and Remote Sensing, Planetary Science, Environmental Research Institute"
+        description={homeDescription}
+        keywords="ASPIER, ASPIER Global, ASPIER Academy, ASPIER Research, ASPIER Bangladesh, ASPIER courses, ASPIER team, ASPIER Young Scholar, ASPIER supervisors, ASPIER research wings, aspierglobal"
         canonicalPath="/"
       />
       <Hero />

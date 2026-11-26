@@ -52,9 +52,15 @@ router.get('/robots.txt', (_req, res) => {
   const baseUrl = (env.CLIENT_URL || 'https://aspierglobal.vercel.app').replace(/\/$/, '');
   const content = `User-agent: *
 Allow: /
+Disallow: /admin
 Disallow: /admin/
-Disallow: /student/
+Disallow: /academy/portal
+Disallow: /academy/portal/
+Disallow: /academy/student
 Disallow: /academy/student/
+Disallow: /student
+Disallow: /student/
+Disallow: /team-onboarding
 Disallow: /api/
 
 Sitemap: ${baseUrl}/sitemap.xml
@@ -84,16 +90,16 @@ router.get('/sitemap.xml', async (_req, res) => {
     const activeScholars = scholars.length ? scholars : demoScholars;
 
     const staticUrls = [
-      { path: '', priority: '1.0', changefreq: 'daily' },
-      { path: '/wings', priority: '0.9', changefreq: 'weekly' },
-      { path: '/wings/apply-research', priority: '0.85', changefreq: 'weekly' },
-      { path: '/team', priority: '0.85', changefreq: 'weekly' },
+      { path: '/', priority: '1.0', changefreq: 'weekly' },
       { path: '/academy', priority: '0.9', changefreq: 'weekly' },
+      { path: '/wings', priority: '0.9', changefreq: 'weekly' },
+      { path: '/team', priority: '0.9', changefreq: 'weekly' },
+      { path: '/apply', priority: '0.85', changefreq: 'weekly' },
+      { path: '/join', priority: '0.85', changefreq: 'weekly' },
+      { path: '/wings/apply-research', priority: '0.85', changefreq: 'weekly' },
       { path: '/academy/classes', priority: '0.8', changefreq: 'weekly' },
-      { path: '/research', priority: '0.8', changefreq: 'weekly' },
-      { path: '/news', priority: '0.75', changefreq: 'weekly' },
-      { path: '/contact', priority: '0.7', changefreq: 'monthly' },
-      { path: '/join', priority: '0.8', changefreq: 'monthly' }
+      { path: '/news', priority: '0.8', changefreq: 'weekly' },
+      { path: '/contact', priority: '0.75', changefreq: 'weekly' }
     ];
 
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';

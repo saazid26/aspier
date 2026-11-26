@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { FileText, Upload, X, ExternalLink, Loader2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { SEO } from '../../components/common/SEO';
+import { usePageSEO } from '../../hooks/usePageSEO';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { staticWings } from '../../lib/staticData';
@@ -11,6 +12,12 @@ import { staticWings } from '../../lib/staticData';
 type ApplicationReceipt = { applicationId: string; accessCode: string };
 
 export function JoinForm() {
+  usePageSEO({
+    title: 'Join ASPIER Global — Apply as Research Supervisor or Young Scholar',
+    description:
+      'Apply online to join ASPIER Global as a Research Supervisor or Young Scholar and collaborate on interdisciplinary research projects.',
+    path: '/join'
+  });
   const { data: remoteWings = [] } = useQuery({
     queryKey: ['wings'],
     queryFn: async () => (await api.get('/public/wings')).data.data as Array<{ slug: string; name: string }>,
@@ -113,9 +120,10 @@ export function JoinForm() {
 
   return <main className="container section" style={{ maxWidth: 720 }}>
     <SEO
-      title="Join the ASPIER Team | Supervisors & Young Scholars Application"
-      description="Apply to join ASPIER as a Research Supervisor or Young Scholar. Membership application is 100% free across all stages."
-      keywords="Join ASPIER, ASPIER fellowship, ASPIER Young Scholars, ASPIER Research Supervisors, research application, free academic fellowship"
+      title="Join ASPIER Global — Apply as Research Supervisor or Young Scholar"
+      exact
+      description="Apply online to join ASPIER Global as a Research Supervisor or Young Scholar and collaborate on interdisciplinary research projects."
+      keywords="Join ASPIER, ASPIER Global, ASPIER Young Scholar, ASPIER supervisors, ASPIER Research Supervisors, ASPIER Bangladesh, apply ASPIER"
       canonicalPath="/join"
       breadcrumbs={[
         { name: 'Home', path: '/' },

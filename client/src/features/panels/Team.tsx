@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { SEO } from '../../components/common/SEO';
+import { usePageSEO } from '../../hooks/usePageSEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { ProfileAvatar } from '../../components/common/ProfileAvatar';
 import { AcademicSocialLinks, type ProfileSocialMedia } from '../../components/common/AcademicSocialLinks';
@@ -167,13 +168,20 @@ export function Team() {
     website: founder.founderWebsite
   };
 
+  usePageSEO({
+    title: 'ASPIER Team — Research Supervisors & Young Scholars | ASPIER Global',
+    description:
+      'Meet the Research Supervisors and Young Scholars of ASPIER Global leading collaborative research across Bangladesh and internationally.',
+    path: '/team'
+  });
+
   return (
     <>
       <SEO
-        title="Research Supervisors, Young Scholars & Research Mates | ASPIER"
+        title="ASPIER Team — Research Supervisors & Young Scholars | ASPIER Global"
         exact
-        description="Meet the multidisciplinary research leadership, university supervisors, young scholars, and research mates driving discovery at ASPIER."
-        keywords="ASPIER team, ASPIER Research Supervisors, ASPIER Young Scholars, ASPIER Research Mate, aerospace researchers, planetary scientists, environmental scientists, ASPIER faculty mentors"
+        description="Meet the Research Supervisors and Young Scholars of ASPIER Global leading collaborative research across Bangladesh and internationally."
+        keywords="ASPIER team, ASPIER supervisors, ASPIER Young Scholar, ASPIER Global, ASPIER Research, ASPIER Bangladesh, ASPIER Research Supervisors, ASPIER Young Scholars"
         canonicalPath="/team"
         breadcrumbs={[
           { name: 'Home', path: '/' },

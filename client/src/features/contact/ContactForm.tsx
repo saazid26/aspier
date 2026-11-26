@@ -2,11 +2,18 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { api } from '../../lib/api';
 import { SEO } from '../../components/common/SEO';
+import { usePageSEO } from '../../hooks/usePageSEO';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getApiErrorMessage } from '../../lib/api';
 
 export function ContactForm() {
+  usePageSEO({
+    title: 'Contact ASPIER Global — Official Inquiries & Support',
+    description:
+      'Get in touch with ASPIER Global for academic collaborations, ASPIER Academy course inquiries, and research partnerships.',
+    path: '/contact'
+  });
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -28,9 +35,10 @@ export function ContactForm() {
   };
   return <main className="container section" style={{maxWidth:680}}>
     <SEO
-      title="Contact ASPIER | Aeronautical, Spatial, Planetary Institution for Environmental Research"
-      description="Get in touch with ASPIER for research inquiries, academic partnerships, and academy program details."
-      keywords="Contact ASPIER, ASPIER email, research collaboration, academic inquiry, ASPIER location, ASPIER support"
+      title="Contact ASPIER Global — Official Inquiries & Support"
+      exact
+      description="Get in touch with ASPIER Global for academic collaborations, ASPIER Academy course inquiries, and research partnerships."
+      keywords="Contact ASPIER, ASPIER Global, ASPIER Academy, ASPIER Bangladesh, research collaboration, academic inquiry"
       canonicalPath="/contact"
       breadcrumbs={[
         { name: 'Home', path: '/' },

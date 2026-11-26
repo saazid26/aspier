@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { SEO } from '../../components/common/SEO';
+import { usePageSEO } from '../../hooks/usePageSEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { CoverMedia } from '../../components/common/CoverMedia';
 import { staticNews } from '../../lib/staticData';
@@ -15,12 +16,19 @@ export function NewsList() {
     initialData: staticNews as NewsItem[]
   });
   const data = remoteData && remoteData.length > 0 ? remoteData : (staticNews as NewsItem[]);
+  usePageSEO({
+    title: 'ASPIER News & Announcements | ASPIER Global',
+    description:
+      'Latest news, research updates, cohort announcements, and academic events from ASPIER Global and ASPIER Academy.',
+    path: '/news'
+  });
 
   return <section className="section">
     <SEO
-      title="News & Announcements | ASPIER"
-      description="Latest scientific news, research publications, fellowship calls, and academic announcements from ASPIER."
-      keywords="ASPIER news, ASPIER publications, ASPIER announcements, scientific calls for papers, research fellowships, ASPIER Academy news"
+      title="ASPIER News & Announcements | ASPIER Global"
+      exact
+      description="Latest news, research updates, cohort announcements, and academic events from ASPIER Global and ASPIER Academy."
+      keywords="ASPIER news, ASPIER Global, ASPIER Academy, ASPIER announcements, research updates, cohort announcements"
       canonicalPath="/news"
       breadcrumbs={[
         { name: 'Home', path: '/' },
