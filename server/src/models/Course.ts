@@ -88,6 +88,9 @@ schema.pre('save', function (next) {
   if (!this.bannerUrl && this.thumbnail) this.bannerUrl = this.thumbnail;
   if (!this.deliveryMode && this.mode) this.deliveryMode = this.mode;
   if (!this.mode && this.deliveryMode) this.mode = this.deliveryMode;
+  if (this.deliveryMode === 'Online and Recorded' || this.mode === 'Online and Recorded') {
+    this.startDate = '';
+  }
   next();
 });
 

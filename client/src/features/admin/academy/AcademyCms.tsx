@@ -287,11 +287,23 @@ export function AcademyCms() {
     e.preventDefault();
     setSavingCourse(true);
     try {
+      const normalizedMode =
+        (editingCourse.mode === 'Online and Live' || editingCourse.deliveryMode === 'Online and Live' || editingCourse.mode === 'Online / Live')
+          ? 'Online and Live'
+          : (editingCourse.mode === 'In-Person Workshop' || editingCourse.deliveryMode === 'In-Person Workshop' || editingCourse.mode === 'Offline' || editingCourse.deliveryMode === 'Offline')
+            ? 'In-Person Workshop'
+            : 'Online and Recorded';
+      const payload = {
+        ...editingCourse,
+        mode: normalizedMode,
+        deliveryMode: normalizedMode,
+        startDate: normalizedMode === 'Online and Recorded' ? '' : (editingCourse.startDate || '')
+      };
       if (editingCourse._id) {
-        await api.put(`/admin/courses/${editingCourse._id}`, editingCourse);
+        await api.put(`/admin/courses/${editingCourse._id}`, payload);
         toast.success('Course updated successfully.');
       } else {
-        await api.post('/admin/courses', editingCourse);
+        await api.post('/admin/courses', payload);
         toast.success('Course created successfully.');
       }
       setCourseModalOpen(false);
@@ -685,7 +697,18 @@ export function AcademyCms() {
                     <strong style={{ color: '#0f172a', fontSize: '0.925rem' }}>{course.title}</strong>
                     <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>{course.slug}</div>
                   </td>
-                  <td style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{course.startDate || 'TBA'}</td>
+                  <td style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                    {(!course.mode && !course.deliveryMode) ||
+                    (course.mode !== 'Online and Live' &&
+                      course.deliveryMode !== 'Online and Live' &&
+                      course.mode !== 'Online / Live' &&
+                      course.mode !== 'In-Person Workshop' &&
+                      course.deliveryMode !== 'In-Person Workshop' &&
+                      course.mode !== 'Offline' &&
+                      course.deliveryMode !== 'Offline')
+                      ? <span className="text-emerald-700 font-semibold">Available Now</span>
+                      : (course.startDate || 'TBA')}
+                  </td>
                   <td>
                     <Badge variant="blue">
                       {(course.mode === 'Online and Live' || course.deliveryMode === 'Online and Live' || course.mode === 'Online / Live')
@@ -1509,7 +1532,15 @@ export function AcademyCms() {
                         ? 'In-Person Workshop'
                         : 'Online and Recorded'
                   }
-                  onChange={(e) => setEditingCourse({ ...editingCourse, mode: e.target.value, deliveryMode: e.target.value })}
+                  onChange={(e) => {
+                    const nextMode = e.target.value;
+                    setEditingCourse({
+                      ...editingCourse,
+                      mode: nextMode,
+                      deliveryMode: nextMode,
+                      startDate: nextMode === 'Online and Recorded' ? '' : editingCourse.startDate
+                    });
+                  }}
                 >
                   <option value="Online and Recorded">Online and Recorded</option>
                   <option value="Online and Live">Online and Live</option>
@@ -1519,14 +1550,27 @@ export function AcademyCms() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-              <label>
-                Start Date
-                <Input
-                  type="date"
-                  value={editingCourse.startDate ? new Date(editingCourse.startDate).toISOString().split('T')[0] : ''}
-                  onChange={(e) => setEditingCourse({ ...editingCourse, startDate: e.target.value })}
-                />
-              </label>
+              {(editingCourse.mode === 'Online and Live' ||
+                editingCourse.deliveryMode === 'Online and Live' ||
+                editingCourse.mode === 'Online / Live' ||
+                editingCourse.mode === 'In-Person Workshop' ||
+                editingCourse.deliveryMode === 'In-Person Workshop' ||
+                editingCourse.mode === 'Offline' ||
+                editingCourse.deliveryMode === 'Offline') ? (
+                <label>
+                  Start Date
+                  <Input
+                    type="date"
+                    required
+                    value={editingCourse.startDate ? new Date(editingCourse.startDate).toISOString().split('T')[0] : ''}
+                    onChange={(e) => setEditingCourse({ ...editingCourse, startDate: e.target.value })}
+                  />
+                </label>
+              ) : (
+                <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center">
+                  No fixed start date — recorded classes are marked &ldquo;Available Now&rdquo;
+                </div>
+              )}
 
               <label>
                 Course Duration

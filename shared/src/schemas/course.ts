@@ -32,7 +32,7 @@ export const courseSchema = z.object({
   duration: z.string().trim().optional(),
   mode: z.preprocess((v) => (typeof v === 'string' ? normalizeCourseDeliveryMode(v) : v), z.enum(courseDeliveryModes)).optional(),
   deliveryMode: z.preprocess((v) => (typeof v === 'string' ? normalizeCourseDeliveryMode(v) : v), z.enum(courseDeliveryModes)).optional(),
-  startDate: z.string().trim().optional(),
+  startDate: z.string().trim().optional().nullable(),
   level: z.enum(['beginner', 'intermediate', 'advanced']).default('beginner'),
   status: z.enum(['draft', 'published', 'archived']).default('draft'),
   modules: z.array(z.object({ title: z.string().min(1), order: z.number().int(), lessons: z.array(lessonSchema).default([]) })).default([])

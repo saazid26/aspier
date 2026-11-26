@@ -75,6 +75,9 @@ export function CourseDetail() {
       : 'Online and Recorded';
 
   const formatStartDate = (startDate?: string) => {
+    if (normalizedDeliveryMode === 'Online and Recorded') {
+      return 'Available Now (Recorded Classes)';
+    }
     if (!startDate || /instant access/i.test(startDate)) return 'Open Enrollment';
     const date = new Date(startDate);
     if (!Number.isNaN(date.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(startDate)) {

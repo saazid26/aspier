@@ -28,6 +28,10 @@ function normalizeDeliveryMode(mode?: string) {
 }
 
 function formatFooterLabel(startDate?: string, deliveryMode?: string) {
+  const normalizedMode = normalizeDeliveryMode(deliveryMode);
+  if (normalizedMode === 'Online and Recorded') {
+    return 'Available Now';
+  }
   if (!startDate || /instant access/i.test(startDate)) return 'Course Fee';
   const date = new Date(startDate);
   if (!Number.isNaN(date.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(startDate)) {
@@ -35,13 +39,7 @@ function formatFooterLabel(startDate?: string, deliveryMode?: string) {
     const now = new Date();
     const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
     const startUtc = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-    if (startUtc > todayUtc) {
-      return `Starts from ${formatted}`;
-    }
-    if (normalizeDeliveryMode(deliveryMode) === 'Online and Recorded') {
-      return 'Course Fee';
-    }
-    return `Started on ${formatted}`;
+    return startUtc > todayUtc ? `Starts from ${formatted}` : `Started on ${formatted}`;
   }
   return 'Course Fee';
 }
@@ -131,9 +129,17 @@ export function Catalog() {
                   if (enrStatus === 'pending') {
                     return <span className="badge badge-yellow">Enrollment Under Review</span>;
                   }
+                  const footerLabel = formatFooterLabel(course.startDate, course.deliveryMode || course.mode);
                   return (
                     <>
-                      <p className="course-start-date">{formatFooterLabel(course.startDate, course.deliveryMode || course.mode)}</p>
+                      {footerLabel === 'Available Now' ? (
+                        <p className="course-start-date inline-flex items-center gap-1.5 text-emerald-700 font-semibold">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" aria-hidden="true" />
+                          <span>Available Now</span>
+                        </p>
+                      ) : (
+                        <p className="course-start-date">{footerLabel}</p>
+                      )}
                       <strong className="course-price">৳{course.price} BDT</strong>
                     </>
                   );

@@ -34,6 +34,9 @@ function sanitizeCoursesForUser(courses: any[], isAdmin: boolean, approvedCourse
     const normalized = normalizeModeValue(obj.deliveryMode || obj.mode);
     obj.mode = normalized;
     obj.deliveryMode = normalized;
+    if (normalized === 'Online and Recorded') {
+      obj.startDate = '';
+    }
     const isApproved = isAdmin || approvedCourseIds.has(String(obj._id));
     if (!isApproved) {
       delete obj.googleClassroomUrl;
@@ -93,6 +96,9 @@ export async function courseDetail(req: AuthRequest, res: Response, next: NextFu
     const normalizedMode = normalizeModeValue(safe.deliveryMode || safe.mode);
     safe.mode = normalizedMode;
     safe.deliveryMode = normalizedMode;
+    if (normalizedMode === 'Online and Recorded') {
+      safe.startDate = '';
+    }
     if (course.classes && course.classes.length > 0) {
       safe.classes = course.classes;
     }
