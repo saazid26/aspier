@@ -84,30 +84,45 @@ export async function uploadToCloudinary(
 }
 
 /**
- * Uploads a document (PDF, DOC, DOCX) directly to Cloudinary using resource_type: 'auto'
- * so PDFs open directly in browser tabs and Word documents download cleanly.
+ * Uploads a document (PDF, DOC, DOCX) directly to Cloudinary as resource_type: 'raw'
+ * with access_mode: 'public' and a clean single extension in public_id (no .pdf.pdf).
  */
 export async function uploadDocumentToCloudinary(
   buffer: Buffer,
   options: { folder?: string; filename?: string; mimeType?: string } = {}
 ): Promise<{ url: string; publicId: string; originalFilename: string }> {
   const folder = options.folder || 'aspier/cv';
-  const safeName = (options.filename || `cv-${Date.now()}.pdf`).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const rawName = options.filename || `cv-${Date.now()}.pdf`;
   const mime = options.mimeType || 'application/pdf';
+
+  let ext = path.extname(rawName).toLowerCase();
+  if (!['.pdf', '.doc', '.docx'].includes(ext)) {
+    if (mime.includes('wordprocessingml')) ext = '.docx';
+    else if (mime.includes('msword')) ext = '.doc';
+    else ext = '.pdf';
+  }
+
+  let baseName = rawName.replace(/(\.(pdf|doc|docx))+$/i, '').replace(/[^a-zA-Z0-9_-]/g, '_');
+  if (!baseName) baseName = 'Applicant_CV';
+
+  const cleanFileName = `${Date.now()}-${baseName}${ext}`;
   const dataUri = `data:${mime};base64,${buffer.toString('base64')}`;
 
   const uploaded = await cloudinary.uploader.upload(dataUri, {
-    resource_type: 'auto',
+    resource_type: 'raw',
+    type: 'upload',
+    access_mode: 'public',
     folder,
-    public_id: `${Date.now()}-${safeName}`,
-    use_filename: true,
-    unique_filename: true
+    public_id: cleanFileName,
+    use_filename: false,
+    unique_filename: false,
+    overwrite: true
   });
 
   return {
     url: uploaded.secure_url,
     publicId: uploaded.public_id,
-    originalFilename: options.filename || uploaded.original_filename || safeName
+    originalFilename: rawName
   };
 }
 

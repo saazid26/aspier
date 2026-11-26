@@ -30,7 +30,7 @@ import { getSettings, updateSettings } from '../controllers/settings.controller.
 import { upsertClass, deleteClass } from '../controllers/class.controller.js';
 import ClassModel from '../models/Class.js';
 import { paymentQueue, deletePayment } from '../controllers/payment.controller.js';
-import { adminMembershipApplications, approveApplicantSignup, approveInitialApplication, deleteMembershipApplication, publishMembershipApplication } from '../controllers/membership.controller.js';
+import { adminMembershipApplications, approveApplicantSignup, approveInitialApplication, deleteMembershipApplication, publishMembershipApplication, requestRevisionMembershipApplication, viewMembershipApplicationCv } from '../controllers/membership.controller.js';
 import { approveAndSendOnboarding } from '../controllers/onboarding.controller.js';
 import { listAdminNotifications, markAdminNotificationRead, markAllAdminNotificationsRead } from '../controllers/notification.controller.js';
 import {
@@ -918,10 +918,12 @@ mountCrud('news', News); mountCrud('courses', Course); mountCrud('users', User);
 router.get('/payments', paymentQueue);
 router.delete('/payments/:id', audit('delete', 'Payment'), deletePayment);
 router.get('/membership-applications', adminMembershipApplications);
+router.get('/membership-applications/:id/cv', viewMembershipApplicationCv);
 router.post('/membership-applications/:id/approve-onboarding', approveAndSendOnboarding);
 router.post('/membership-applications/:id/approve-signup', approveApplicantSignup);
 router.post('/membership-applications/:id/approve', approveInitialApplication);
 router.post('/membership-applications/:id/publish', publishMembershipApplication);
+router.post('/membership-applications/:id/request-revision', requestRevisionMembershipApplication);
 router.delete('/membership-applications/:id', deleteMembershipApplication);
 router.post('/classes', upsertClass);
 router.put('/classes/:id', upsertClass);

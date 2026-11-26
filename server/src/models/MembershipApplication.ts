@@ -25,7 +25,7 @@ const schema = new Schema({
   activationCodeEncrypted: { type: String, select: false },
   activationCodeUsedAt: Date,
   memberUserId: { type: Schema.Types.ObjectId, ref: 'User' },
-  status: { type: String, enum: ['signup_pending', 'signup_approved', 'initial_pending', 'membership_pending', 'final_pending', 'payment_pending', 'verification_pending', 'onboarding_sent', 'publishing', 'published', 'completed', 'active_member', 'rejected'], default: 'initial_pending', index: true },
+  status: { type: String, enum: ['signup_pending', 'signup_approved', 'initial_pending', 'membership_pending', 'final_pending', 'stage2_profile_review', 'payment_pending', 'verification_pending', 'onboarding_sent', 'publishing', 'published', 'completed', 'active_member', 'rejected'], default: 'initial_pending', index: true },
   onboardingToken: { type: String, index: true },
   onboardingTokenExpires: Date,
   onboardingTokenUsed: { type: Boolean, default: false },

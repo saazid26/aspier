@@ -30,6 +30,7 @@ import { fastCache } from '../utils/fastCache.js';
 import { extractToken } from '../utils/token.js';
 import { signAccessToken, issueRefreshSession } from '../services/token.service.js';
 import { setAuthCookies, setCsrfCookie } from '../utils/cookies.js';
+import { cloudinary } from '../config/cloudinary.js';
 
 const initialSchema = z.preprocess((value) => {
   if (!value || typeof value !== 'object') return value;
@@ -666,7 +667,9 @@ export async function adminMembershipApplications(req: AuthRequest, res: Respons
     }
     if (mongoose.connection.readyState === 1) {
       try {
-        const filter = typeof status === 'string' && status !== 'all' ? { status } : {};
+        const filter = typeof status === 'string' && status !== 'all'
+          ? (status === 'final_pending' ? { status: { $in: ['final_pending', 'stage2_profile_review'] } } : { status })
+          : {};
         applications = await MembershipApplication.find(filter).sort({ createdAt: -1 }).lean();
       } catch (err) {
         console.warn('[membership] admin find error:', err);
@@ -676,7 +679,9 @@ export async function adminMembershipApplications(req: AuthRequest, res: Respons
     const filterStatus = typeof status === 'string' ? status : 'all';
     const filteredInMem = filterStatus === 'all' || !filterStatus
       ? inMem
-      : inMem.filter((a: any) => a.status === filterStatus);
+      : filterStatus === 'final_pending'
+        ? inMem.filter((a: any) => a.status === 'final_pending' || a.status === 'stage2_profile_review')
+        : inMem.filter((a: any) => a.status === filterStatus);
 
     const combined = [...(applications || [])];
     for (const item of filteredInMem) {
@@ -820,12 +825,12 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
         }
       });
     }
-    if (!['final_pending', 'verification_pending'].includes(candidate.status)) {
+    if (!['final_pending', 'verification_pending', 'stage2_profile_review'].includes(candidate.status)) {
       throw new HttpError(409, 'Application is not awaiting profile review');
     }
     const previousStatus = candidate.status;
     const application = await MembershipApplication.findOneAndUpdate(
-      { _id: applicationId, status: { $in: ['final_pending', 'verification_pending'] } },
+      { _id: applicationId, status: { $in: ['final_pending', 'verification_pending', 'stage2_profile_review'] } },
       { $set: { status: 'publishing', reviewedBy: req.user._id, reviewedAt: new Date() } },
       { new: true }
     );
@@ -1174,6 +1179,190 @@ export async function deleteMembershipApplication(req: AuthRequest, res: Respons
       resourceId: id
     });
     res.json({ success: true, message: 'Application deleted' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+function parseCloudinaryCvUrl(cvUrl: string): { resourceType: 'raw' | 'image' | 'video'; publicId: string; format: string } | null {
+  try {
+    const parsed = new URL(cvUrl);
+    if (!parsed.hostname.includes('cloudinary.com')) return null;
+    const match = parsed.pathname.match(/\/[^/]+\/(raw|image|video)\/(?:upload|authenticated|private)\/(?:v\d+\/)?(.+)$/);
+    if (!match || !match[2]) return null;
+    const resourceType = match[1] as 'raw' | 'image' | 'video';
+    const publicId = decodeURIComponent(match[2]);
+    const extMatch = publicId.match(/\.([a-zA-Z0-9]+)$/);
+    const format = extMatch?.[1] ? extMatch[1].toLowerCase() : 'pdf';
+    return { resourceType, publicId, format };
+  } catch {
+    return null;
+  }
+}
+
+export async function viewMembershipApplicationCv(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const id = String(req.params.id || '');
+    let application: any = null;
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase().catch(() => {});
+    }
+    if (mongoose.connection.readyState === 1 && mongoose.isValidObjectId(id)) {
+      application = await MembershipApplication.findById(id).lean().catch(() => null);
+    }
+    if (!application) {
+      application = getFallbackApplications().find((a: any) => String(a._id) === id || a.id === id);
+    }
+    if (!application || !application.cvUrl) {
+      throw new HttpError(404, 'Curriculum Vitae (CV) not found for this application');
+    }
+
+    const cvUrl = String(application.cvUrl).trim();
+    const filename = (application.cvFileName || 'Applicant_CV.pdf').replace(/["\\]/g, '_');
+    const lowerName = `${filename} ${cvUrl}`.toLowerCase();
+    const mimeType = lowerName.includes('.docx')
+      ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      : lowerName.includes('.doc')
+        ? 'application/msword'
+        : 'application/pdf';
+
+    const candidateUrls: string[] = [cvUrl];
+    const parsed = parseCloudinaryCvUrl(cvUrl);
+    if (parsed) {
+      const expiresAt = Math.floor(Date.now() / 1000) + 300;
+      const publicIdWithoutExt = parsed.publicId.replace(/\.[^.]+$/, '');
+      if (parsed.resourceType === 'raw') {
+        candidateUrls.push(
+          cloudinary.utils.private_download_url(parsed.publicId, '', {
+            resource_type: 'raw',
+            type: 'upload',
+            expires_at: expiresAt
+          }),
+          cloudinary.url(parsed.publicId, {
+            resource_type: 'raw',
+            type: 'upload',
+            sign_url: true,
+            secure: true
+          })
+        );
+      } else {
+        candidateUrls.push(
+          cloudinary.utils.private_download_url(publicIdWithoutExt, parsed.format, {
+            resource_type: parsed.resourceType,
+            type: 'upload',
+            expires_at: expiresAt
+          }),
+          cloudinary.utils.private_download_url(parsed.publicId, parsed.format, {
+            resource_type: parsed.resourceType,
+            type: 'upload',
+            expires_at: expiresAt
+          }),
+          cloudinary.url(parsed.publicId, {
+            resource_type: parsed.resourceType,
+            type: 'upload',
+            sign_url: true,
+            secure: true
+          })
+        );
+      }
+    }
+
+    let fileBuffer: Buffer | null = null;
+    let lastStatus = 502;
+    for (const targetUrl of candidateUrls) {
+      if (!targetUrl) continue;
+      try {
+        const upstream = await fetch(targetUrl);
+        if (upstream.ok) {
+          fileBuffer = Buffer.from(await upstream.arrayBuffer());
+          break;
+        }
+        lastStatus = upstream.status;
+      } catch {
+        // try next signed URL candidate
+      }
+    }
+
+    if (!fileBuffer) {
+      throw new HttpError(lastStatus === 404 ? 404 : 502, 'Could not retrieve CV document from storage');
+    }
+
+    const disposition = req.query.download === '1' ? 'attachment' : 'inline';
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `${disposition}; filename="${filename}"`);
+    res.setHeader('Content-Length', String(fileBuffer.length));
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    return res.send(fileBuffer);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function requestRevisionMembershipApplication(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const id = String(req.params.id || '');
+    const note = typeof req.body?.note === 'string' ? req.body.note.trim() : '';
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const application = await MembershipApplication.findById(id);
+    if (!application) throw new HttpError(404, 'Application not found');
+
+    if (!application.onboardingToken) {
+      application.onboardingToken = randomBytes(32).toString('hex');
+    }
+    application.onboardingTokenUsed = false;
+    application.onboardingTokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    application.status = 'onboarding_sent';
+    application.reviewedBy = req.user._id;
+    application.reviewedAt = new Date();
+    await application.save();
+    fastCache.clear();
+
+    const isSupervisor = application.role === 'supervisor' || application.category === 'teammate';
+    const roleSlug = isSupervisor ? 'supervisor' : 'scholar';
+    const clientBase = (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'))
+      ? process.env.CLIENT_URL.replace(/\/$/, '')
+      : (env.CLIENT_URL && !env.CLIENT_URL.includes('localhost')
+        ? env.CLIENT_URL.replace(/\/$/, '')
+        : 'https://aspierglobal.vercel.app');
+    const onboardingUrl = `${clientBase}/onboarding?token=${application.onboardingToken}&role=${roleSlug}`;
+
+    const message = note
+      ? `The ASPIER Admin team reviewed your Stage 2 profile and requested a revision: "${note}". Please update and resubmit your profile using your onboarding link.`
+      : 'The ASPIER Admin team reviewed your Stage 2 profile and requested a revision before publishing to the Team page. Please update and resubmit your profile using your onboarding link.';
+
+    await notifyMember({
+      applicationId: application._id,
+      ...(application.memberUserId ? { userId: application.memberUserId } : {}),
+      title: 'Revision Requested for Your ASPIER Profile',
+      body: message,
+      category: 'onboarding-revision',
+      link: `/onboarding?token=${application.onboardingToken}&role=${roleSlug}`
+    }).catch(() => {});
+
+    await sendEmail({
+      to: application.email,
+      subject: 'ASPIER Onboarding: Profile Revision Requested',
+      html: `<p>Hello ${application.name},</p><p>${message}</p><p><a href="${onboardingUrl}" style="display:inline-block;padding:10px 18px;background:#0f766e;color:#fff;text-decoration:none;border-radius:6px;">Update &amp; Resubmit Profile</a></p>`
+    }).catch(() => {});
+
+    await recordAudit({
+      req,
+      action: 'request_revision_membership_application',
+      description: `Requested Stage 2 profile revision for ${application.name}${note ? `: ${note}` : ''}`,
+      resource: 'MembershipApplication',
+      resourceId: String(application.id || application._id)
+    });
+
+    res.json({
+      success: true,
+      data: {
+        applicationId: application.id || application._id,
+        status: application.status,
+        onboardingUrl
+      }
+    });
   } catch (error) {
     next(error);
   }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Send, Copy, Check, ExternalLink, ShieldCheck, Clock, UserCheck, Trash2, FileText, Download } from 'lucide-react';
+import { Send, Copy, Check, ExternalLink, ShieldCheck, Clock, UserCheck, Trash2, FileText, Download, RotateCcw, Globe, Loader2 } from 'lucide-react';
 import { api, getApiErrorMessage } from '../../../lib/api';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
@@ -30,6 +30,11 @@ type Application = {
   researchGate?: string;
   orcid?: string;
   linkedin?: string;
+  website?: string;
+  github?: string;
+  twitter?: string;
+  slug?: string;
+  cohort?: string;
   bio?: string;
   researchDomain?: string;
   researchDomains?: string[];
@@ -73,6 +78,7 @@ const statusBadge = (status: string) => {
     case 'initial_pending':
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200"><Clock className="w-3 h-3" /> Stage 1: Primary</span>;
     case 'final_pending':
+    case 'stage2_profile_review':
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200"><Clock className="w-3 h-3" /> Stage 2: Profile Review</span>;
     case 'verification_pending':
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200"><Clock className="w-3 h-3" /> Stage 2: Profile Review</span>;
@@ -89,6 +95,10 @@ export function MembershipApplications() {
   const [onboardingModal, setOnboardingModal] = useState<OnboardingModalData | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [approvalError, setApprovalError] = useState('');
+  const [cvLoadingKey, setCvLoadingKey] = useState('');
+  const [revisionTargetId, setRevisionTargetId] = useState('');
+  const [revisionNote, setRevisionNote] = useState('');
+  const [revisionBusy, setRevisionBusy] = useState(false);
   
   const client = useQueryClient();
   const { data = [], isLoading, refetch } = useQuery({
@@ -136,6 +146,54 @@ export function MembershipApplications() {
       setTimeout(() => setCopiedLink(false), 2500);
     } catch {
       toast.error('Could not access clipboard. Please copy manually.');
+    }
+  };
+
+  const handleViewCv = async (application: Application, download = false) => {
+    const key = `${application._id}:${download ? 'dl' : 'view'}`;
+    setCvLoadingKey(key);
+    try {
+      const response = await api.get(`/applications/${application._id}/cv`, {
+        params: download ? { download: '1' } : undefined,
+        responseType: 'blob'
+      });
+      const contentType = String(response.headers['content-type'] || 'application/pdf');
+      const blob = new Blob([response.data], { type: contentType });
+      const blobUrl = URL.createObjectURL(blob);
+      if (download) {
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = application.cvFileName || `${application.name.replace(/\s+/g, '_')}_CV.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+      } else {
+        const opened = window.open(blobUrl, '_blank', 'noopener,noreferrer');
+        if (!opened) {
+          toast.error('Pop-up blocked. Please allow pop-ups or use Download CV.');
+        }
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+      }
+    } catch (error: any) {
+      toast.error(getApiErrorMessage(error, 'Could not load CV document'));
+    } finally {
+      setCvLoadingKey('');
+    }
+  };
+
+  const handleRequestRevision = async (id: string) => {
+    setRevisionBusy(true);
+    try {
+      await api.post(`/admin/membership-applications/${id}/request-revision`, { note: revisionNote.trim() });
+      toast.success('Revision requested. Application returned to Onboarding Dispatched and applicant notified.');
+      setRevisionTargetId('');
+      setRevisionNote('');
+      await refetch();
+    } catch (error: any) {
+      toast.error(getApiErrorMessage(error, 'Could not request revision'));
+    } finally {
+      setRevisionBusy(false);
     }
   };
 
@@ -295,25 +353,24 @@ export function MembershipApplications() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href={application.cvUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold no-underline transition shadow-2xs"
+                    <button
+                      type="button"
+                      disabled={cvLoadingKey === `${application._id}:view`}
+                      onClick={() => void handleViewCv(application, false)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 disabled:opacity-60 text-white text-xs font-semibold transition shadow-2xs cursor-pointer"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>View / Open CV</span>
-                    </a>
-                    <a
-                      href={application.cvUrl}
-                      download={application.cvFileName || 'applicant-cv'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold no-underline transition"
+                      {cvLoadingKey === `${application._id}:view` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
+                      <span>{cvLoadingKey === `${application._id}:view` ? 'Opening…' : 'View / Open CV'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={cvLoadingKey === `${application._id}:dl`}
+                      onClick={() => void handleViewCv(application, true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 disabled:opacity-60 text-slate-700 border border-slate-300 text-xs font-semibold transition cursor-pointer"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Download</span>
-                    </a>
+                      {cvLoadingKey === `${application._id}:dl` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                      <span>Download CV</span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -422,26 +479,173 @@ export function MembershipApplications() {
                 </div>
               )}
 
-              {(stage === 'final_pending' || stage === 'verification_pending') && (
-                <div className="mb-4">
-                  {application.photo && (
-                    <img className="w-20 h-20 rounded-full object-cover border border-slate-200 mb-3" src={application.photo} alt={`${application.name} profile`} />
-                  )}
-                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <div><dt className="text-xs text-slate-500 font-semibold">Designation</dt><dd>{application.designation || '—'}</dd></div>
-                    {isSupervisor && application.institution && (
-                      <div><dt className="text-xs text-slate-500 font-semibold">Affiliation</dt><dd>{application.institution}</dd></div>
-                    )}
-                    <div><dt className="text-xs text-slate-500 font-semibold">Education</dt><dd>{application.education || application.educationalBackground || '—'}</dd></div>
-                    <div><dt className="text-xs text-slate-500 font-semibold">Research Domains</dt><dd>{application.researchDomain || application.researchDomains?.join(', ') || '—'}</dd></div>
-                  </dl>
-                  {application.bio && (
-                    <div className="mt-2 text-sm text-slate-600 bg-white p-3 rounded border border-slate-200">
-                      <strong>Bio:</strong> {application.bio}
+              {['final_pending', 'verification_pending', 'stage2_profile_review'].includes(application.status) && (() => {
+                const domainTags = (application.researchDomains && application.researchDomains.length > 0)
+                  ? application.researchDomains
+                  : (application.researchDomain ? application.researchDomain.split(',').map((s) => s.trim()).filter(Boolean) : []);
+                const socialLinks = [
+                  { label: 'ResearchGate', url: application.researchGate },
+                  { label: 'Google Scholar', url: application.googleScholar },
+                  { label: 'LinkedIn', url: application.linkedin },
+                  { label: 'ORCID', url: application.orcid },
+                  { label: 'X (Twitter)', url: application.twitter },
+                  { label: 'Website', url: application.website },
+                  { label: 'GitHub', url: application.github }
+                ].filter((item) => Boolean(item.url && item.url.trim()));
+
+                return (
+                  <div className="mb-4 p-5 rounded-xl bg-purple-50/40 border border-purple-200 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 border-b border-purple-100">
+                      {application.photo ? (
+                        <img
+                          className="w-24 h-24 rounded-full object-cover border-2 border-purple-300 shadow-sm shrink-0 bg-white"
+                          src={application.photo}
+                          alt={`${application.name} 1:1 profile preview`}
+                        />
+                      ) : (
+                        <div className="w-24 h-24 rounded-full bg-purple-100 border-2 border-purple-200 flex items-center justify-center text-purple-700 font-bold text-2xl shrink-0">
+                          {application.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-purple-800">Stage 2: Complete Profile Verification</span>
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900">{application.name}</h3>
+                        <p className="text-xs font-mono text-slate-500">
+                          Slug / Username: <span className="text-slate-700">{application.slug || 'Auto-generated on publish'}</span>
+                        </p>
+                      </div>
+                      {application.cvUrl && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            disabled={cvLoadingKey === `${application._id}:view`}
+                            onClick={() => void handleViewCv(application, false)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 disabled:opacity-60 text-white text-xs font-semibold transition cursor-pointer"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>View / Open CV</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
+
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm text-slate-700 bg-white p-3.5 rounded-lg border border-purple-100">
+                      <div>
+                        <dt className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Role</dt>
+                        <dd className="font-medium text-slate-900">{roleLabel}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Designation</dt>
+                        <dd className="font-medium text-slate-900">{application.designation || (isSupervisor ? 'Research Supervisor' : 'Young Scholar')}</dd>
+                      </div>
+                      {isSupervisor ? (
+                        <div>
+                          <dt className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Affiliation</dt>
+                          <dd className="font-medium text-slate-900">{application.institution || 'ASPIER'}</dd>
+                        </div>
+                      ) : (
+                        <div>
+                          <dt className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Cohort / Batch</dt>
+                          <dd className="font-medium text-slate-900">{application.cohort || '2026'}</dd>
+                        </div>
+                      )}
+                      <div>
+                        <dt className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Email</dt>
+                        <dd className="font-mono text-xs text-slate-800 break-all">{application.email}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Phone</dt>
+                        <dd className="text-slate-800">{application.phone || 'Not provided'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Academic Wing</dt>
+                        <dd className="text-slate-800">{application.wing || application.wingInterest || 'General'}</dd>
+                      </div>
+                      <div className="sm:col-span-2 lg:col-span-3">
+                        <dt className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Education</dt>
+                        <dd className="text-slate-800">{application.education || application.educationalBackground || 'Not provided'}</dd>
+                      </div>
+                      <div className="sm:col-span-2 lg:col-span-3">
+                        <dt className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-1">Research Interests / Topics</dt>
+                        <dd className="flex flex-wrap gap-1.5">
+                          {domainTags.length > 0 ? (
+                            domainTags.map((tag, idx) => (
+                              <span key={`${tag}-${idx}`} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-800 border border-teal-200">
+                                {tag}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-slate-400 italic">None specified</span>
+                          )}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Full Biography / Research Statement</p>
+                      <div className="text-sm text-slate-700 bg-white p-3.5 rounded-lg border border-purple-100 leading-relaxed whitespace-pre-line">
+                        {application.bio || <span className="text-slate-400 italic">No biography provided.</span>}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Submitted Academic &amp; Social Links</p>
+                      {socialLinks.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {socialLinks.map((link) => (
+                            <a
+                              key={link.label}
+                              href={link.url!.startsWith('http') ? link.url! : `https://${link.url!}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-purple-50 text-slate-700 border border-purple-200 text-xs font-semibold no-underline transition"
+                            >
+                              <Globe className="w-3.5 h-3.5 text-purple-700" />
+                              <span>{link.label}</span>
+                              <ExternalLink className="w-3 h-3 text-slate-400" />
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-500 italic">No academic or social links submitted.</p>
+                      )}
+                    </div>
+
+                    {revisionTargetId === application._id && (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                        <label className="text-xs font-semibold text-amber-900 block">
+                          Revision Note for Applicant (Optional)
+                        </label>
+                        <Input
+                          value={revisionNote}
+                          onChange={(e) => setRevisionNote(e.target.value)}
+                          placeholder="e.g., Please upload a clearer 1:1 photo and add your ORCID link..."
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            disabled={revisionBusy}
+                            onClick={() => void handleRequestRevision(application._id)}
+                            className="bg-amber-600 hover:bg-amber-700 text-white text-xs"
+                          >
+                            {revisionBusy ? 'Sending Revision Request…' : 'Confirm Request Revision'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => { setRevisionTargetId(''); setRevisionNote(''); }}
+                            className="text-xs"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* ACTION BUTTONS */}
               <div className="membership-actions flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100">
@@ -463,15 +667,29 @@ export function MembershipApplications() {
                 )}
 
                 {/* Stage 2 Final Approval & Publish Action */}
-                {['final_pending', 'verification_pending'].includes(application.status) && (
-                  <Button
-                    type="button"
-                    className="bg-teal-600 hover:bg-teal-700 text-white"
-                    onClick={() => runAction(application._id, 'publish')}
-                  >
-                    <UserCheck className="w-4 h-4 mr-1.5 inline" />
-                    Final Approve &amp; Publish to Team
-                  </Button>
+                {['final_pending', 'verification_pending', 'stage2_profile_review'].includes(application.status) && (
+                  <>
+                    <Button
+                      type="button"
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
+                      onClick={() => runAction(application._id, 'publish')}
+                    >
+                      <UserCheck className="w-4 h-4 mr-1.5 inline" />
+                      Final Approve &amp; Publish to Team
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="border-amber-300 text-amber-800 hover:bg-amber-50"
+                      onClick={() => {
+                        setRevisionTargetId(application._id);
+                        setRevisionNote('');
+                      }}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-1.5 inline" />
+                      Reject / Request Revision
+                    </Button>
+                  </>
                 )}
 
                 {/* Legacy Signup flow manual action */}
