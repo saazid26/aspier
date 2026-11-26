@@ -148,7 +148,7 @@ export function SocialConnectFooter({
         </div>
 
         {/* Action Icon Buttons */}
-        <div className="max-w-[220px] mx-auto flex flex-wrap items-center justify-center gap-2.5 sm:max-w-none sm:mx-0 sm:gap-3 md:flex-nowrap">
+        <div className="flex flex-nowrap items-center justify-center gap-1.5 sm:gap-3 w-full md:w-auto px-2 sm:px-0">
           {socialLinks.map((item) => {
             const isMail = item.url.startsWith('mailto:');
             return (
@@ -159,7 +159,7 @@ export function SocialConnectFooter({
                 rel={isMail ? undefined : 'noopener noreferrer'}
                 aria-label={item.label}
                 title={item.name}
-                className={`w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-xl flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500/50 ${
+                className={`w-9 h-9 sm:w-11 sm:h-11 shrink-0 rounded-xl flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4 sm:[&>svg]:w-5 sm:[&>svg]:h-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500/50 ${
                   isDark
                     ? 'bg-slate-800/90 text-slate-300 border border-slate-700/80 hover:text-white'
                     : 'bg-white text-slate-700 border border-slate-200/90 shadow-2xs hover:text-white'
