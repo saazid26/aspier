@@ -41,24 +41,21 @@ function formatFooterLabel(startDate?: string, deliveryMode?: string) {
 
 export function Catalog() {
   const { me } = useMe();
-  const isStudentSession = Boolean(me && me.role === 'student');
   const { data: remoteData } = useQuery({
-    queryKey: ['courses', me?._id || 'anon'],
+    queryKey: ['courses'],
     queryFn: async () => (await api.get('/academy/courses')).data.data as Course[],
     initialData: staticCourses as Course[]
   });
   const { data: myEnrollments = [] } = useQuery({
     queryKey: ['my-enrollments-catalog', me?._id],
     queryFn: async () => (await api.get('/academy/my-enrollments')).data.data as any[],
-    enabled: isStudentSession
+    enabled: Boolean(me)
   });
 
   const enrollmentByCourseId = new Map<string, string>();
-  if (isStudentSession) {
-    for (const enr of myEnrollments) {
-      const cid = String(enr?.courseId?._id || enr?.courseId || '');
-      if (cid && enr?.status) enrollmentByCourseId.set(cid, enr.status);
-    }
+  for (const enr of myEnrollments) {
+    const cid = String(enr?.courseId?._id || enr?.courseId || '');
+    if (cid && enr?.status) enrollmentByCourseId.set(cid, enr.status);
   }
 
   const data = remoteData && remoteData.length > 0 ? remoteData : (staticCourses as Course[]);

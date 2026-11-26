@@ -229,15 +229,40 @@ router.get('/research/:slug', async (req, res) => {
   return res.json({ success: true, data: fallback });
 });
 
+async function normalizeSequence(Model: any, docs: any[]) {
+  if (!Array.isArray(docs) || docs.length === 0) return docs;
+  const needsInit = docs.some((d) => !d.order || d.order <= 0);
+  if (!needsInit) return docs;
+  try {
+    let maxOrd = docs.reduce((max, d) => Math.max(max, Number(d.order || 0), Number(d.displayOrder || 0)), 0);
+    for (const d of docs) {
+      if (!d.order || d.order <= 0) {
+        maxOrd += 1;
+        d.order = maxOrd;
+        d.displayOrder = maxOrd;
+        if (d._id && mongoose.Types.ObjectId.isValid(String(d._id))) {
+          await Model.updateOne({ _id: d._id }, { $set: { order: maxOrd, displayOrder: maxOrd } }).catch(() => {});
+        }
+      }
+    }
+    docs.sort((a, b) => (Number(a.order || 0) - Number(b.order || 0)) || (new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()));
+  } catch {}
+  return docs;
+}
+
 router.get('/team', async (_req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       await connectDatabase().catch(() => {});
     }
-    const [founding, supervisors, scholars] = await Promise.all([
+    const [founding, rawSupervisors, rawScholars] = await Promise.all([
       FoundingMember.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).catch(() => getFallbackFoundingMembers()),
       Supervisor.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).catch(() => getFallbackSupervisors()),
       Scholar.find().sort({ order: 1, displayOrder: 1, createdAt: 1 }).catch(() => getFallbackScholars())
+    ]);
+    const [supervisors, scholars] = await Promise.all([
+      normalizeSequence(Supervisor, rawSupervisors),
+      normalizeSequence(Scholar, rawScholars)
     ]);
     return res.json({ success: true, data: { founding, supervisors, scholars } });
   } catch {

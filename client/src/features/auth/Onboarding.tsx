@@ -38,6 +38,11 @@ export function Onboarding() {
     retry: false
   });
 
+  const { data: wingsData = [] } = useQuery({
+    queryKey: ['public-wings'],
+    queryFn: async () => (await api.get('/public/wings')).data.data as Array<{ _id?: string; name: string; slug: string }>
+  });
+
   const applicant = validationData || {};
   const role: 'supervisor' | 'scholar' = applicant.role || (initialRoleParam === 'supervisor' ? 'supervisor' : 'scholar');
   const roleLabel = role === 'supervisor' ? 'Research Supervisor' : 'Young Scholar';
@@ -80,7 +85,24 @@ export function Onboarding() {
           ? (validationData.designation || 'Research Supervisor')
           : 'Young Scholar'
       );
-      setAffiliation(validationData.role === 'supervisor' ? (validationData.institution || 'ASPIER') : '');
+      if (validationData.role === 'supervisor') {
+        const rawInst = String(validationData.institution || '').trim();
+        const rawWing = String(validationData.wing || '').trim().toLowerCase();
+        const matchedWing = wingsData.find(
+          (w) => w.slug?.toLowerCase() === rawWing || w.name?.toLowerCase() === rawWing
+        );
+        if (rawInst.startsWith('ASPIER • ')) {
+          setAffiliation(rawInst);
+        } else if (matchedWing) {
+          setAffiliation(`ASPIER • ${matchedWing.name}`);
+        } else if (wingsData.length > 0) {
+          setAffiliation(`ASPIER • ${wingsData[0].name}`);
+        } else {
+          setAffiliation(rawInst || 'ASPIER');
+        }
+      } else {
+        setAffiliation('');
+      }
       setCohort('2026');
       setEducationalBackground(validationData.education || validationData.educationalBackground || validationData.academicStatus || '');
       setBio(validationData.bio || '');
@@ -88,7 +110,7 @@ export function Onboarding() {
         setTagsInput(validationData.researchDomain || validationData.researchDomains.join(', '));
       }
     }
-  }, [validationData]);
+  }, [validationData, wingsData]);
 
   const handleNameChange = (val: string) => {
     setName(val);
@@ -437,12 +459,22 @@ export function Onboarding() {
                 </label>
                 <label>
                   Affiliation *
-                  <Input
+                  <select
+                    className="select"
                     required
                     value={affiliation}
                     onChange={(e) => setAffiliation(e.target.value)}
-                    placeholder="e.g. ASPIER / University Name"
-                  />
+                  >
+                    <option value="">Select ASPIER Wing Affiliation</option>
+                    {wingsData.map((w) => {
+                      const label = `ASPIER • ${w.name}`;
+                      return (
+                        <option key={w.slug || w.name} value={label}>
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </label>
               </>
             ) : (

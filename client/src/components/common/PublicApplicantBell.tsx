@@ -632,14 +632,22 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
                       <label className="text-[11px] font-semibold text-slate-700 block mb-1">
                         Affiliation <span className="text-rose-500">*</span>
                       </label>
-                      <input
+                      <select
                         required
-                        type="text"
-                        placeholder="e.g. ASPIER / University Name"
                         value={profile.institution}
                         onChange={(e) => setProfile({ ...profile, institution: e.target.value })}
-                        className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
-                      />
+                        className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
+                      >
+                        <option value="">Select ASPIER Wing Affiliation</option>
+                        {wings.map((w) => {
+                          const label = `ASPIER • ${w.name}`;
+                          return (
+                            <option key={w.slug || w.name} value={label}>
+                              {label}
+                            </option>
+                          );
+                        })}
+                      </select>
                     </div>
                   </>
                 ) : (

@@ -14,7 +14,7 @@ import { fastCache } from '../utils/fastCache.js';
 const APPROVED_ENROLLMENT_STATUSES = ['active', 'approved', 'final_approved', 'completed'];
 
 async function getApprovedCourseIdSet(user: any): Promise<Set<string>> {
-  if (!user?._id || user.role !== 'student') return new Set();
+  if (!user?._id) return new Set();
   const enrollments = await Enrollment.find({
     userId: user._id,
     status: { $in: APPROVED_ENROLLMENT_STATUSES }
@@ -22,28 +22,24 @@ async function getApprovedCourseIdSet(user: any): Promise<Set<string>> {
   return new Set(enrollments.map((e: any) => String(e.courseId)));
 }
 
-function sanitizeCoursesForUser(courses: any[], isStudent: boolean, approvedCourseIds: Set<string>) {
+function sanitizeCoursesForUser(courses: any[], isAdmin: boolean, approvedCourseIds: Set<string>) {
   return courses.map((course) => {
     const obj = typeof course.toObject === 'function' ? course.toObject() : { ...course };
-    const isApproved = isStudent && approvedCourseIds.has(String(obj._id));
+    const isApproved = isAdmin || approvedCourseIds.has(String(obj._id));
     if (!isApproved) {
       delete obj.googleClassroomUrl;
-      obj.googleClassroomUrl = null;
-      obj.userEnrollmentStatus = null;
-    } else {
-      obj.userEnrollmentStatus = 'approved';
     }
     return obj;
   });
 }
 
 export async function catalog(req: AuthRequest, res: Response) {
-  const isStudent = Boolean(req.user && req.user.role === 'student');
-  const approvedCourseIds = isStudent ? await getApprovedCourseIdSet(req.user).catch(() => new Set<string>()) : new Set<string>();
+  const isAdmin = Boolean(req.user && ['admin', 'superadmin'].includes(req.user.role));
+  const approvedCourseIds = isAdmin ? new Set<string>() : await getApprovedCourseIdSet(req.user).catch(() => new Set<string>());
 
   const cached = fastCache.get('academy:catalog') as any[] | undefined;
   if (cached) {
-    return res.json({ success: true, data: sanitizeCoursesForUser(cached, isStudent, approvedCourseIds) });
+    return res.json({ success: true, data: sanitizeCoursesForUser(cached, isAdmin, approvedCourseIds) });
   }
 
   try {
@@ -51,13 +47,13 @@ export async function catalog(req: AuthRequest, res: Response) {
       const courses = await Course.find({ status: 'published' }).populate('instructorId', 'name title photo').sort({ createdAt: -1 }).lean().maxTimeMS(2000);
       if (courses && courses.length > 0) {
         fastCache.set('academy:catalog', courses, 60);
-        return res.json({ success: true, data: sanitizeCoursesForUser(courses, isStudent, approvedCourseIds) });
+        return res.json({ success: true, data: sanitizeCoursesForUser(courses, isAdmin, approvedCourseIds) });
       }
     }
   } catch (err) {
     console.warn('[academy/catalog] fallback:', err instanceof Error ? err.message : err);
   }
-  return res.json({ success: true, data: sanitizeCoursesForUser(fallbackCourses, isStudent, approvedCourseIds) });
+  return res.json({ success: true, data: sanitizeCoursesForUser(fallbackCourses, isAdmin, approvedCourseIds) });
 }
 export async function courseDetail(req: AuthRequest, res: Response, next: NextFunction) {
   try {
@@ -66,18 +62,14 @@ export async function courseDetail(req: AuthRequest, res: Response, next: NextFu
     const course = await Course.findOne(query).populate('instructorId');
     if (!course) {
       const fallback = fallbackCourses.find((c) => c._id === id || c.slug === id);
-      if (fallback) {
-        const fbCopy: any = { ...fallback, googleClassroomUrl: null, userEnrollmentStatus: null };
-        return res.json({ success: true, data: fbCopy });
-      }
+      if (fallback) return res.json({ success: true, data: fallback });
       throw new HttpError(404, 'Course not found');
     }
     const isAdmin = Boolean(req.user && ['admin', 'superadmin'].includes(req.user.role));
-    const isStudent = Boolean(req.user && req.user.role === 'student');
     if (course.status !== 'published' && !isAdmin) throw new HttpError(404, 'Course not found');
-    let active = false;
+    let active = isAdmin;
     let enrollmentStatus: string | null = null;
-    if (isStudent && req.user?._id) {
+    if (req.user) {
       const enr = await Enrollment.findOne({ userId: req.user._id, courseId: course._id }).lean();
       if (enr) {
         enrollmentStatus = enr.status;
@@ -87,40 +79,34 @@ export async function courseDetail(req: AuthRequest, res: Response, next: NextFu
         if (pendingPay) enrollmentStatus = 'pending';
       }
     }
+    if (isAdmin) active = true;
     const safe = course.toObject() as any;
     if (course.classes && course.classes.length > 0) {
       safe.classes = course.classes;
     }
     if (!active) {
       delete safe.googleClassroomUrl;
-      safe.googleClassroomUrl = null;
-      if (!isAdmin) {
-        safe.modules = (safe.modules || []).map((module: any) => ({
-          ...module,
-          lessons: (module.lessons || []).map((lesson: any) => ({
-            ...lesson,
-            youtubeVideoId: lesson.isFreePreview ? lesson.youtubeVideoId : undefined
-          }))
-        }));
-      }
+      safe.modules = (safe.modules || []).map((module: any) => ({
+        ...module,
+        lessons: (module.lessons || []).map((lesson: any) => ({
+          ...lesson,
+          youtubeVideoId: lesson.isFreePreview ? lesson.youtubeVideoId : undefined
+        }))
+      }));
     }
-    safe.enrollmentStatus = enrollmentStatus;
-    safe.userEnrollmentStatus = active ? 'approved' : enrollmentStatus;
+    if (enrollmentStatus) safe.enrollmentStatus = enrollmentStatus;
     res.json({ success: true, data: safe });
   } catch (error) {
     const id = typeof req.params.id === 'string' ? req.params.id : '';
     const fallback = fallbackCourses.find((c) => c._id === id || c.slug === id);
-    if (fallback) {
-      const fbCopy: any = { ...fallback, googleClassroomUrl: null, userEnrollmentStatus: null };
-      return res.json({ success: true, data: fbCopy });
-    }
+    if (fallback) return res.json({ success: true, data: fallback });
     next(error);
   }
 }
 
 export async function myEnrollments(req: AuthRequest, res: Response) {
   try {
-    if (!req.user?._id || req.user.role !== 'student') return res.json({ success: true, data: [] });
+    if (!req.user?._id) return res.json({ success: true, data: [] });
     const [enrollments, pendingPayments] = await Promise.all([
       Enrollment.find({ userId: req.user._id })
         .populate('courseId', 'title slug thumbnail bannerUrl mode deliveryMode description modules classes instructorId level price status googleClassroomUrl')
