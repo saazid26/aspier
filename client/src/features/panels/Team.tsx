@@ -168,9 +168,9 @@ export function Team() {
     website: founder.founderWebsite
   };
 
-  const teamTitle = 'Find a Research Supervisor & Academic Mentor in Bangladesh — PhD & MSc Researchers | ASPIER';
+  const teamTitle = 'Find a Research Supervisor in Bangladesh — Collaborate With PhD & MSc Researchers | ASPIER';
   const teamDescription =
-    'Connect with experienced research supervisors and young scholars in Bangladesh working on climate change, hydrology, biotechnology, geospatial intelligence, and engineering.';
+    'Connect with experienced PhD and MSc research supervisors and young scholars in Bangladesh for thesis guidance, interdisciplinary collaboration, and peer-reviewed journal publications.';
   usePageSEO({
     title: teamTitle,
     description: teamDescription,
@@ -183,7 +183,7 @@ export function Team() {
         title={teamTitle}
         exact
         description={teamDescription}
-        keywords="find research supervisor Bangladesh, PhD research mentor Bangladesh, MSc research mentor, undergraduate research supervision, climate change hydrology biotechnology researchers"
+        keywords="find a research supervisor in Bangladesh, collaborate with PhD researchers on scientific publications, research training program for study abroad applicants"
         canonicalPath="/team"
         breadcrumbs={[
           { name: 'Home', path: '/' },

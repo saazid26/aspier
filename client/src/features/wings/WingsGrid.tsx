@@ -18,9 +18,9 @@ type Wing = {
 };
 
 function WingsPageSEO() {
-  const wingsTitle = 'Interdisciplinary Research Groups in Climate, Hydrology, AI, Biotech & Engineering | ASPIER';
+  const wingsTitle = 'Interdisciplinary Research Groups in Climate, Hydrology, GIS, AI & Biotechnology in Bangladesh | ASPIER';
   const wingsDescription =
-    'Explore 10 active research divisions covering Hydrology & Atmospheric Physics, Biotechnology, Aeronautical & Spatial Engineering, Geospatial AI, and Environmental Sustainability.';
+    'Explore 10 specialized research wings spanning climate change and hydrology, geospatial intelligence (GIS & remote sensing), biotechnology, aeronautical engineering, and applied AI.';
   usePageSEO({
     title: wingsTitle,
     description: wingsDescription,
@@ -31,7 +31,7 @@ function WingsPageSEO() {
       title={wingsTitle}
       exact
       description={wingsDescription}
-      keywords="interdisciplinary research groups Bangladesh, hydrology atmospheric physics research, biotechnology research lab, geospatial AI remote sensing, aeronautical spatial engineering research"
+      keywords="climate change and hydrology research organization in Bangladesh, geospatial intelligence GIS and remote sensing research group, biotechnology environmental science and engineering research platform"
       canonicalPath="/wings"
       breadcrumbs={[
         { name: 'Home', path: '/' },

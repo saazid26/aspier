@@ -66,9 +66,9 @@ export function Catalog() {
   }
 
   const data = remoteData && remoteData.length > 0 ? remoteData : (staticCourses as Course[]);
-  const academyTitle = 'Online Research Paper Writing & AI Productivity Courses in Bangladesh | ASPIER Academy';
+  const academyTitle = 'Online Research Paper Writing, Methodology & AI Productivity Courses in Bangladesh | ASPIER Academy';
   const academyDescription =
-    'Join practical online live and recorded training courses in academic research paper writing, literature review, data analysis, and AI productivity tools for students and professionals.';
+    'Step-by-step online live and recorded courses in academic research methodology, literature review, Scopus journal publication, and AI workflow automation for students, researchers, and professionals.';
   usePageSEO({
     title: academyTitle,
     description: academyDescription,
@@ -81,7 +81,7 @@ export function Catalog() {
         title={academyTitle}
         exact
         description={academyDescription}
-        keywords="research paper writing course online, research methodology course Bangladesh, higher study research course, AI tools course for researchers, ChatGPT and AI productivity masterclass"
+        keywords="academic research methodology course online, how to write and publish a research paper for beginners, AI tools training for students researchers and professionals, thesis and publication guidance for undergraduate students"
         canonicalPath="/academy"
         coursesList={data.map((c) => ({
           name: c.title,

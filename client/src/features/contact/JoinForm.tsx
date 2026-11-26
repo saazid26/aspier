@@ -13,9 +13,9 @@ type ApplicationReceipt = { applicationId: string; accessCode: string };
 
 export function JoinForm() {
   usePageSEO({
-    title: 'Undergraduate & Graduate Research Mentorship Program — Apply as Young Scholar or Supervisor',
+    title: 'Join an Interdisciplinary Research Team Online — Young Scholar & Research Supervisor Mentorship Program',
     description:
-      'Apply online to join an interdisciplinary research team as a Young Scholar or Research Supervisor and collaborate on peer-reviewed scientific publications.',
+      'Apply online for remote young scholar research opportunities or join as a research supervisor to collaborate on peer-reviewed scientific publications.',
     path: '/join'
   });
   const { data: remoteWings = [] } = useQuery({
@@ -120,10 +120,10 @@ export function JoinForm() {
 
   return <main className="container section" style={{ maxWidth: 720 }}>
     <SEO
-      title="Undergraduate & Graduate Research Mentorship Program — Apply as Young Scholar or Supervisor"
+      title="Join an Interdisciplinary Research Team Online — Young Scholar & Research Supervisor Mentorship Program"
       exact
-      description="Apply online to join an interdisciplinary research team as a Young Scholar or Research Supervisor and collaborate on peer-reviewed scientific publications."
-      keywords="undergraduate research mentorship, graduate research fellowship Bangladesh, apply as young scholar, apply as research supervisor, peer-reviewed publication collaboration"
+      description="Apply online for remote young scholar research opportunities or join as a research supervisor to collaborate on peer-reviewed scientific publications."
+      keywords="remote research assistant and young scholar opportunity, join an interdisciplinary research team online, research mentorship program for undergraduate and graduate students"
       canonicalPath="/join"
       breadcrumbs={[
         { name: 'Home', path: '/' },

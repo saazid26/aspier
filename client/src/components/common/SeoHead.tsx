@@ -37,11 +37,11 @@ export type SeoHeadProps = {
   googleSiteVerification?: string;
 };
 
-const DEFAULT_TITLE = 'Research Paper Writing Courses, AI Training & Research Mentorship in Bangladesh | ASPIER';
+const DEFAULT_TITLE = 'Research Paper Writing Courses, AI Productivity Training & Research Mentorship in Bangladesh | ASPIER';
 const DEFAULT_DESCRIPTION =
-  'Learn how to write and publish peer-reviewed research papers for higher studies abroad, master AI productivity tools, and collaborate with PhD research supervisors in Bangladesh.';
+  'Build a strong research profile for higher studies abroad: learn how to write and publish a research paper in Scopus journals, master AI productivity tools, and collaborate with PhD research supervisors in Bangladesh.';
 const DEFAULT_KEYWORDS =
-  'research paper writing course in Bangladesh, how to write and publish a research paper, higher study research training, AI productivity masterclass online, find research supervisor Bangladesh, undergraduate research mentorship, Scopus journal publication course';
+  'research paper writing course in Bangladesh, research experience for higher studies abroad from Bangladesh, AI productivity course in Bangladesh, find a research supervisor in Bangladesh, research mentorship program for undergraduate and graduate students';
 
 const DEFAULT_IMAGE = 'https://aspierglobal.vercel.app/aspier-logo.png';
 const BASE_URL =
