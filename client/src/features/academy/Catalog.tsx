@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { formatCourseFee } from '../../lib/format';
 import { SEO } from '../../components/common/SEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { CoverMedia } from '../../components/common/CoverMedia';
@@ -140,7 +141,7 @@ export function Catalog() {
                       ) : (
                         <p className="course-start-date">{footerLabel}</p>
                       )}
-                      <strong className="course-price">৳{course.price} BDT</strong>
+                      <strong className="course-price">৳{formatCourseFee((course as any).fee ?? course.price)} BDT</strong>
                     </>
                   );
                 })()}

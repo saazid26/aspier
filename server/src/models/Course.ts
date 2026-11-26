@@ -68,7 +68,8 @@ const schema = new Schema({
   wingId: { type: Schema.Types.ObjectId, ref: 'Wing' },
   instructorId: { type: Schema.Types.ObjectId, ref: 'Instructor' },
   instructors: { type: [instructorSubSchema], default: [] },
-  price: { type: Number, required: true, default: 2000 },
+  price: { type: Number, required: true, default: 0 },
+  fee: { type: Number },
   thumbnail: String,
   bannerUrl: String,
   googleClassroomUrl: { type: String, trim: true, default: '' },
@@ -88,6 +89,9 @@ schema.pre('save', function (next) {
   if (!this.bannerUrl && this.thumbnail) this.bannerUrl = this.thumbnail;
   if (!this.deliveryMode && this.mode) this.deliveryMode = this.mode;
   if (!this.mode && this.deliveryMode) this.mode = this.deliveryMode;
+  if (this.fee !== undefined && this.fee !== null && (this.price === undefined || this.price === null)) {
+    this.price = this.fee;
+  }
   if (this.deliveryMode === 'Online and Recorded' || this.mode === 'Online and Recorded') {
     this.startDate = '';
   }

@@ -32,6 +32,7 @@ router.post('/', async (req: any, res, next) => {
       userId: req.user._id,
       courseId: course._id,
       status: 'active',
+      amount: Number((course as any).fee ?? course.price ?? 0),
       enrolledAt: new Date(),
       progressPercent: 0,
       completedLessonIds: []

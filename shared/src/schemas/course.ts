@@ -7,6 +7,10 @@ export function normalizeCourseDeliveryMode(value?: string): CourseDeliveryMode 
   if (value === 'In-Person Workshop' || value === 'Offline' || value === 'Offline (Physical)') return 'In-Person Workshop';
   return 'Online and Recorded';
 }
+export function formatCourseFee(fee: unknown): string {
+  const numeric = Number(fee ?? 0);
+  return (Number.isFinite(numeric) && numeric >= 0 ? numeric : 0).toLocaleString('en-US');
+}
 export const courseInstructorSchema = z.object({
   name: z.string().min(1),
   designationOrDetails: z.string().optional(),
@@ -26,7 +30,8 @@ export const courseSchema = z.object({
   wingId: z.string().optional(),
   instructorId: z.string().optional(),
   instructors: z.array(courseInstructorSchema).optional(),
-  price: z.number().nonnegative(),
+  price: z.number().nonnegative().optional(),
+  fee: z.number().nonnegative().optional(),
   thumbnail: z.string().optional(),
   googleClassroomUrl: z.string().trim().optional().or(z.literal('')),
   duration: z.string().trim().optional(),

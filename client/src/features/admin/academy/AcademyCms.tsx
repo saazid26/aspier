@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Sparkles, Download, Plus, CheckCircle, Trash2, Edit2, Users, Award, ShieldCheck, Clock, ExternalLink, RefreshCw, Upload, Eye, Copy } from 'lucide-react';
 import { api } from '../../../lib/api';
+import { formatCourseFee } from '../../../lib/format';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
@@ -626,7 +627,7 @@ export function AcademyCms() {
                   duration: '8 weeks',
                   mode: 'Online and Live',
                   startDate: new Date().toISOString().split('T')[0],
-                  price: 2500,
+                  price: 0,
                   level: 'beginner',
                   status: 'published',
                   thumbnail: ''
@@ -662,7 +663,7 @@ export function AcademyCms() {
                   duration: '8 weeks',
                   mode: 'Online and Live',
                   startDate: new Date().toISOString().split('T')[0],
-                  price: 2500,
+                  price: 0,
                   level: 'beginner',
                   status: 'published',
                   thumbnail: ''
@@ -719,7 +720,7 @@ export function AcademyCms() {
                     </Badge>
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    <strong style={{ color: '#0f766e' }}>৳{course.price || 0} BDT</strong>
+                    <strong style={{ color: '#0f766e' }}>৳{formatCourseFee(course.fee ?? course.price)} BDT</strong>
                   </td>
                   <td>
                     <Badge variant={course.status === 'published' ? 'green' : 'amber'}>

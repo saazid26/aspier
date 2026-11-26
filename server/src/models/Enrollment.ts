@@ -4,6 +4,7 @@ const schema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   courseId: { type: Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
   status: { type: String, enum: ['pending', 'stage1_verified', 'final_approved', 'active', 'rejected', 'expired'], default: 'pending', index: true },
+  amount: { type: Number, default: 0 },
   completedLessonIds: [{ type: Schema.Types.ObjectId }],
   progressPercent: { type: Number, default: 0 },
   certificateStatus: { type: String, enum: ['not_claimed', 'claimed', 'issued'], default: 'not_claimed', index: true },

@@ -34,6 +34,9 @@ function sanitizeCoursesForUser(courses: any[], isAdmin: boolean, approvedCourse
     const normalized = normalizeModeValue(obj.deliveryMode || obj.mode);
     obj.mode = normalized;
     obj.deliveryMode = normalized;
+    const resolvedFee = Number(obj.fee ?? obj.price ?? 0);
+    obj.price = resolvedFee;
+    obj.fee = resolvedFee;
     if (normalized === 'Online and Recorded') {
       obj.startDate = '';
     }
@@ -96,6 +99,9 @@ export async function courseDetail(req: AuthRequest, res: Response, next: NextFu
     const normalizedMode = normalizeModeValue(safe.deliveryMode || safe.mode);
     safe.mode = normalizedMode;
     safe.deliveryMode = normalizedMode;
+    const resolvedFee = Number(safe.fee ?? safe.price ?? 0);
+    safe.price = resolvedFee;
+    safe.fee = resolvedFee;
     if (normalizedMode === 'Online and Recorded') {
       safe.startDate = '';
     }

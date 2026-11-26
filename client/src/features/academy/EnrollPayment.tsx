@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { formatCourseFee } from '../../lib/format';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useMe } from '../auth/useMe';
@@ -43,11 +44,13 @@ export function EnrollPayment() {
   const isApproved = ['active', 'approved', 'final_approved', 'completed'].includes(enrStatus);
   const isPending = enrStatus === 'pending';
 
+  const resolvedCourseFee = course?.fee ?? course?.price;
+
   useEffect(() => {
-    if (course?.price && !form.amount) {
-      setForm((prev) => ({ ...prev, amount: String(course.price) }));
+    if (resolvedCourseFee !== undefined && resolvedCourseFee !== null && !form.amount) {
+      setForm((prev) => ({ ...prev, amount: String(resolvedCourseFee) }));
     }
-  }, [course]);
+  }, [resolvedCourseFee]);
 
   if (meLoading || courseLoading) {
     return <main className="container section" style={{ maxWidth: 680 }}><p role="status">Loading enrollment…</p></main>;
@@ -121,7 +124,7 @@ export function EnrollPayment() {
       <span className="eyebrow">ASPIER Academy · Course Enrollment</span>
       <h1>Enroll in {course?.title || 'Course'}</h1>
       <div className="card" style={{ marginBottom: 20 }}>
-        <p><strong>Course Fee:</strong> ৳{course?.price ?? '—'} BDT</p>
+        <p><strong>Course Fee:</strong> ৳{resolvedCourseFee !== undefined && resolvedCourseFee !== null ? formatCourseFee(resolvedCourseFee) : '—'} BDT</p>
         <p><strong>bKash:</strong> {settings?.bkashNumber || '01603012448'}</p>
         <p><strong>Nagad:</strong> {settings?.nagadNumber || '01603012448'}</p>
         <p className="muted">{settings?.paymentInstructions || 'Send the course fee by bKash or Nagad, then submit your transaction ID for verification.'}</p>
@@ -176,7 +179,7 @@ export function EnrollPayment() {
           <Input
             type="number"
             required
-            readOnly={Boolean(course?.price)}
+            readOnly={resolvedCourseFee !== undefined && resolvedCourseFee !== null}
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
           />

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { PlayCircle, Clock, CheckCircle2, ShieldCheck, Users, ExternalLink, AlertCircle, BookOpen, Linkedin, Globe } from 'lucide-react';
 import { api } from '../../lib/api';
+import { formatCourseFee } from '../../lib/format';
 import { SEO } from '../../components/common/SEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { CoverMedia } from '../../components/common/CoverMedia';
@@ -108,8 +109,9 @@ export function CourseDetail() {
     );
   }
 
-  const coursePrice = typeof data.price === 'number' ? data.price : 2000;
-  const formattedPrice = `৳${coursePrice.toLocaleString()} BDT`;
+  const coursePrice = Number((data as any).fee ?? data.price ?? 0);
+  const formattedFee = formatCourseFee(coursePrice);
+  const formattedPrice = `৳${formattedFee} BDT`;
 
   return (
     <main className="container section">
@@ -300,7 +302,7 @@ export function CourseDetail() {
               <strong style={{ fontSize: '0.95rem', color: '#1e40af' }}>New Enrolling Students</strong>
             </div>
             <p style={{ margin: 0, fontSize: '0.875rem', color: '#334155', lineHeight: 1.5 }}>
-              Enroll for <strong>2,000 BDT</strong> via your student account and bKash/Nagad payment. Once verified, private YouTube playback permission is granted directly to your registered Gmail address.
+              Enroll for <strong>{formattedFee} BDT</strong> via your student account and bKash/Nagad payment. Once verified, class access permission is granted directly to your registered Gmail address.
             </p>
           </div>
         </div>
@@ -421,7 +423,7 @@ export function CourseDetail() {
         <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: 8, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
           <AlertCircle size={16} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 2 }} />
           <p style={{ margin: 0, fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.4 }}>
-            <strong>Private Playback Note:</strong> If YouTube displays <em>"Video unavailable (This video is private)"</em>, ensure you are signed into YouTube with the Google/Gmail account registered with ASPIER. New students: enroll below (2,000 BDT) to receive access permission on your registered email.
+            <strong>Private Playback Note:</strong> If YouTube displays <em>"Video unavailable (This video is private)"</em>, ensure you are signed into YouTube with the Google/Gmail account registered with ASPIER. New students: enroll below ({formattedFee} BDT) to receive access permission on your registered email.
           </p>
         </div>
       </section>
