@@ -14,7 +14,7 @@ import Course from '../models/Course.js';
 import { env } from '../config/env.js';
 import { validate } from '../middleware/validate.js';
 import { getSettings } from '../controllers/settings.controller.js';
-import { activateMemberAccount, applicantLoginWithTwoFactor, markMembershipNotificationRead, membershipPortal, requestMembershipAccessCode, submitApplicantSignup, submitInitialApplication, submitMembershipPayment, submitMembershipProfile, uploadMembershipPhoto } from '../controllers/membership.controller.js';
+import { activateMemberAccount, applicantLoginWithTwoFactor, markMembershipNotificationRead, membershipPortal, requestMembershipAccessCode, submitApplicantSignup, submitInitialApplication, submitMembershipPayment, submitMembershipProfile, uploadMembershipPhoto, uploadApplicationCv } from '../controllers/membership.controller.js';
 import { notifyAdmins } from '../services/notification.service.js';
 import { authLimiter, slowAuth } from '../middleware/rateLimit.js';
 import { submitResearchApplication, lookupResearchApplication, submitResearchPayment, downloadResearchApplicationCv } from '../controllers/researchApplication.controller.js';
@@ -447,6 +447,24 @@ router.post('/contact', validate(contactSchema), async (req, res) => {
   }
 });
 
+const cvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    const allowedMimes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    const hasAllowedExt = /\.(pdf|doc|docx)$/i.test(file.originalname || '');
+    if (allowedMimes.includes(file.mimetype) || hasAllowedExt) {
+      callback(null, true);
+    } else {
+      callback(new Error('Only PDF, DOC, or DOCX files are permitted for CV uploads'));
+    }
+  }
+});
+router.post('/join/cv', cvUpload.single('file'), uploadApplicationCv);
 router.post('/join', submitInitialApplication);
 router.post('/membership/signup', authLimiter, slowAuth, submitApplicantSignup);
 router.post('/membership/applicant-login', authLimiter, slowAuth, applicantLoginWithTwoFactor);

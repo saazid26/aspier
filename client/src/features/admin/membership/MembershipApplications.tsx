@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Send, Copy, Check, ExternalLink, ShieldCheck, Clock, UserCheck, Trash2 } from 'lucide-react';
+import { Send, Copy, Check, ExternalLink, ShieldCheck, Clock, UserCheck, Trash2, FileText, Download } from 'lucide-react';
 import { api, getApiErrorMessage } from '../../../lib/api';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
@@ -39,6 +39,8 @@ type Application = {
   onboardingTokenUsed?: boolean;
   publicApplicationId?: string;
   secretAccessCode?: string;
+  cvUrl?: string;
+  cvFileName?: string;
 };
 
 type OnboardingModalData = {
@@ -282,6 +284,39 @@ export function MembershipApplications() {
                   <p className="md:col-span-2"><strong>Research Domain:</strong> {application.researchDomain || application.researchDomains?.join(', ')}</p>
                 )}
               </div>
+
+              {application.cvUrl && (
+                <div className="mb-4 p-3 bg-teal-50/60 border border-teal-200 rounded-lg flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <FileText className="w-4 h-4 text-teal-700 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-teal-800 block">Curriculum Vitae (CV)</span>
+                      <span className="text-sm font-medium text-slate-800 truncate block">{application.cvFileName || 'Applicant CV Document'}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a
+                      href={application.cvUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold no-underline transition shadow-2xs"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>View / Open CV</span>
+                    </a>
+                    <a
+                      href={application.cvUrl}
+                      download={application.cvFileName || 'applicant-cv'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold no-underline transition"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download</span>
+                    </a>
+                  </div>
+                </div>
+              )}
 
               {application.statement && (
                 <div className="mb-4">

@@ -49,6 +49,8 @@ const schema = new Schema({
   bio: String,
   researchDomain: { type: String, trim: true },
   researchDomains: { type: [String], default: [] },
+  cvUrl: { type: String, trim: true, default: '' },
+  cvFileName: { type: String, trim: true, default: '' },
   photo: String,
   paymentMethod: { type: String, enum: ['bKash', 'Nagad'] },
   trxId: String,

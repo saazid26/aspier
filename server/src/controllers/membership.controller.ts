@@ -14,7 +14,7 @@ import { recordAudit } from '../services/audit.service.js';
 import { HttpError } from '../middleware/error.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { sha256 } from '../utils/crypto.js';
-import { saveMedia } from '../services/media.service.js';
+import { saveMedia, uploadDocumentToCloudinary } from '../services/media.service.js';
 import MediaAsset from '../models/MediaAsset.js';
 import { slugify } from '../utils/slug.js';
 import { decrypt, encrypt } from '../utils/crypto.js';
@@ -49,6 +49,8 @@ const initialSchema = z.preprocess((value) => {
   role: z.enum(['supervisor', 'youngScholar']),
   education: z.string().trim().min(2).max(1000).optional(),
   researchDomain: z.string().trim().min(1).max(1000).optional(),
+  cvUrl: z.string().trim().min(1, 'Curriculum Vitae (CV) attachment is required').max(2000),
+  cvFileName: z.string().trim().max(300).optional().default(''),
   statement: z.string().trim().max(3000).optional()
 }));
 
@@ -226,6 +228,29 @@ export async function applicantLoginWithTwoFactor(req: Request, res: Response, n
   }
 }
 
+export async function uploadApplicationCv(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.file) {
+      throw new HttpError(400, 'Curriculum Vitae (CV) file is required');
+    }
+    const uploaded = await uploadDocumentToCloudinary(req.file.buffer, {
+      folder: 'aspier/cv',
+      filename: req.file.originalname,
+      mimeType: req.file.mimetype
+    });
+    res.status(201).json({
+      success: true,
+      data: {
+        url: uploaded.url,
+        secure_url: uploaded.url,
+        original_filename: uploaded.originalFilename
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function submitInitialApplication(req: Request, res: Response, next: NextFunction) {
   try {
     const data = parseBody(initialSchema, req.body);
@@ -252,6 +277,8 @@ export async function submitInitialApplication(req: Request, res: Response, next
           educationalBackground: cleanEdu,
           researchDomain: rawDomain,
           researchDomains: domainArray,
+          cvUrl: data.cvUrl,
+          cvFileName: data.cvFileName || '',
           accessCodeHash: sha256(accessCode)
         });
       } catch (dbErr) {
@@ -275,6 +302,8 @@ export async function submitInitialApplication(req: Request, res: Response, next
         educationalBackground: cleanEdu,
         researchDomain: rawDomain,
         researchDomains: domainArray,
+        cvUrl: data.cvUrl,
+        cvFileName: data.cvFileName || '',
         statement: data.statement,
         accessCodeHash: sha256(accessCode),
         status: 'initial_pending',

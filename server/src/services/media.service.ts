@@ -84,6 +84,34 @@ export async function uploadToCloudinary(
 }
 
 /**
+ * Uploads a document (PDF, DOC, DOCX) directly to Cloudinary using resource_type: 'auto'
+ * so PDFs open directly in browser tabs and Word documents download cleanly.
+ */
+export async function uploadDocumentToCloudinary(
+  buffer: Buffer,
+  options: { folder?: string; filename?: string; mimeType?: string } = {}
+): Promise<{ url: string; publicId: string; originalFilename: string }> {
+  const folder = options.folder || 'aspier/cv';
+  const safeName = (options.filename || `cv-${Date.now()}.pdf`).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const mime = options.mimeType || 'application/pdf';
+  const dataUri = `data:${mime};base64,${buffer.toString('base64')}`;
+
+  const uploaded = await cloudinary.uploader.upload(dataUri, {
+    resource_type: 'auto',
+    folder,
+    public_id: `${Date.now()}-${safeName}`,
+    use_filename: true,
+    unique_filename: true
+  });
+
+  return {
+    url: uploaded.secure_url,
+    publicId: uploaded.public_id,
+    originalFilename: options.filename || uploaded.original_filename || safeName
+  };
+}
+
+/**
  * Intercepts any incoming image string (e.g. in Wing, Team, Research, News)
  * and if it is Base64 data or a /media/:id route, automatically resolves/uploads to Cloudinary and returns the secure URL.
  */
