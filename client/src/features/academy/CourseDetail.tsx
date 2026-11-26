@@ -1,14 +1,26 @@
 import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { PlayCircle, Clock, CheckCircle2, ShieldCheck, Users, ExternalLink, AlertCircle, BookOpen } from 'lucide-react';
+import { PlayCircle, Clock, CheckCircle2, ShieldCheck, Users, ExternalLink, AlertCircle, BookOpen, Linkedin, Globe } from 'lucide-react';
 import { api } from '../../lib/api';
 import { SEO } from '../../components/common/SEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { CoverMedia } from '../../components/common/CoverMedia';
+import { ResearchGateIcon, GoogleScholarIcon, OrcidIcon } from '../../components/common/AcademicSocialLinks';
 import { useMe } from '../auth/useMe';
 import { staticCourses } from '../../lib/staticData';
 import { RESEARCH_PAPER_WRITING_CLASSES, CourseClassItem } from './researchCourseCurriculum';
+
+function normalizeProfileUrl(url?: string, isOrcid = false): string {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (!trimmed || trimmed === 'undefined' || trimmed === 'null' || trimmed === '#') return '';
+  if (isOrcid && /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/i.test(trimmed)) {
+    return `https://orcid.org/${trimmed}`;
+  }
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
 
 export function CourseDetail() {
   const { id } = useParams();
@@ -599,6 +611,56 @@ export function CourseDetail() {
                         dangerouslySetInnerHTML={{ __html: ins.bio }}
                       />
                     )}
+                    {(() => {
+                      const links = [
+                        { key: 'researchGate', label: 'ResearchGate', href: normalizeProfileUrl(ins.researchGateUrl), icon: <ResearchGateIcon size={14} />, color: '#00ccbb', bg: '#f0fdfa', border: '#99f6e4' },
+                        { key: 'googleScholar', label: 'Google Scholar', href: normalizeProfileUrl(ins.googleScholarUrl), icon: <GoogleScholarIcon size={14} />, color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+                        { key: 'linkedIn', label: 'LinkedIn', href: normalizeProfileUrl(ins.linkedInUrl), icon: <Linkedin size={14} />, color: '#0a66c2', bg: '#eff6ff', border: '#bfdbfe' },
+                        { key: 'orcid', label: 'ORCID', href: normalizeProfileUrl(ins.orcidUrl, true), icon: <OrcidIcon size={14} />, color: '#4d7c0f', bg: '#f7fee7', border: '#d9f99d' },
+                        { key: 'website', label: 'Website', href: normalizeProfileUrl(ins.websiteUrl), icon: <Globe size={14} />, color: '#0f766e', bg: '#f0fdfa', border: '#99f6e4' }
+                      ].filter((item) => Boolean(item.href));
+
+                      if (links.length === 0) return null;
+
+                      return (
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 8,
+                            marginTop: 12
+                          }}
+                          role="group"
+                          aria-label={`${ins.name} profile links`}
+                        >
+                          {links.map((item) => (
+                            <a
+                              key={item.key}
+                              href={item.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '5px 11px',
+                                borderRadius: 999,
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                                color: item.color,
+                                background: item.bg,
+                                border: `1px solid ${item.border}`,
+                                textDecoration: 'none',
+                                transition: 'opacity 0.15s ease'
+                              }}
+                            >
+                              {item.icon}
+                              <span>{item.label}</span>
+                            </a>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}

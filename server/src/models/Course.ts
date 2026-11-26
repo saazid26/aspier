@@ -26,7 +26,12 @@ const instructorSubSchema = new Schema({
   name: { type: String, required: true },
   designationOrDetails: String,
   photoUrl: String,
-  bio: String
+  bio: String,
+  researchGateUrl: { type: String, trim: true, default: '' },
+  googleScholarUrl: { type: String, trim: true, default: '' },
+  linkedInUrl: { type: String, trim: true, default: '' },
+  orcidUrl: { type: String, trim: true, default: '' },
+  websiteUrl: { type: String, trim: true, default: '' }
 }, { _id: true });
 
 const deliveryModeSetter = (value: unknown) => {

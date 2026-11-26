@@ -1604,7 +1604,17 @@ export function AcademyCms() {
                       ...editingCourse,
                       instructors: [
                         ...current,
-                        { name: '', designationOrDetails: 'Course Instructor & Research Mentor', photoUrl: '', bio: '' }
+                        {
+                          name: '',
+                          designationOrDetails: 'Course Instructor & Research Mentor',
+                          photoUrl: '',
+                          bio: '',
+                          researchGateUrl: '',
+                          googleScholarUrl: '',
+                          linkedInUrl: '',
+                          orcidUrl: '',
+                          websiteUrl: ''
+                        }
                       ]
                     });
                   }}
@@ -1691,6 +1701,68 @@ export function AcademyCms() {
                           helperText="Upload instructor photo (saved to Cloudinary aspier/academy/instructors)"
                           maxSizeMB={2}
                         />
+                      </div>
+
+                      <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #e2e8f0' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', display: 'block', marginBottom: 8 }}>
+                          Academic & Social Profile Links (Optional — only filled links appear on the website)
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                          {[
+                            { key: 'researchGateUrl', label: 'ResearchGate URL', placeholder: 'https://www.researchgate.net/profile/...' },
+                            { key: 'googleScholarUrl', label: 'Google Scholar URL', placeholder: 'https://scholar.google.com/citations?user=...' },
+                            { key: 'linkedInUrl', label: 'LinkedIn URL', placeholder: 'https://www.linkedin.com/in/...' },
+                            { key: 'orcidUrl', label: 'ORCID ID / Link', placeholder: 'https://orcid.org/0000-0000-0000-0000' },
+                            { key: 'websiteUrl', label: 'Personal Website URL', placeholder: 'https://...' }
+                          ].map((field) => {
+                            const val = ins[field.key] || '';
+                            return (
+                              <div key={field.key}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                                  {field.label}
+                                </label>
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                  <Input
+                                    type="text"
+                                    placeholder={field.placeholder}
+                                    value={val}
+                                    style={{ paddingRight: val ? 28 : undefined }}
+                                    onChange={(e) => {
+                                      const current = [...(editingCourse.instructors || [])];
+                                      current[iIdx] = { ...current[iIdx], [field.key]: e.target.value };
+                                      setEditingCourse({ ...editingCourse, instructors: current });
+                                    }}
+                                  />
+                                  {val && (
+                                    <button
+                                      type="button"
+                                      title={`Clear ${field.label}`}
+                                      aria-label={`Clear ${field.label}`}
+                                      onClick={() => {
+                                        const current = [...(editingCourse.instructors || [])];
+                                        current[iIdx] = { ...current[iIdx], [field.key]: '' };
+                                        setEditingCourse({ ...editingCourse, instructors: current });
+                                      }}
+                                      style={{
+                                        position: 'absolute',
+                                        right: 8,
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        color: '#64748b',
+                                        fontSize: '0.95rem',
+                                        lineHeight: 1,
+                                        padding: '2px 4px'
+                                      }}
+                                    >
+                                      ×
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   ))}
