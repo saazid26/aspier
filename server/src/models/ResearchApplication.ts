@@ -32,6 +32,7 @@ const schema = new Schema({
   paymentSenderPhone: { type: String, trim: true },
   trxId: { type: String, trim: true },
   paymentAmount: { type: Number, default: 1000 },
+  paymentStatus: { type: String, enum: ['unpaid', 'submitted', 'verified'], default: 'unpaid' },
   whatsAppGroupLink: { type: String, trim: true, default: '' },
   reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   reviewedAt: Date

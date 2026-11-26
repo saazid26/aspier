@@ -57,6 +57,7 @@ const schema = new Schema({
   nagadNumber: { type: String, default: '01603012448' },
   membershipFee: { type: Number, default: 0, min: 0 },
   paymentInstructions: String,
+  researchMateWhatsappLink: { type: String, trim: true, default: '' },
   seoTitle: String,
   seoDescription: String
 }, { timestamps: true, strict: false });

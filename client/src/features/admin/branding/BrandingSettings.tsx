@@ -266,6 +266,23 @@ export function BrandingSettings() {
           </label>
         </div>
 
+        {/* ResearchMate Onboarding & Private WhatsApp Group */}
+        <div className="card" style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: '1.25rem', marginBottom: 6 }}>ResearchMate Onboarding &amp; Private WhatsApp Group</h2>
+          <p className="muted" style={{ marginBottom: 16 }}>
+            Automatically included in the welcome notification &amp; email when a ResearchMate&apos;s Stage 2 (1,000 BDT) payment receives Final Approval.
+          </p>
+          <label>
+            ResearchMate Private WhatsApp Group Link
+            <Input
+              type="url"
+              value={String(fields.researchMateWhatsappLink || '')}
+              onChange={(e) => update('researchMateWhatsappLink', e.target.value)}
+              placeholder="https://chat.whatsapp.com/..."
+            />
+          </label>
+        </div>
+
         <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
           <Button disabled={saving}>{saving ? 'Saving changes…' : 'Save & Publish Branding'}</Button>
         </div>

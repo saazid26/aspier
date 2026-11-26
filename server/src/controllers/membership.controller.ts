@@ -587,6 +587,7 @@ export async function submitMembershipProfile(req: Request, res: Response, next:
       activationCodeEncrypted: encrypt(activationCode)
     });
     await application.save();
+    fastCache.clear();
 
     await notifyAdmins({
       title: `${roleTitle} profile auto-published to Team`,
@@ -812,51 +813,80 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
         ? application.researchDomains
         : (application.researchDomain ? application.researchDomain.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
 
+      const socialPayload = {
+        googleScholar: application.googleScholar || '',
+        researchGate: application.researchGate || '',
+        orcid: application.orcid || '',
+        linkedin: application.linkedin || '',
+        website: (application as any).website || '',
+        github: (application as any).github || '',
+        twitter: (application as any).twitter || ''
+      };
+
       if (isSupervisor) {
-        const profile = await Supervisor.create({
+        const supPayload = {
           name: application.name,
           slug,
-          designation: application.designation,
-          affiliation: application.institution,
+          designation: application.designation || 'Research Supervisor',
+          affiliation: application.institution || 'ASPIER',
           wingIds: wing ? [wing._id] : [],
-          bio: application.bio,
-          photo: application.photo,
-          email: application.email,
-          presentAddress: application.presentAddress,
-          permanentAddress: application.permanentAddress,
+          bio: application.bio || '',
+          photo: application.photo || '',
+          email: (application.email || '').toLowerCase(),
+          presentAddress: application.presentAddress || '',
+          permanentAddress: application.permanentAddress || '',
           education: edu,
           educationalBackground: edu,
-          googleScholar: application.googleScholar,
-          researchGate: application.researchGate,
-          orcid: application.orcid,
-          linkedin: application.linkedin,
+          ...socialPayload,
           researchInterests: domains,
-          socialLinks: { linkedin: application.linkedin }
+          socialLinks: socialPayload,
+          isPublished: true,
+          sampleData: false
+        };
+        const existingSup = await Supervisor.findOne({
+          $or: [
+            ...(application.email ? [{ email: application.email.toLowerCase() }] : []),
+            { slug }
+          ]
         });
-        profileId = profile._id;
+        if (existingSup) {
+          existingSup.set({ ...supPayload, slug: existingSup.slug });
+          await existingSup.save();
+          profileId = existingSup._id;
+        } else {
+          const created = await Supervisor.create(supPayload);
+          profileId = created._id;
+        }
         application.publishedProfileType = 'supervisor';
       } else {
-        const profile = await Scholar.create({
+        const schPayload = {
           name: application.name,
           slug,
           cohort: String(new Date().getFullYear()),
           wingId: wing?._id,
-          bio: application.bio,
-          photo: application.photo,
-          presentAddress: application.presentAddress,
-          permanentAddress: application.permanentAddress,
-          designation: application.designation,
-          affiliation: application.institution,
+          bio: application.bio || '',
+          photo: application.photo || '',
+          presentAddress: application.presentAddress || '',
+          permanentAddress: application.permanentAddress || '',
+          designation: application.designation || 'Young Scholar',
+          affiliation: application.institution || 'ASPIER',
           education: edu,
           educationalBackground: edu,
-          googleScholar: application.googleScholar,
-          researchGate: application.researchGate,
-          orcid: application.orcid,
-          linkedin: application.linkedin,
+          ...socialPayload,
           researchTopics: domains,
-          socialLinks: { linkedin: application.linkedin }
-        });
-        profileId = profile._id;
+          socialLinks: socialPayload,
+          isPublished: true,
+          sampleData: false
+        };
+        const existingSch = await Scholar.findOne({ slug });
+        if (existingSch) {
+          existingSch.set({ ...schPayload, slug: existingSch.slug });
+          await existingSch.save();
+          profileId = existingSch._id;
+        } else {
+          const created = await Scholar.create(schPayload);
+          profileId = created._id;
+        }
         application.publishedProfileType = 'scholar';
       }
 

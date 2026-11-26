@@ -60,6 +60,11 @@ export function ResearchApplications() {
     }
   });
 
+  const { data: siteSettings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => (await api.get('/public/settings')).data.data as any
+  });
+
   const getCode = (item: ResearchApplication) => {
     if (accessCodes[item._id] !== undefined) return accessCodes[item._id];
     return item.accessCode || `RM-SEC-${crypto.randomUUID().slice(0, 4).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
@@ -71,7 +76,7 @@ export function ResearchApplications() {
 
   const getWhatsApp = (item: ResearchApplication) => {
     if (whatsAppLinks[item._id] !== undefined) return whatsAppLinks[item._id];
-    return item.whatsAppGroupLink || 'https://chat.whatsapp.com/invite/AspierResearchMate2026';
+    return item.whatsAppGroupLink || siteSettings?.researchMateWhatsappLink || '';
   };
 
   const setWhatsApp = (id: string, link: string) => {

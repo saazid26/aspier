@@ -286,8 +286,7 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
             : (application.researchDomain ? application.researchDomain.split(',').map((s: string) => s.trim()).filter(Boolean) : [])));
       const supEdu = (profile.education || profile.educationalBackground || application.education || application.educationalBackground || '').trim();
 
-      const supData = {
-        _id: new mongoose.Types.ObjectId().toString(),
+      const supDbPayload = {
         name: profile.name,
         slug: baseSlug,
         designation: profile.designation || 'Research Supervisor',
@@ -296,7 +295,7 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
         educationalBackground: supEdu,
         bio: profile.bio || '',
         photo,
-        email: application.email,
+        email: (application.email || '').toLowerCase(),
         researchInterests: interests,
         researchGate: profile.researchGate || '',
         googleScholar: profile.googleScholar || '',
@@ -311,16 +310,19 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
           orcid: profile.orcid || '',
           twitter: profile.twitter || '',
           website: profile.website || ''
-        }
+        },
+        isPublished: true,
+        sampleData: false
       };
 
+      const supData = { _id: new mongoose.Types.ObjectId().toString(), ...supDbPayload };
       demoSupervisors.unshift(supData as any);
 
       if (mongoose.connection.readyState === 1) {
         try {
           profileDoc = await Supervisor.findOneAndUpdate(
-            { $or: [{ slug: baseSlug }, { email: application.email }] },
-            supData,
+            { $or: [{ slug: baseSlug }, { email: (application.email || '').toLowerCase() }] },
+            { $set: supDbPayload },
             { upsert: true, new: true, setDefaultsOnInsert: true }
           );
         } catch (sErr) {
@@ -338,8 +340,7 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
             : (application.researchDomain ? application.researchDomain.split(',').map((s: string) => s.trim()).filter(Boolean) : [])));
       const schEdu = (profile.education || profile.educationalBackground || application.education || application.educationalBackground || '').trim();
 
-      const schData = {
-        _id: new mongoose.Types.ObjectId().toString(),
+      const schDbPayload = {
         name: profile.name,
         slug: baseSlug,
         cohort: profile.cohort || '2026',
@@ -363,16 +364,19 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
           orcid: profile.orcid || '',
           twitter: profile.twitter || '',
           github: profile.github || ''
-        }
+        },
+        isPublished: true,
+        sampleData: false
       };
 
+      const schData = { _id: new mongoose.Types.ObjectId().toString(), ...schDbPayload };
       demoScholars.unshift(schData as any);
 
       if (mongoose.connection.readyState === 1) {
         try {
           profileDoc = await Scholar.findOneAndUpdate(
             { slug: baseSlug },
-            schData,
+            { $set: schDbPayload },
             { upsert: true, new: true, setDefaultsOnInsert: true }
           );
         } catch (scErr) {

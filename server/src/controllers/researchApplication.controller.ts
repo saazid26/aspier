@@ -10,9 +10,10 @@ import Research from '../models/Research.js';
 import Wing from '../models/Wing.js';
 import Setting from '../models/Setting.js';
 import ResearchApplication from '../models/ResearchApplication.js';
+import Notification from '../models/Notification.js';
 import { HttpError } from '../middleware/error.js';
 import type { AuthRequest } from '../middleware/auth.js';
-import { notifyAdmins } from '../services/notification.service.js';
+import { notifyAdmins, notifyMember } from '../services/notification.service.js';
 import { sendEmail } from '../services/email.service.js';
 import AuditLog from '../models/AuditLog.js';
 import { recordAudit } from '../services/audit.service.js';
@@ -292,6 +293,20 @@ export async function lookupResearchApplication(req: Request, res: Response, nex
         // ignore
       }
     }
+    if (!activeWhatsAppLink && application.status === 'approved') {
+      activeWhatsAppLink = (settings as any)?.researchMateWhatsappLink || '';
+    }
+
+    let notifications: any[] = [];
+    if (mongoose.connection.readyState === 1 && application._id) {
+      try {
+        notifications = await Notification.find({ applicationId: application._id, audience: 'member' })
+          .sort({ createdAt: -1 })
+          .lean();
+      } catch {
+        notifications = [];
+      }
+    }
 
     res.json({
       success: true,
@@ -311,6 +326,7 @@ export async function lookupResearchApplication(req: Request, res: Response, nex
         skills: application.skills,
         statement: application.statement,
         status: application.status,
+        paymentStatus: (application as any).paymentStatus || (application.status === 'approved' ? 'verified' : application.status === 'payment_submitted' ? 'submitted' : 'unpaid'),
         paymentAmount: application.paymentAmount || 1000,
         paymentMethod: application.paymentMethod,
         paymentSenderPhone: application.paymentSenderPhone,
@@ -320,6 +336,7 @@ export async function lookupResearchApplication(req: Request, res: Response, nex
         paymentInstructions: settings?.paymentInstructions || 'Send BDT 1,000 using bKash or Nagad Personal Send Money, then enter your sender phone number and Transaction ID (TrxID) below.',
         whatsAppGroupLink: activeWhatsAppLink,
         whatsappGroupUrl: activeWhatsAppLink,
+        notifications,
         createdAt: application.createdAt
       }
     });
@@ -376,6 +393,7 @@ export async function submitResearchPayment(req: Request, res: Response, next: N
     application.paymentSenderPhone = senderPhone || '';
     application.trxId = String(trxId).trim();
     application.status = 'payment_submitted';
+    application.paymentStatus = 'submitted';
     application.paymentAmount = 1000;
 
     if (typeof application.save === 'function') {
@@ -458,6 +476,18 @@ export async function approveStage1ResearchApplication(req: AuthRequest, res: Re
 
     if (typeof application.save === 'function') {
       await application.save().catch(() => {});
+    }
+
+    try {
+      await notifyMember({
+        applicationId: application._id,
+        title: 'ResearchMate Stage 1 Approved!',
+        body: `Congratulations ${application.name}! Your Stage 1 application for "${application.researchTitle || 'Research Project'}" is approved. Open Check Application with ID ${application.applicationId} & Code ${accessCode} to submit the Stage 2 (1,000 BDT) onboarding fee.`,
+        category: 'research-mate-stage1-approved',
+        link: '/check-application'
+      });
+    } catch {
+      // ignore
     }
 
     // Send email / notification
@@ -586,12 +616,38 @@ export async function confirmResearchPayment(req: AuthRequest, res: Response, ne
         // ignore
       }
     }
+    if (!application.whatsAppGroupLink && mongoose.connection.readyState === 1) {
+      try {
+        const siteSettings: any = await Setting.findOne({ singleton: 'main' }).lean();
+        if (siteSettings?.researchMateWhatsappLink) {
+          application.whatsAppGroupLink = String(siteSettings.researchMateWhatsappLink).trim();
+        }
+      } catch {
+        // ignore
+      }
+    }
     application.status = 'approved';
+    application.paymentStatus = 'verified';
     application.reviewedBy = req.user?._id;
     application.reviewedAt = new Date();
 
     if (typeof application.save === 'function') {
       await application.save().catch(() => {});
+    }
+
+    const finalWhatsAppUrl = application.whatsAppGroupLink || '';
+    try {
+      await notifyMember({
+        applicationId: application._id,
+        title: 'Welcome to the ASPIER Research Team!',
+        body: finalWhatsAppUrl
+          ? `Your BDT 1,000 payment for "${application.researchTitle}" is verified! Join our Private WhatsApp Group here: ${finalWhatsAppUrl}`
+          : `Your BDT 1,000 payment for "${application.researchTitle}" is verified! Welcome to the research team.`,
+        category: 'research-mate-approved',
+        link: finalWhatsAppUrl || '/check-application'
+      });
+    } catch {
+      // ignore
     }
 
     // Send final congratulatory email with WhatsApp link

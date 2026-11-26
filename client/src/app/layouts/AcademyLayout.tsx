@@ -219,7 +219,7 @@ export function AcademyLayout() {
           </div>
           <SocialConnectFooter variant="dark" showBorder={false} />
           <div className="border-t border-slate-800/80 pt-6 flex flex-col lg:flex-row items-center justify-between gap-5">
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-center max-w-xs mx-auto sm:mx-0 sm:max-w-none sm:flex sm:flex-row sm:items-center sm:justify-center sm:gap-8 text-xs sm:text-sm font-medium">
+            <div className="grid !grid-cols-2 gap-x-6 gap-y-3 text-center max-w-xs mx-auto sm:mx-0 sm:max-w-none sm:!flex sm:flex-row sm:items-center sm:justify-center sm:gap-8 text-xs sm:text-sm font-medium">
               <Link to="/academy" className="hover:text-white transition whitespace-nowrap">Courses</Link>
               <Link to="/academy/student" className="hover:text-white transition whitespace-nowrap">Student Portal</Link>
               <Link to="/academy/verify-certificate" className="hover:text-white transition text-teal-400 whitespace-nowrap">Verify Certificate</Link>
