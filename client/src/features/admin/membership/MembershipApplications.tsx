@@ -95,7 +95,7 @@ export function MembershipApplications() {
   const [onboardingModal, setOnboardingModal] = useState<OnboardingModalData | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [approvalError, setApprovalError] = useState('');
-  const [cvLoadingKey, setCvLoadingKey] = useState('');
+  const [cvLoadingId, setCvLoadingId] = useState('');
   const [revisionTargetId, setRevisionTargetId] = useState('');
   const [revisionNote, setRevisionNote] = useState('');
   const [revisionBusy, setRevisionBusy] = useState(false);
@@ -149,36 +149,29 @@ export function MembershipApplications() {
     }
   };
 
-  const handleViewCv = async (application: Application, download = false) => {
-    const key = `${application._id}:${download ? 'dl' : 'view'}`;
-    setCvLoadingKey(key);
+  const handleDownloadCv = async (application: Application) => {
+    setCvLoadingId(application._id);
     try {
       const response = await api.get(`/applications/${application._id}/cv`, {
-        params: download ? { download: '1' } : undefined,
         responseType: 'blob'
       });
       const contentType = String(response.headers['content-type'] || 'application/pdf');
       const blob = new Blob([response.data], { type: contentType });
       const blobUrl = URL.createObjectURL(blob);
-      if (download) {
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = application.cvFileName || `${application.name.replace(/\s+/g, '_')}_CV.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
-      } else {
-        const opened = window.open(blobUrl, '_blank', 'noopener,noreferrer');
-        if (!opened) {
-          toast.error('Pop-up blocked. Please allow pop-ups or use Download CV.');
-        }
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-      }
+      const rawExt = (application.cvFileName || application.cvUrl || '').toLowerCase();
+      const ext = rawExt.includes('.docx') ? '.docx' : rawExt.includes('.doc') ? '.doc' : '.pdf';
+      const safeName = (application.name || 'Applicant').trim().replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'Applicant';
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `${safeName}_CV${ext}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
     } catch (error: any) {
-      toast.error(getApiErrorMessage(error, 'Could not load CV document'));
+      toast.error(getApiErrorMessage(error, 'Could not download CV document'));
     } finally {
-      setCvLoadingKey('');
+      setCvLoadingId('');
     }
   };
 
@@ -355,21 +348,12 @@ export function MembershipApplications() {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
-                      disabled={cvLoadingKey === `${application._id}:view`}
-                      onClick={() => void handleViewCv(application, false)}
+                      disabled={cvLoadingId === application._id}
+                      onClick={() => void handleDownloadCv(application)}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 disabled:opacity-60 text-white text-xs font-semibold transition shadow-2xs cursor-pointer"
                     >
-                      {cvLoadingKey === `${application._id}:view` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
-                      <span>{cvLoadingKey === `${application._id}:view` ? 'Opening…' : 'View / Open CV'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      disabled={cvLoadingKey === `${application._id}:dl`}
-                      onClick={() => void handleViewCv(application, true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 disabled:opacity-60 text-slate-700 border border-slate-300 text-xs font-semibold transition cursor-pointer"
-                    >
-                      {cvLoadingKey === `${application._id}:dl` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                      <span>Download CV</span>
+                      {cvLoadingId === application._id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                      <span>{cvLoadingId === application._id ? 'Downloading…' : 'Download CV'}</span>
                     </button>
                   </div>
                 </div>
@@ -520,12 +504,12 @@ export function MembershipApplications() {
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
-                            disabled={cvLoadingKey === `${application._id}:view`}
-                            onClick={() => void handleViewCv(application, false)}
+                            disabled={cvLoadingId === application._id}
+                            onClick={() => void handleDownloadCv(application)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 disabled:opacity-60 text-white text-xs font-semibold transition cursor-pointer"
                           >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            <span>View / Open CV</span>
+                            {cvLoadingId === application._id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                            <span>{cvLoadingId === application._id ? 'Downloading…' : 'Download CV'}</span>
                           </button>
                         </div>
                       )}

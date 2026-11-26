@@ -1218,13 +1218,23 @@ export async function viewMembershipApplicationCv(req: AuthRequest, res: Respons
     }
 
     const cvUrl = String(application.cvUrl).trim();
-    const filename = (application.cvFileName || 'Applicant_CV.pdf').replace(/["\\]/g, '_');
-    const lowerName = `${filename} ${cvUrl}`.toLowerCase();
-    const mimeType = lowerName.includes('.docx')
-      ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    const rawOriginalName = String(application.cvFileName || '').trim();
+    const lowerName = `${rawOriginalName} ${cvUrl}`.toLowerCase();
+    const ext = lowerName.includes('.docx')
+      ? '.docx'
       : lowerName.includes('.doc')
+        ? '.doc'
+        : '.pdf';
+    const mimeType = ext === '.docx'
+      ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      : ext === '.doc'
         ? 'application/msword'
         : 'application/pdf';
+    const safeApplicantName = String(application.name || 'Applicant')
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'Applicant';
+    const filename = `${safeApplicantName}_CV${ext}`;
 
     const candidateUrls: string[] = [cvUrl];
     const parsed = parseCloudinaryCvUrl(cvUrl);
@@ -1287,9 +1297,8 @@ export async function viewMembershipApplicationCv(req: AuthRequest, res: Respons
       throw new HttpError(lastStatus === 404 ? 404 : 502, 'Could not retrieve CV document from storage');
     }
 
-    const disposition = req.query.download === '1' ? 'attachment' : 'inline';
     res.setHeader('Content-Type', mimeType);
-    res.setHeader('Content-Disposition', `${disposition}; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length', String(fileBuffer.length));
     res.setHeader('Cache-Control', 'private, max-age=300');
     return res.send(fileBuffer);
