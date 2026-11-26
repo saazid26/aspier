@@ -28,7 +28,7 @@ export async function register(req: AuthRequest, res: Response, next: NextFuncti
     if (mongoose.connection.readyState !== 1) {
       await connectDatabase();
     }
-    const { name, email: rawEmail, password, role: requestedRole } = req.body;
+    const { name, email: rawEmail, password, phone, university, department, role: requestedRole } = req.body;
     const email = String(rawEmail || '').trim().toLowerCase();
     if (email === FIXED_ADMIN_EMAIL || email === 'admin@gmail.com') {
       throw new HttpError(403, 'The administrator email is reserved');
@@ -41,7 +41,16 @@ export async function register(req: AuthRequest, res: Response, next: NextFuncti
     if (await User.exists({ email })) {
       throw new HttpError(409, 'An account with this email already exists. Please sign in.');
     }
-    const user = await User.create({ name: String(name).trim(), email, passwordHash: await hashPassword(password), role: 'student', isActive: true });
+    const user = await User.create({
+      name: String(name).trim(),
+      email,
+      passwordHash: await hashPassword(password),
+      phone: phone ? String(phone).trim() : '',
+      university: university ? String(university).trim() : '',
+      department: department ? String(department).trim() : '',
+      role: 'student',
+      isActive: true
+    });
     fastCache.clear();
     
     try {

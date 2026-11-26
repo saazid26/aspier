@@ -31,6 +31,9 @@ const registerSchema = z.object({
   name: z.string().trim().min(2).max(100),
   email: z.string().email().transform((value) => value.trim().toLowerCase()),
   password: strongPassword,
+  phone: z.string().trim().max(50).optional().default(''),
+  university: z.string().trim().max(150).optional().default(''),
+  department: z.string().trim().max(150).optional().default(''),
   role: z.literal('student').optional()
 });
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1).max(128), role: z.string().optional(), totpCode: z.string().max(100).optional(), strongKey: z.string().max(128).optional() });

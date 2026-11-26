@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
+import { StudentAuthGate } from '../features/auth/StudentAuthGate';
 import { SEO } from '../components/common/SEO';
 import { PublicLayout } from './layouts/PublicLayout';
 import { AcademyLayout } from './layouts/AcademyLayout';
@@ -93,6 +94,15 @@ function Guard({ children, roles }: { children: ReactNode; roles: string[] }) {
   const role = user.role;
   const userMatches = roles.includes(role) || (roles.includes('admin') && role === 'superadmin') || (roles.includes('superadmin') && role === 'admin');
   if (!userMatches) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function StudentGuard({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <main className="container section">Loading Student Portal…</main>;
+  if (!user || !user.role || !['student', 'instructor'].includes(user.role)) {
+    return <StudentAuthGate />;
+  }
   return <>{children}</>;
 }
 function Home(){
@@ -222,7 +232,7 @@ export function AppRouter(){return <BrowserRouter><ScrollToTop/><Suspense fallba
   <Route path="academy/login" element={<Login/>}/>
   <Route path="academy/forgot" element={<Forgot/>}/>
   <Route path="academy/reset" element={<Reset/>}/>
-  <Route path="academy/student" element={<Guard roles={['student','instructor','supervisor','youngScholar','admin','superadmin']}><StudentLayout/></Guard>}>
+  <Route path="academy/student" element={<StudentGuard><StudentLayout/></StudentGuard>}>
     <Route index element={<StudentDashboard/>}/>
     <Route path="dashboard" element={<StudentDashboard/>}/>
     <Route path="courses" element={<MyCourses/>}/>

@@ -14,15 +14,8 @@ export interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUserState] = useState<Me>(() => {
-    try {
-      const cached = localStorage.getItem('aspier_cached_user');
-      return cached ? JSON.parse(cached) : undefined;
-    } catch {
-      return undefined;
-    }
-  });
-  const [loading, setLoading] = useState<boolean>(() => !user && Boolean(getAuthToken()));
+  const [user, setUserState] = useState<Me>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const setUser = useCallback((newUser: Me | ((prev: Me) => Me)) => {
     setUserState((prev) => {
@@ -88,6 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ignore
     } finally {
       clearAuthToken();
+      try {
+        localStorage.removeItem('aspier_cached_user');
+        sessionStorage.clear();
+      } catch {}
       setUser(null);
     }
   }, [setUser]);
