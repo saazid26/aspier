@@ -70,6 +70,30 @@ export function Onboarding() {
   const [submitting, setSubmitting] = useState(false);
   const [publishedProfile, setPublishedProfile] = useState<any | null>(null);
 
+  const { data: wingsData = [] } = useQuery({
+    queryKey: ['public-wings-onboarding'],
+    queryFn: async () => {
+      const res = await api.get('/public/wings');
+      return (res.data?.data || []) as Array<{ _id?: string; name: string; slug: string }>;
+    },
+    staleTime: 5 * 60 * 1000
+  });
+
+  const wingOptions = wingsData.length > 0
+    ? wingsData
+    : [
+        { name: 'Aeronautical Engineering and UAV Systems', slug: 'aeronautical-engineering-and-uav-systems' },
+        { name: 'Spatial Data and Remote Sensing', slug: 'spatial-data-and-remote-sensing' },
+        { name: 'Planetary Science and Astrobiology', slug: 'planetary-science-and-astrobiology' },
+        { name: 'Climate Change and Atmospheric Modeling', slug: 'climate-change-and-atmospheric-modeling' },
+        { name: 'Environmental Hydrology and Water Resources', slug: 'environmental-hydrology-and-water-resources' },
+        { name: 'AI and Computational Earth Sciences', slug: 'ai-and-computational-earth-sciences' },
+        { name: 'Urban Sustainability and Smart Cities', slug: 'urban-sustainability-and-smart-cities' },
+        { name: 'Environmental Toxicology and Public Health', slug: 'environmental-toxicology-and-public-health' },
+        { name: 'Biodiversity Conservation and Ecosystem Management', slug: 'biodiversity-conservation-and-ecosystem-management' },
+        { name: 'Wings of Applied Biotechnology', slug: 'wings-of-applied-biotechnology' }
+      ];
+
   // Pre-fill form when validation data loads
   useEffect(() => {
     if (validationData) {
@@ -80,7 +104,24 @@ export function Onboarding() {
           ? (validationData.designation || 'Research Supervisor')
           : 'Young Scholar'
       );
-      setAffiliation(validationData.role === 'supervisor' ? (validationData.institution || 'ASPIER') : '');
+      if (validationData.role === 'supervisor') {
+        const inst = String(validationData.institution || '').trim();
+        const prefWing = String(validationData.wing || '').trim().toLowerCase();
+        const matchedWing = wingOptions.find(
+          (w) => w.slug.toLowerCase() === prefWing || w.name.toLowerCase() === prefWing
+        );
+        if (inst.startsWith('ASPIER •')) {
+          setAffiliation(inst);
+        } else if (matchedWing) {
+          setAffiliation(`ASPIER • ${matchedWing.name}`);
+        } else if (wingOptions.length > 0) {
+          setAffiliation(`ASPIER • ${wingOptions[0].name}`);
+        } else {
+          setAffiliation(inst || 'ASPIER');
+        }
+      } else {
+        setAffiliation('');
+      }
       setCohort('2026');
       setEducationalBackground(validationData.education || validationData.educationalBackground || validationData.academicStatus || '');
       setBio(validationData.bio || '');
@@ -88,7 +129,7 @@ export function Onboarding() {
         setTagsInput(validationData.researchDomain || validationData.researchDomains.join(', '));
       }
     }
-  }, [validationData]);
+  }, [validationData, wingsData.length]);
 
   const handleNameChange = (val: string) => {
     setName(val);
@@ -437,12 +478,22 @@ export function Onboarding() {
                 </label>
                 <label>
                   Affiliation *
-                  <Input
+                  <select
+                    className="select"
                     required
                     value={affiliation}
                     onChange={(e) => setAffiliation(e.target.value)}
-                    placeholder="e.g. ASPIER / University Name"
-                  />
+                  >
+                    <option value="">Select ASPIER Wing Affiliation</option>
+                    {wingOptions.map((w) => {
+                      const label = `ASPIER • ${w.name}`;
+                      return (
+                        <option key={w.slug || w.name} value={label}>
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </label>
               </>
             ) : (
