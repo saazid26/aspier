@@ -870,7 +870,7 @@ export function Dashboard() {
                       rel="noopener noreferrer"
                       className="text-xs text-teal-700 hover:text-teal-900 inline-flex items-center gap-1 font-semibold"
                     >
-                      Open Raw Image <ExternalLink size={13} />
+                      View Certificate <ExternalLink size={13} />
                     </a>
                   </div>
                   <img

@@ -399,7 +399,7 @@ export function VerifyCertificate() {
                       rel="noopener noreferrer"
                       className="text-xs text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 font-medium"
                     >
-                      Open Raw Image <ExternalLink className="w-3 h-3" />
+                      View Certificate <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
 
