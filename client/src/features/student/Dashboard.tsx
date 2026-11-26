@@ -277,7 +277,13 @@ export function Dashboard() {
               if (!course) return null;
               const { total, completed, percent } = calculateProgress(enr);
               const isFinished = percent >= 100;
-              const mode = course.mode || course.deliveryMode || 'Online and Live';
+              const rawMode = course.mode || course.deliveryMode || 'Online and Live';
+              const mode =
+                rawMode === 'Online and Live' || rawMode === 'Online / Live'
+                  ? 'Online and Live'
+                  : rawMode === 'In-Person Workshop' || rawMode === 'Offline' || rawMode === 'Offline (Physical)'
+                    ? 'In-Person Workshop'
+                    : 'Online and Recorded';
 
               return (
                 <div
@@ -289,7 +295,7 @@ export function Dashboard() {
                     <div className="flex items-center justify-between gap-2 mb-3">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-teal-50 text-teal-800 border border-teal-600/20">
                         {mode === 'Online and Live' && <Video size={12} />}
-                        {mode === 'Offline' && <Building size={12} />}
+                        {mode === 'In-Person Workshop' && <Building size={12} />}
                         {mode === 'Online and Recorded' && <Play size={12} />}
                         {mode}
                       </span>

@@ -687,7 +687,13 @@ export function AcademyCms() {
                   </td>
                   <td style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{course.startDate || 'TBA'}</td>
                   <td>
-                    <Badge variant="blue">{course.mode || course.deliveryMode || 'Online'}</Badge>
+                    <Badge variant="blue">
+                      {(course.mode === 'Online and Live' || course.deliveryMode === 'Online and Live' || course.mode === 'Online / Live')
+                        ? 'Online and Live'
+                        : (course.mode === 'In-Person Workshop' || course.deliveryMode === 'In-Person Workshop' || course.mode === 'Offline' || course.deliveryMode === 'Offline')
+                          ? 'In-Person Workshop'
+                          : 'Online and Recorded'}
+                    </Badge>
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <strong style={{ color: '#0f766e' }}>৳{course.price || 0} BDT</strong>
@@ -1496,10 +1502,15 @@ export function AcademyCms() {
                 Class Mode
                 <select
                   className="select"
-                  value={editingCourse.mode || 'Online Recorded'}
+                  value={
+                    (editingCourse.mode === 'Online and Live' || editingCourse.deliveryMode === 'Online and Live' || editingCourse.mode === 'Online / Live')
+                      ? 'Online and Live'
+                      : (editingCourse.mode === 'In-Person Workshop' || editingCourse.deliveryMode === 'In-Person Workshop' || editingCourse.mode === 'Offline' || editingCourse.deliveryMode === 'Offline')
+                        ? 'In-Person Workshop'
+                        : 'Online and Recorded'
+                  }
                   onChange={(e) => setEditingCourse({ ...editingCourse, mode: e.target.value, deliveryMode: e.target.value })}
                 >
-                  <option value="Online Recorded">Online Recorded</option>
                   <option value="Online and Recorded">Online and Recorded</option>
                   <option value="Online and Live">Online and Live</option>
                   <option value="In-Person Workshop">In-Person Workshop</option>

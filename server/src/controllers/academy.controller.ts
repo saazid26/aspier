@@ -22,9 +22,18 @@ async function getApprovedCourseIdSet(user: any): Promise<Set<string>> {
   return new Set(enrollments.map((e: any) => String(e.courseId)));
 }
 
+function normalizeModeValue(value?: string) {
+  if (value === 'Online and Live' || value === 'Online / Live') return 'Online and Live';
+  if (value === 'In-Person Workshop' || value === 'Offline' || value === 'Offline (Physical)') return 'In-Person Workshop';
+  return 'Online and Recorded';
+}
+
 function sanitizeCoursesForUser(courses: any[], isAdmin: boolean, approvedCourseIds: Set<string>) {
   return courses.map((course) => {
     const obj = typeof course.toObject === 'function' ? course.toObject() : { ...course };
+    const normalized = normalizeModeValue(obj.deliveryMode || obj.mode);
+    obj.mode = normalized;
+    obj.deliveryMode = normalized;
     const isApproved = isAdmin || approvedCourseIds.has(String(obj._id));
     if (!isApproved) {
       delete obj.googleClassroomUrl;
@@ -81,6 +90,9 @@ export async function courseDetail(req: AuthRequest, res: Response, next: NextFu
     }
     if (isAdmin) active = true;
     const safe = course.toObject() as any;
+    const normalizedMode = normalizeModeValue(safe.deliveryMode || safe.mode);
+    safe.mode = normalizedMode;
+    safe.deliveryMode = normalizedMode;
     if (course.classes && course.classes.length > 0) {
       safe.classes = course.classes;
     }

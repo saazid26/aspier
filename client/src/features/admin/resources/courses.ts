@@ -4,9 +4,9 @@ export const coursesResource={name:'courses',title:'Courses',endpoint:'/admin/co
   {name:'description',label:'Course overview and syllabus',type:'richtext'},
   {name:'duration',label:'Duration'},
   {name:'mode',label:'Delivery Mode',type:'select',options:[
-    ['Online and Live','Online and Live'],
     ['Online and Recorded','Online and Recorded'],
-    ['Offline','Offline']
+    ['Online and Live','Online and Live'],
+    ['In-Person Workshop','In-Person Workshop']
   ]},
   {name:'startDate',label:'Course Start Date',type:'date'},
   {name:'targetAudience',label:'Target audience',type:'richtext'},

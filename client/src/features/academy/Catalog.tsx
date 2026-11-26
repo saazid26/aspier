@@ -22,19 +22,26 @@ type Course = {
 };
 
 function normalizeDeliveryMode(mode?: string) {
-  if (mode === 'Online / Live') return 'Online and Live';
-  if (mode === 'Online and Recorded' || mode === 'Online Recorded') return 'Online Recorded';
-  return mode || 'Online Recorded';
+  if (mode === 'Online / Live' || mode === 'Online and Live') return 'Online and Live';
+  if (mode === 'In-Person Workshop' || mode === 'Offline' || mode === 'Offline (Physical)') return 'In-Person Workshop';
+  return 'Online and Recorded';
 }
 
 function formatFooterLabel(startDate?: string, deliveryMode?: string) {
-  if (deliveryMode === 'Online Recorded' || deliveryMode === 'Online and Recorded') {
-    return 'Course Fee';
-  }
   if (!startDate || /instant access/i.test(startDate)) return 'Course Fee';
   const date = new Date(startDate);
   if (!Number.isNaN(date.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(startDate)) {
-    return `Starts: ${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(date)}`;
+    const formatted = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(date);
+    const now = new Date();
+    const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const startUtc = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    if (startUtc > todayUtc) {
+      return `Starts from ${formatted}`;
+    }
+    if (normalizeDeliveryMode(deliveryMode) === 'Online and Recorded') {
+      return 'Course Fee';
+    }
+    return `Started on ${formatted}`;
   }
   return 'Course Fee';
 }

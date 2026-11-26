@@ -68,17 +68,21 @@ export function CourseDetail() {
 
   const deliveryMode = data?.deliveryMode || data?.mode;
   const normalizedDeliveryMode =
-    deliveryMode === 'Online Recorded'
-      ? 'Online Recorded'
-      : deliveryMode === 'Online / Live'
+    deliveryMode === 'Online and Live' || deliveryMode === 'Online / Live'
       ? 'Online and Live'
-      : deliveryMode || 'Online Recorded';
+      : deliveryMode === 'In-Person Workshop' || deliveryMode === 'Offline' || deliveryMode === 'Offline (Physical)'
+      ? 'In-Person Workshop'
+      : 'Online and Recorded';
 
   const formatStartDate = (startDate?: string) => {
     if (!startDate || /instant access/i.test(startDate)) return 'Open Enrollment';
     const date = new Date(startDate);
     if (!Number.isNaN(date.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(startDate)) {
-      return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(date);
+      const formatted = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(date);
+      const now = new Date();
+      const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+      const startUtc = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+      return startUtc > todayUtc ? `Starts from ${formatted}` : `Started on ${formatted}`;
     }
     return startDate;
   };

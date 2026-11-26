@@ -35,9 +35,9 @@ const instructorSubSchema = new Schema({
 }, { _id: true });
 
 const deliveryModeSetter = (value: unknown) => {
-  if (value === 'Online / Live') return 'Online and Live';
-  if (value === 'Online and Recorded' || value === 'Online Recorded') return 'Online Recorded';
-  return value;
+  if (value === 'Online / Live' || value === 'Online and Live') return 'Online and Live';
+  if (value === 'In-Person Workshop' || value === 'Offline' || value === 'Offline (Physical)') return 'In-Person Workshop';
+  return 'Online and Recorded';
 };
 
 const schema = new Schema({
@@ -46,19 +46,21 @@ const schema = new Schema({
   description: String,
   summary: String,
   duration: String,
-  format: { type: String, default: 'Online Recorded' },
+  format: { type: String, default: 'Online and Recorded' },
   isRecorded: { type: Boolean, default: true },
   mode: {
     type: String,
-    enum: ['Online and Live', 'Online and Recorded', 'Online Recorded', 'Offline', 'In-Person Workshop'],
+    enum: ['Online and Recorded', 'Online and Live', 'In-Person Workshop'],
     set: deliveryModeSetter,
-    default: 'Online Recorded'
+    get: deliveryModeSetter,
+    default: 'Online and Recorded'
   },
   deliveryMode: {
     type: String,
-    enum: ['Online and Live', 'Online and Recorded', 'Online Recorded', 'Offline', 'In-Person Workshop'],
+    enum: ['Online and Recorded', 'Online and Live', 'In-Person Workshop'],
     set: deliveryModeSetter,
-    default: 'Online Recorded'
+    get: deliveryModeSetter,
+    default: 'Online and Recorded'
   },
   startDate: String,
   targetAudience: String,

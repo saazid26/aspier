@@ -995,9 +995,9 @@ router.post('/update-research-course-curriculum', async (req, res) => {
         title: 'Higher Study-Oriented Research Paper Writing Course',
         slug: 'higher-study-research-paper-writing',
         price: 2000,
-        mode: 'Online Recorded',
-        deliveryMode: 'Online Recorded',
-        format: 'Online Recorded',
+        mode: 'Online and Recorded',
+        deliveryMode: 'Online and Recorded',
+        format: 'Online and Recorded',
         isRecorded: true,
         duration: '15 Recorded Classes (Classes 0–14)',
         level: 'advanced',
@@ -1009,9 +1009,9 @@ router.post('/update-research-course-curriculum', async (req, res) => {
     course.title = 'Higher Study-Oriented Research Paper Writing Course';
     course.slug = 'higher-study-research-paper-writing';
     course.price = 2000;
-    course.mode = 'Online Recorded';
-    course.deliveryMode = 'Online Recorded';
-    course.format = 'Online Recorded';
+    course.mode = 'Online and Recorded';
+    course.deliveryMode = 'Online and Recorded';
+    course.format = 'Online and Recorded';
     course.isRecorded = true;
     course.duration = '15 Recorded Classes (Classes 0–14)';
     course.status = 'published';
