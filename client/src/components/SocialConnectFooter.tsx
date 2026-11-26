@@ -139,7 +139,7 @@ export function SocialConnectFooter({
             </h4>
           </div>
           <p
-            className={`text-[11px] sm:text-xs ${
+            className={`text-[11px] sm:text-xs leading-relaxed ${
               isDark ? 'text-slate-400' : 'text-slate-500'
             }`}
           >
@@ -148,7 +148,7 @@ export function SocialConnectFooter({
         </div>
 
         {/* Action Icon Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
+        <div className="max-w-[220px] mx-auto flex flex-wrap items-center justify-center gap-2.5 sm:max-w-none sm:mx-0 sm:gap-3 md:flex-nowrap">
           {socialLinks.map((item) => {
             const isMail = item.url.startsWith('mailto:');
             return (
@@ -159,8 +159,7 @@ export function SocialConnectFooter({
                 rel={isMail ? undefined : 'noopener noreferrer'}
                 aria-label={item.label}
                 title={item.name}
-                style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500/50 ${
+                className={`w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-xl flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500/50 ${
                   isDark
                     ? 'bg-slate-800/90 text-slate-300 border border-slate-700/80 hover:text-white'
                     : 'bg-white text-slate-700 border border-slate-200/90 shadow-2xs hover:text-white'

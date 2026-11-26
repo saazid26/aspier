@@ -671,33 +671,22 @@ export function CourseDetail() {
 
       {/* Bottom Sticky/Floating Enroll Bar */}
       <section
-        style={{
-          marginTop: '3rem',
-          borderRadius: 14,
-          padding: '1.5rem',
-          background: '#0f766e',
-          color: '#ffffff',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 16
-        }}
+        className="mt-10 mb-8 rounded-2xl bg-[#0f766e] text-white p-4 sm:px-6 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md"
       >
-        <div>
-          <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700, color: '#ffffff' }}>
+        <div className="text-center sm:text-left">
+          <h3 className="m-0 text-lg sm:text-xl font-bold text-white leading-snug">
             Ready to Master Scientific Research Paper Writing?
           </h3>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', color: '#ccfbf1' }}>
+          <p className="mt-1 mb-0 text-xs sm:text-sm text-[#ccfbf1] leading-relaxed">
             Get instant access to all 15 classes, practical datasets, LaTeX templates, and direct mentorship.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <strong style={{ fontSize: '1.5rem', color: '#ffffff' }}>{formattedPrice}</strong>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 shrink-0 w-full sm:w-auto">
+          <strong className="text-xl sm:text-2xl text-white whitespace-nowrap">{formattedPrice}</strong>
           <Link
             to={`/academy/courses/${id}/payment`}
-            className="button"
+            className="button w-full sm:w-auto text-center"
             style={{
               background: '#ffffff',
               color: '#0f766e',

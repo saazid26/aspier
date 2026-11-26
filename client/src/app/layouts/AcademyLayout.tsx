@@ -182,8 +182,8 @@ export function AcademyLayout() {
         </div>
       </nav>
       <Outlet />
-      <footer className="footer bg-slate-900 text-slate-400 py-8 border-t border-slate-800 text-sm">
-        <div className="container mx-auto px-4 space-y-6">
+      <footer className="footer bg-slate-900 text-slate-400 py-10 sm:py-14 border-t border-slate-800 text-sm overflow-x-hidden">
+        <div className="container mx-auto px-5 sm:px-8 space-y-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
             <Link
               to="/academy"
@@ -218,14 +218,14 @@ export function AcademyLayout() {
             </Link>
           </div>
           <SocialConnectFooter variant="dark" showBorder={false} />
-          <div className="border-t border-slate-800/80 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm font-medium">
-              <Link to="/academy" className="hover:text-white transition">Courses</Link>
-              <Link to="/academy/student" className="hover:text-white transition">Student Portal</Link>
-              <Link to="/academy/verify-certificate" className="hover:text-white transition text-teal-400">Verify Certificate</Link>
-              <Link to="/" className="hover:text-white transition">ASPIER Main</Link>
+          <div className="border-t border-slate-800/80 pt-6 flex flex-col lg:flex-row items-center justify-between gap-5">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-center max-w-xs mx-auto sm:mx-0 sm:max-w-none sm:flex sm:flex-row sm:items-center sm:justify-center sm:gap-8 text-xs sm:text-sm font-medium">
+              <Link to="/academy" className="hover:text-white transition whitespace-nowrap">Courses</Link>
+              <Link to="/academy/student" className="hover:text-white transition whitespace-nowrap">Student Portal</Link>
+              <Link to="/academy/verify-certificate" className="hover:text-white transition text-teal-400 whitespace-nowrap">Verify Certificate</Link>
+              <Link to="/" className="hover:text-white transition whitespace-nowrap">ASPIER Main</Link>
             </div>
-            <div className="text-xs text-slate-500 text-center sm:text-right">
+            <div className="text-xs text-slate-500 text-center lg:text-right leading-relaxed max-w-md lg:max-w-none mx-auto lg:mx-0">
               © {new Date().getFullYear()} ASPIER Academy — Aeronautical, Spatial, Planetary Institution for Environmental Research
             </div>
           </div>
