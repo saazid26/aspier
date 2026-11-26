@@ -111,9 +111,8 @@ function Home(){
     queryKey: ['public-settings'],
     queryFn: async () => (await api.get('/public/settings')).data.data
   });
-  const homeTitle = settings?.siteTitle || 'ASPIER Global — ASPIER Research, ASPIER Academy & Young Scholars';
+  const homeTitle = 'ASPIER Global — ASPIER Research, ASPIER Academy & Young Scholars';
   const homeDescription =
-    settings?.seoDescription ||
     'Official website of ASPIER Global (ASPIER) — explore ASPIER Academy courses, 10 specialized research wings, supervisors, and Young Scholar mentorship.';
   usePageSEO({
     title: homeTitle,
