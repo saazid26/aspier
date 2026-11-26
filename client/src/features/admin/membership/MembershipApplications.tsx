@@ -37,6 +37,8 @@ type Application = {
   onboardingToken?: string;
   onboardingTokenExpires?: string;
   onboardingTokenUsed?: boolean;
+  publicApplicationId?: string;
+  secretAccessCode?: string;
 };
 
 type OnboardingModalData = {
@@ -58,19 +60,20 @@ const categoryLabel = (role: Application['role'] | undefined, category?: string)
 const statusBadge = (status: string) => {
   switch (status) {
     case 'onboarding_sent':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200"><Send className="w-3 h-3" /> Onboarding Link Dispatched</span>;
+      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200"><Send className="w-3 h-3" /> Onboarding Dispatched</span>;
     case 'published':
     case 'completed':
-    case 'active_member':
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-800 border border-teal-200"><ShieldCheck className="w-3 h-3" /> Published to Team</span>;
+    case 'active_member':
+      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 border border-sky-200"><Clock className="w-3 h-3" /> Activated (Awaiting Stage 2)</span>;
     case 'signup_pending':
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200"><Clock className="w-3 h-3" /> Sign-Up Pending</span>;
     case 'initial_pending':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200"><Clock className="w-3 h-3" /> Stage 1 Review</span>;
+      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200"><Clock className="w-3 h-3" /> Stage 1: Primary</span>;
     case 'final_pending':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200"><Clock className="w-3 h-3" /> Profile Review</span>;
+      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200"><Clock className="w-3 h-3" /> Stage 2: Profile Review</span>;
     case 'verification_pending':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200"><Clock className="w-3 h-3" /> Profile Review</span>;
+      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200"><Clock className="w-3 h-3" /> Stage 2: Profile Review</span>;
     default:
       return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200">{status}</span>;
   }
@@ -291,27 +294,47 @@ export function MembershipApplications() {
 
               {/* Onboarding Token Dispatched Info */}
               {application.status === 'onboarding_sent' && (
-                <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 text-sm flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <Send className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Personalized Onboarding Sign-Up link dispatched to candidate. Candidate profile auto-publishes upon submission.</span>
+                <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 text-sm space-y-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <Send className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Onboarding dispatched. Applicant can activate with Secret Access Code and submit Stage 2 Final Profile.</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {application.secretAccessCode && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="text-xs py-1 px-3 border-emerald-300 hover:bg-emerald-100 text-emerald-800"
+                          onClick={() => copyToClipboard(application.secretAccessCode || '')}
+                        >
+                          <Copy className="w-3.5 h-3.5 mr-1 inline" /> Copy Secret Code
+                        </Button>
+                      )}
+                      {application.onboardingToken && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="text-xs py-1 px-3 border-emerald-300 hover:bg-emerald-100 text-emerald-800"
+                          onClick={() => {
+                            const baseUrl = (window.location.origin && !window.location.origin.includes('localhost'))
+                              ? window.location.origin
+                              : 'https://aspierglobal.vercel.app';
+                            const role = isSupervisor ? 'supervisor' : 'scholar';
+                            const url = `${baseUrl}/onboarding?token=${application.onboardingToken}&role=${role}`;
+                            copyToClipboard(url);
+                          }}
+                        >
+                          <Copy className="w-3.5 h-3.5 mr-1 inline" /> Copy Onboarding Link
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  {application.onboardingToken && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="text-xs py-1 px-3 border-emerald-300 hover:bg-emerald-100 text-emerald-800"
-                      onClick={() => {
-                        const baseUrl = (window.location.origin && !window.location.origin.includes('localhost'))
-                          ? window.location.origin
-                          : 'https://aspierglobal.vercel.app';
-                        const role = isSupervisor ? 'supervisor' : 'scholar';
-                        const url = `${baseUrl}/onboarding?token=${application.onboardingToken}&role=${role}`;
-                        copyToClipboard(url);
-                      }}
-                    >
-                      <Copy className="w-3.5 h-3.5 mr-1 inline" /> Copy Onboarding Link
-                    </Button>
+                  {(application.publicApplicationId || application.secretAccessCode) && (
+                    <div className="flex flex-wrap gap-4 text-xs font-mono bg-white/80 px-3 py-2 rounded border border-emerald-200">
+                      {application.publicApplicationId && <span><strong>Application ID:</strong> {application.publicApplicationId}</span>}
+                      {application.secretAccessCode && <span><strong>Secret Access Code:</strong> {application.secretAccessCode}</span>}
+                    </div>
                   )}
                 </div>
               )}
@@ -387,8 +410,8 @@ export function MembershipApplications() {
 
               {/* ACTION BUTTONS */}
               <div className="membership-actions flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100">
-                {/* Primary Automated Onboarding Action */}
-                {application.status !== 'published' && (
+                {/* Primary Stage 1 Onboarding Dispatch Action */}
+                {['initial_pending', 'signup_pending', 'onboarding_sent'].includes(application.status) && (
                   <Button
                     type="button"
                     disabled={approvingId === application._id}
@@ -396,19 +419,23 @@ export function MembershipApplications() {
                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-2 shadow-sm"
                   >
                     <Send className="w-4 h-4" />
-                    {approvingId === application._id ? 'Sending Onboarding Invite…' : 'Approve & Send Onboarding Sign-Up'}
+                    {approvingId === application._id
+                      ? 'Sending Onboarding Invite…'
+                      : application.status === 'onboarding_sent'
+                        ? 'Resend Onboarding Sign-Up'
+                        : 'Approve & Send Onboarding Sign-Up'}
                   </Button>
                 )}
 
-                {/* Legacy / Direct Publish Actions if at Stage 2 */}
-                {(stage === 'final_pending' || stage === 'verification_pending') && (
+                {/* Stage 2 Final Approval & Publish Action */}
+                {['final_pending', 'verification_pending'].includes(application.status) && (
                   <Button
                     type="button"
                     className="bg-teal-600 hover:bg-teal-700 text-white"
                     onClick={() => runAction(application._id, 'publish')}
                   >
                     <UserCheck className="w-4 h-4 mr-1.5 inline" />
-                    Publish Profile Directly (Free)
+                    Final Approve &amp; Publish to Team
                   </Button>
                 )}
 

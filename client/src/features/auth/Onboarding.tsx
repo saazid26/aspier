@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { ImageUploader } from '../../components/forms/ImageUploader';
 import { cleanActivationToken } from './Login';
+import { useAuth } from './AuthContext';
 
 function slugify(text: string): string {
   return text
@@ -21,17 +22,19 @@ function slugify(text: string): string {
 export function Onboarding() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const token = cleanActivationToken(searchParams.get('token') || '');
   const initialRoleParam = searchParams.get('role') || '';
+  const isMemberLoggedIn = Boolean(user && ['supervisor', 'youngScholar', 'young_scholar'].includes((user as any).role));
 
-  // 1. Validate Token on Load
+  // 1. Validate Token or Authenticated Member Session on Load
   const { data: validationData, isLoading, isError, error } = useQuery({
-    queryKey: ['onboarding-validate', token],
+    queryKey: ['onboarding-validate', token, isMemberLoggedIn ? (user as any)?._id : ''],
     queryFn: async () => {
-      const res = await api.get('/public/onboarding/validate', { params: { token } });
+      const res = await api.get('/public/onboarding/validate', { params: token ? { token } : undefined });
       return res.data.data;
     },
-    enabled: Boolean(token),
+    enabled: Boolean(token) || isMemberLoggedIn,
     retry: false
   });
 
@@ -97,17 +100,19 @@ export function Onboarding() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!password || password.length < 8) {
-      toast.error('Password must be at least 8 characters.');
-      return;
-    }
-    if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
-      toast.error('Please use a mix of letters and numbers in your password.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match.');
-      return;
+    if (!isMemberLoggedIn) {
+      if (!password || password.length < 8) {
+        toast.error('Password must be at least 8 characters.');
+        return;
+      }
+      if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+        toast.error('Please use a mix of letters and numbers in your password.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        toast.error('Passwords do not match.');
+        return;
+      }
     }
     if (!name.trim()) {
       toast.error('Full Name is required.');
@@ -152,14 +157,14 @@ export function Onboarding() {
 
     setSubmitting(true);
     try {
-      const res = await api.post('/public/onboarding/complete', {
-        token,
-        password,
+      await api.post('/public/onboarding/complete', {
+        ...(token ? { token } : {}),
+        ...(password ? { password } : {}),
         profile: profilePayload
       });
 
-      toast.success('Your profile has been published to the Team page!');
-      setPublishedProfile(res.data.data.profile);
+      toast.success('Stage 2 Final Profile submitted for Admin review!');
+      setPublishedProfile({ name: profilePayload.name, status: 'final_pending' });
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Could not complete onboarding. Please try again.');
     } finally {
@@ -167,7 +172,7 @@ export function Onboarding() {
     }
   };
 
-  if (!token) {
+  if (!token && !isMemberLoggedIn) {
     return (
       <main className="container section" style={{ maxWidth: 640 }}>
         <SEO title="Onboarding | ASPIER" description="Official researcher onboarding at ASPIER." />
@@ -215,22 +220,30 @@ export function Onboarding() {
     );
   }
 
-  // 4. Celebratory Live Published State
-  if (publishedProfile) {
+  // 4. Submitted / Published Confirmation State
+  const alreadySubmitted = applicant.status === 'final_pending' || applicant.status === 'published';
+  if (publishedProfile || alreadySubmitted) {
+    const isPublished = applicant.status === 'published' && !publishedProfile;
     return (
       <main className="container section" style={{ maxWidth: 720 }}>
-        <SEO title="Profile Published | ASPIER" description="Your ASPIER researcher profile is now live." />
+        <SEO title={isPublished ? 'Profile Published | ASPIER' : 'Stage 2 Profile Submitted | ASPIER'} description="Your ASPIER researcher onboarding status." />
         <div className="card" style={{ textAlign: 'center', padding: '44px 28px' }}>
           <div style={{ width: 68, height: 68, borderRadius: '50%', background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
             <CheckCircle2 size={38} />
           </div>
           <span className="eyebrow" style={{ color: '#0f766e', fontWeight: 700 }}>
             <Sparkles size={14} style={{ display: 'inline', marginRight: 4 }} />
-            Official Profile Published
+            {isPublished ? 'Official Profile Published' : 'Stage 2: Profile Review'}
           </span>
-          <h1 style={{ margin: '8px 0 10px', fontSize: '2rem' }}>Welcome to the ASPIER Team!</h1>
+          <h1 style={{ margin: '8px 0 10px', fontSize: '2rem' }}>
+            {isPublished ? 'Welcome to the ASPIER Team!' : 'Final Team Profile Submitted!'}
+          </h1>
           <p className="muted" style={{ fontSize: '1.05rem', lineHeight: 1.6, maxWidth: 540, margin: '0 auto 28px' }}>
-            Congratulations, <strong>{name}</strong>! Your account has been created and your profile card is now <strong>live on the public Team page</strong>.
+            {isPublished ? (
+              <>Congratulations, <strong>{name || applicant.name}</strong>! Your profile card is <strong>live on the public Team page</strong>.</>
+            ) : (
+              <>Thank you, <strong>{name || applicant.name}</strong>! Your Stage 2 Final Team Profile has been submitted for Admin review. Once approved, your profile will be published automatically to the public <strong>/team</strong> page.</>
+            )}
           </p>
 
           {/* Mini Preview Card Matching /team exact layout */}
@@ -339,6 +352,7 @@ export function Onboarding() {
             <small className="muted">Permanently locked to your approved application email.</small>
           </label>
 
+          {!isMemberLoggedIn && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginTop: 12 }}>
             <label>
               Create Account Password
@@ -368,6 +382,7 @@ export function Onboarding() {
               />
             </label>
           </div>
+          )}
         </div>
 
         {/* SECTION 2: Role-Specific Profile Information */}
@@ -607,10 +622,10 @@ export function Onboarding() {
               boxShadow: '0 4px 16px rgba(15,118,110,0.3)'
             }}
           >
-            {submitting ? 'Publishing Your Profile…' : 'Complete Onboarding & Publish My Profile'}
+            {submitting ? 'Submitting Stage 2 Profile…' : 'Submit Stage 2 Final Profile'}
           </Button>
           <p className="muted" style={{ fontSize: '0.85rem', marginTop: 12 }}>
-            By submitting, your profile card will be directly inserted into the ASPIER Team directory and immediately visible to the public.
+            By submitting, your Stage 2 profile enters Admin review and will be published to the ASPIER Team directory upon final approval.
           </p>
         </div>
       </form>

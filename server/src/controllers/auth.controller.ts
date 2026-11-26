@@ -74,12 +74,28 @@ export async function register(req: AuthRequest, res: Response, next: NextFuncti
       req
     });
 
+    let memberApplication: any = null;
+    if (['supervisor', 'youngScholar'].includes(user.role)) {
+      try {
+        const MembershipApplication = (await import('../models/MembershipApplication.js')).default;
+        memberApplication = await MembershipApplication.findOne({
+          $or: [{ memberUserId: user._id }, { email: user.email }]
+        }).sort({ createdAt: -1 }).lean();
+      } catch {
+        memberApplication = null;
+      }
+    }
+
     const sanitizedUser = {
       _id: user._id,
       id: user._id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      ...(memberApplication ? {
+        applicationStatus: memberApplication.status,
+        onboardingToken: memberApplication.onboardingToken || null
+      } : {})
     };
 
     res.status(201).json({
@@ -247,7 +263,7 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
       || reqRoleLower === userRoleLower
       || (['learner', 'student'].includes(reqRoleLower) && ['student', 'instructor'].includes(userRoleLower))
       || (['supervisor'].includes(reqRoleLower) && ['supervisor'].includes(userRoleLower))
-      || (['youngscholar', 'scholar'].includes(reqRoleLower) && ['youngscholar', 'scholar'].includes(userRoleLower));
+      || (['youngscholar', 'young_scholar', 'scholar'].includes(reqRoleLower) && ['youngscholar', 'young_scholar', 'scholar'].includes(userRoleLower));
     if (!roleMatches) throw new HttpError(401, 'The selected role does not match this account');
 
     if (adminAccount && user.isAdmin2FAEnabled) {
@@ -264,13 +280,7 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
         return;
       }
       await User.updateOne({ _id: user._id }, { $set: { otpFailedAttempts: 0 }, $unset: { otpLockedUntil: 1 } });
-    } else if (!adminAccount && ['supervisor', 'youngScholar'].includes(user.role)) {
-      if (!user.twoFactorEnabled) {
-        const setupToken = randomBytes(32).toString('base64url');
-        await User.updateOne({ _id: user._id }, { $set: { admin2FASetupTokenHash: sha256(setupToken), admin2FASetupExpires: new Date(Date.now() + 10 * 60 * 1000) } });
-        res.json({ success: true, data: { requires2FASetup: true, setupToken, role: user.role } });
-        return;
-      }
+    } else if (!adminAccount && ['supervisor', 'youngScholar'].includes(user.role) && user.twoFactorEnabled) {
       if (user.otpLockedUntil && user.otpLockedUntil > new Date()) throw new HttpError(429, 'Authenticator verification is temporarily locked. Try again later.');
       if (!totpCode) {
         const webAuthnChallenge = await beginWebAuthnLogin(user);
@@ -308,12 +318,28 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
     const csrf = (req.cookies?.csrfToken as string) || randomBytes(32).toString('hex');
     setCsrfCookie(res, csrf);
 
+    let memberApplication: any = null;
+    if (['supervisor', 'youngScholar'].includes(user.role)) {
+      try {
+        const MembershipApplication = (await import('../models/MembershipApplication.js')).default;
+        memberApplication = await MembershipApplication.findOne({
+          $or: [{ memberUserId: user._id }, { email: user.email }]
+        }).sort({ createdAt: -1 }).lean();
+      } catch {
+        memberApplication = null;
+      }
+    }
+
     const sanitizedUser = {
       _id: user._id,
       id: user._id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      ...(memberApplication ? {
+        applicationStatus: memberApplication.status,
+        onboardingToken: memberApplication.onboardingToken || null
+      } : {})
     };
 
     void recordAudit({

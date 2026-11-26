@@ -77,14 +77,18 @@ export function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const modeParam = searchParams.get('mode');
+    if (modeParam === 'activate') {
+      setMode('activate');
+    }
     const codeParam = searchParams.get('code') || searchParams.get('token') || searchParams.get('activationCode');
     if (codeParam) {
       setMode('activate');
       setActivationCode(cleanActivationToken(codeParam));
     }
     const roleParam = searchParams.get('role');
-    if (roleParam && (roleParam === 'supervisor' || roleParam === 'youngScholar')) {
-      setRole(roleParam);
+    if (roleParam && (roleParam === 'supervisor' || roleParam === 'youngScholar' || roleParam === 'young_scholar')) {
+      setRole(roleParam === 'young_scholar' ? 'youngScholar' : roleParam);
     }
     const emailParam = searchParams.get('email');
     if (emailParam) {
@@ -130,14 +134,26 @@ export function Login() {
           setBusy(false);
           return;
         }
-        await api.post('/public/membership/activate', {
+        const activateRes = await api.post('/public/membership/activate', {
           role,
           activationCode: cleanedCode,
           email: email.trim().toLowerCase(),
           password,
           confirmPassword
         });
-        toast.success('Member account activated! Please sign in with your Gmail and new password.');
+        const actData = activateRes.data;
+        const actUser = actData?.user || actData?.data?.user || actData?.data;
+        const actToken = actData?.token || actData?.data?.token;
+        const actCsrf = actData?.csrfToken || actData?.data?.csrfToken;
+        if (actUser && actToken) {
+          login(actUser, actToken, actCsrf);
+          toast.success('Account activated! Complete your Stage 2 Final Team Profile.');
+          const obToken = actUser?.onboardingToken || actData?.data?.onboardingToken;
+          const obRole = role === 'supervisor' ? 'supervisor' : 'scholar';
+          navigate(obToken ? `/team-onboarding?token=${encodeURIComponent(obToken)}&role=${obRole}` : '/team-onboarding', { replace: true });
+          return;
+        }
+        toast.success('Member account activated! Please sign in with your email and new password.');
         setMode('login');
         setPassword('');
         setConfirmPassword('');
@@ -197,11 +213,17 @@ export function Login() {
 
       toast.success('Signed in');
       const resolvedRole = rawUser?.role || resData?.data?.role || resData?.role;
+      const appStatus = rawUser?.applicationStatus || resData?.data?.applicationStatus;
+      const obToken = rawUser?.onboardingToken || resData?.data?.onboardingToken;
+      const isTeamMember = ['supervisor', 'youngScholar', 'young_scholar'].includes(resolvedRole);
+      const memberTarget = isTeamMember
+        ? (obToken && !['final_pending', 'published'].includes(appStatus)
+          ? `/team-onboarding?token=${encodeURIComponent(obToken)}&role=${resolvedRole === 'supervisor' ? 'supervisor' : 'scholar'}`
+          : '/team-onboarding')
+        : '/academy/student';
       const defaultTarget = ['admin', 'superadmin'].includes(resolvedRole)
         ? '/admin'
-        : ['supervisor', 'youngScholar'].includes(resolvedRole)
-          ? '/team'
-          : '/academy/student';
+        : memberTarget;
       const target = redirect || defaultTarget;
       navigate(target, { replace: true });
     } catch (error: any) {
@@ -342,13 +364,11 @@ export function Login() {
               onChange={(event) => setActivationCode(cleanActivationToken(event.target.value))}
             />
           </label>
-          <label>Gmail ID
+          <label>Email address
             <Input
               required
               type="email"
-              pattern=".+@gmail\.com"
-              title="Use an address ending in @gmail.com"
-              placeholder="yourname@gmail.com"
+              placeholder="yourname@example.com"
               value={email}
               onChange={(event) => setEmail(event.target.value.toLowerCase())}
             />

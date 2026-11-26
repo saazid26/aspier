@@ -28,6 +28,8 @@ import { getFallbackApplications, addOrUpdateFallbackSupervisor, addOrUpdateFall
 import { env } from '../config/env.js';
 import { fastCache } from '../utils/fastCache.js';
 import { extractToken } from '../utils/token.js';
+import { signAccessToken, issueRefreshSession } from '../services/token.service.js';
+import { setAuthCookies, setCsrfCookie } from '../utils/cookies.js';
 
 const initialSchema = z.preprocess((value) => {
   if (!value || typeof value !== 'object') return value;
@@ -944,17 +946,21 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
 export async function activateMemberAccount(req: Request, res: Response, next: NextFunction) {
     try {
       const data = parseBody(z.object({
-        role: z.enum(['supervisor', 'youngScholar']),
+        role: z.enum(['supervisor', 'youngScholar', 'young_scholar']),
         activationCode: z.string().min(1).max(500).transform((val) => extractToken(val)),
-        email: z.string().trim().email().max(254).refine((email) => email.toLowerCase().endsWith('@gmail.com'), 'Use a Gmail address ending in @gmail.com'),
+        email: z.string().trim().email().max(254),
         password: z.string().min(8, 'Password must be at least 8 characters').max(128, 'Password must not exceed 128 characters'),
         confirmPassword: z.string().min(8, 'Password must be at least 8 characters').max(128, 'Password must not exceed 128 characters')
       }).refine((body) => body.password === body.confirmPassword, { message: 'Passwords do not match' }), req.body);
       const passwordErrors = passwordStrength(data.password);
       if (passwordErrors.length) throw new HttpError(400, passwordErrors.join('. '));
 
-      const cleanCode = data.activationCode;
+      const normalizedRole = data.role === 'supervisor' ? 'supervisor' : 'youngScholar';
+      const cleanCode = data.activationCode.trim();
+      const upperCode = cleanCode.toUpperCase();
       const codeHash = sha256(cleanCode);
+      const upperCodeHash = sha256(upperCode);
+      const email = data.email.trim().toLowerCase();
 
       if (mongoose.connection.readyState !== 1) {
         await connectDatabase();
@@ -965,17 +971,31 @@ export async function activateMemberAccount(req: Request, res: Response, next: N
         application = await MembershipApplication.findOne({
           $or: [
             { activationCodeHash: codeHash },
+            { activationCodeHash: upperCodeHash },
+            { secretAccessCode: upperCode },
             { onboardingToken: cleanCode }
           ],
-          activationCodeUsedAt: { $exists: false }
+          activationCodeUsedAt: { $not: { $type: 'date' } }
         });
+        if (!application) {
+          application = await MembershipApplication.findOne({
+            email,
+            status: { $in: ['onboarding_sent', 'initial_pending', 'signup_pending', 'membership_pending'] },
+            $or: [
+              { activationCodeHash: codeHash },
+              { activationCodeHash: upperCodeHash },
+              { secretAccessCode: upperCode },
+              { onboardingToken: cleanCode }
+            ]
+          });
+        }
       }
 
       if (!application) {
         const fallbacks = getFallbackApplications();
         application = fallbacks.find((a: any) =>
           !a.activationCodeUsedAt &&
-          (a.onboardingToken === cleanCode || a.activationCode === cleanCode)
+          (a.onboardingToken === cleanCode || a.activationCode === cleanCode || a.secretAccessCode === upperCode)
         );
       }
 
@@ -983,7 +1003,10 @@ export async function activateMemberAccount(req: Request, res: Response, next: N
         throw new HttpError(400, 'Secret activation code or onboarding link is invalid, already used, or does not match');
       }
 
-      const email = data.email.toLowerCase();
+      if (application.email && application.email.toLowerCase() !== email) {
+        throw new HttpError(400, 'Email does not match the approved application');
+      }
+
       let user: any = null;
 
       if (mongoose.connection.readyState === 1) {
@@ -994,7 +1017,7 @@ export async function activateMemberAccount(req: Request, res: Response, next: N
           }
           user.name = application.name || user.name;
           user.passwordHash = await hashPassword(data.password);
-          user.role = data.role;
+          user.role = normalizedRole;
           user.isActive = true;
           await user.save();
         } else {
@@ -1002,14 +1025,19 @@ export async function activateMemberAccount(req: Request, res: Response, next: N
             name: application.name,
             email,
             passwordHash: await hashPassword(data.password),
-            role: data.role,
+            role: normalizedRole,
             isActive: true
           });
         }
 
+        if (!application.onboardingToken) {
+          application.onboardingToken = randomBytes(32).toString('hex');
+          application.onboardingTokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        }
         application.activationCodeUsedAt = new Date();
-        application.onboardingTokenUsed = true;
-        application.status = 'active_member';
+        if (!['final_pending', 'published'].includes(application.status)) {
+          application.status = 'onboarding_sent';
+        }
         application.memberUserId = user._id;
         if (typeof application.save === 'function') {
           await application.save().catch(() => {});
@@ -1017,30 +1045,55 @@ export async function activateMemberAccount(req: Request, res: Response, next: N
         await Notification.updateMany({ applicationId: application._id, audience: 'member' }, { $set: { userId: user._id } }).catch(() => {});
       } else {
         application.activationCodeUsedAt = new Date();
-        application.onboardingTokenUsed = true;
-        application.status = 'active_member';
+        if (!['final_pending', 'published'].includes(application.status)) {
+          application.status = 'onboarding_sent';
+        }
         user = {
           _id: new mongoose.Types.ObjectId(),
           name: application.name,
           email,
-          role: data.role
+          role: normalizedRole
         };
       }
 
       fastCache.clear();
 
+      const accessToken = signAccessToken(user);
+      let refreshToken = '';
+      try {
+        refreshToken = await issueRefreshSession(String(user._id), { device: req.headers['user-agent'], ip: req.ip });
+      } catch {
+        refreshToken = 'member-refresh-token';
+      }
+      setAuthCookies(res, accessToken, refreshToken);
+      const csrf = (req.cookies?.csrfToken as string) || randomBytes(32).toString('hex');
+      setCsrfCookie(res, csrf);
+
+      const sanitizedUser = {
+        _id: user._id,
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        applicationStatus: application.status,
+        onboardingToken: application.onboardingToken || null
+      };
+
       res.status(201).json({
         success: true,
+        token: accessToken,
+        csrfToken: csrf,
+        user: sanitizedUser,
         data: {
-          id: user._id || user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role
+          ...sanitizedUser,
+          token: accessToken,
+          csrfToken: csrf,
+          user: sanitizedUser
         }
       });
     } catch (error) {
       if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
-        next(new HttpError(409, 'This Gmail address already has an account'));
+        next(new HttpError(409, 'This email address already has an account'));
       } else {
         next(error);
       }

@@ -19,6 +19,22 @@ import { env } from '../config/env.js';
 import { getFallbackApplications, demoSupervisors, demoScholars, makeDemoAvatar } from '../utils/fallbackData.js';
 import { fastCache } from '../utils/fastCache.js';
 import { extractToken } from '../utils/token.js';
+import { sha256, encrypt } from '../utils/crypto.js';
+import { verifyAccessToken } from '../services/token.service.js';
+
+function resolveOptionalUser(req: Request): { _id?: string; email?: string; role?: string } | null {
+  try {
+    const authHeader = req.headers.authorization;
+    const rawToken = (authHeader && authHeader.startsWith('Bearer '))
+      ? authHeader.slice(7).trim()
+      : (req as any).cookies?.accessToken;
+    if (!rawToken) return null;
+    const payload = verifyAccessToken(rawToken) as any;
+    return payload ? { _id: payload.sub || payload._id, email: payload.email, role: payload.role } : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function approveAndSendOnboarding(req: AuthRequest, res: Response, next: NextFunction) {
   try {
@@ -38,10 +54,17 @@ export async function approveAndSendOnboarding(req: AuthRequest, res: Response, 
 
     const token = randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const secretAccessCode = application.secretAccessCode || `ASP-${randomBytes(4).toString('hex').toUpperCase()}`;
+    const publicApplicationId = application.publicApplicationId || `ASPIER-${new Date().getFullYear()}-${randomBytes(2).toString('hex').toUpperCase()}`;
 
     application.onboardingToken = token;
     application.onboardingTokenExpires = expiresAt;
     application.onboardingTokenUsed = false;
+    application.publicApplicationId = publicApplicationId;
+    application.secretAccessCode = secretAccessCode;
+    application.activationCodeHash = sha256(secretAccessCode);
+    application.activationCodeEncrypted = encrypt(secretAccessCode);
+    application.activationCodeUsedAt = undefined;
     application.status = 'onboarding_sent';
     application.reviewedBy = req.user?._id;
     application.reviewedAt = new Date();
@@ -51,6 +74,7 @@ export async function approveAndSendOnboarding(req: AuthRequest, res: Response, 
     fastCache.clear();
 
     const role = application.role === 'supervisor' || application.category === 'teammate' ? 'supervisor' : 'scholar';
+    const loginRole = role === 'supervisor' ? 'supervisor' : 'youngScholar';
     const roleLabel = role === 'supervisor' ? 'Research Supervisor' : 'Young Scholar';
 
     const baseUrl = (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'))
@@ -60,7 +84,8 @@ export async function approveAndSendOnboarding(req: AuthRequest, res: Response, 
         : (env.CLIENT_URL && !env.CLIENT_URL.includes('localhost')
           ? env.CLIENT_URL.replace(/\/$/, '')
           : 'https://aspierglobal.vercel.app'));
-    const onboardingUrl = `${baseUrl}/onboarding?token=${token}&role=${role}`;
+    const onboardingUrl = `${baseUrl}/login?mode=activate&email=${encodeURIComponent(application.email)}&code=${encodeURIComponent(secretAccessCode)}&role=${loginRole}`;
+    const directTokenUrl = `${baseUrl}/onboarding?token=${token}&role=${role}`;
 
     // Send in-app notification to member (if they checked portal or have account)
     try {
@@ -130,7 +155,10 @@ export async function approveAndSendOnboarding(req: AuthRequest, res: Response, 
       success: true,
       data: {
         onboardingUrl,
+        directTokenUrl,
         token,
+        secretAccessCode,
+        publicApplicationId,
         role,
         roleLabel,
         email: application.email,
@@ -147,27 +175,39 @@ export async function validateOnboardingToken(req: Request, res: Response, next:
   try {
     const rawToken = String(req.query.token || '').trim();
     const token = extractToken(rawToken);
-    if (!token) throw new HttpError(400, 'Onboarding token is required');
+    const authUser = resolveOptionalUser(req);
+
+    if (!token && !authUser) throw new HttpError(400, 'Onboarding token or member login is required');
 
     let application: any = null;
     if (mongoose.connection.readyState !== 1) {
       await connectDatabase();
     }
     if (mongoose.connection.readyState === 1) {
-      application = await MembershipApplication.findOne({ onboardingToken: token }).catch(() => null);
+      if (token) {
+        application = await MembershipApplication.findOne({ onboardingToken: token }).catch(() => null);
+      }
+      if (!application && authUser) {
+        const orQuery: any[] = [];
+        if (authUser._id) orQuery.push({ memberUserId: authUser._id });
+        if (authUser.email) orQuery.push({ email: authUser.email.toLowerCase() });
+        if (orQuery.length) {
+          application = await MembershipApplication.findOne({ $or: orQuery }).sort({ createdAt: -1 }).catch(() => null);
+        }
+      }
     }
-    if (!application) {
+    if (!application && token) {
       application = getFallbackApplications().find((a) => a.onboardingToken === token);
     }
     if (!application) {
       throw new HttpError(404, 'Invalid or unrecognized onboarding link.');
     }
 
-    if (application.onboardingTokenUsed) {
+    if (token && !authUser && application.onboardingTokenUsed && !['final_pending', 'published'].includes(application.status)) {
       throw new HttpError(410, 'This onboarding link has already been used. Please log in to your account.');
     }
 
-    if (application.onboardingTokenExpires && new Date(application.onboardingTokenExpires) < new Date()) {
+    if (token && !authUser && application.onboardingTokenExpires && new Date(application.onboardingTokenExpires) < new Date()) {
       throw new HttpError(410, 'This onboarding link has expired. Please contact the ASPIER administration.');
     }
 
@@ -177,6 +217,7 @@ export async function validateOnboardingToken(req: Request, res: Response, next:
       success: true,
       data: {
         valid: true,
+        status: application.status,
         name: application.name,
         email: application.email,
         phone: application.phone,
@@ -188,6 +229,7 @@ export async function validateOnboardingToken(req: Request, res: Response, next:
         educationalBackground: application.educationalBackground || application.education || '',
         academicStatus: application.academicStatus || '',
         bio: application.bio || '',
+        photo: application.photo || '',
         researchDomain: application.researchDomain || (application.researchDomains || []).join(', '),
         researchDomains: application.researchDomains || []
       }
@@ -218,11 +260,18 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
   try {
     const { token: rawToken, password, profile } = req.body || {};
     const token = extractToken(rawToken);
-    if (!token) throw new HttpError(400, 'Onboarding token is required');
-    if (!password || password.length < 8) throw new HttpError(400, 'Password must be at least 8 characters');
-    if (password.length > 128) throw new HttpError(400, 'Password must not exceed 128 characters');
-    const passwordErrors = passwordStrength(password);
-    if (passwordErrors.length) throw new HttpError(400, passwordErrors.join('. '));
+    const authUser = resolveOptionalUser(req);
+    if (!token && !authUser) throw new HttpError(400, 'Onboarding token or member login is required');
+    if (!authUser) {
+      if (!password || password.length < 8) throw new HttpError(400, 'Password must be at least 8 characters');
+      if (password.length > 128) throw new HttpError(400, 'Password must not exceed 128 characters');
+      const passwordErrors = passwordStrength(password);
+      if (passwordErrors.length) throw new HttpError(400, passwordErrors.join('. '));
+    } else if (password) {
+      if (password.length < 8 || password.length > 128) throw new HttpError(400, 'Password must be between 8 and 128 characters');
+      const passwordErrors = passwordStrength(password);
+      if (passwordErrors.length) throw new HttpError(400, passwordErrors.join('. '));
+    }
     if (!profile || !profile.name) throw new HttpError(400, 'Profile details and full name are required');
 
     let application: any = null;
@@ -230,181 +279,108 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
       await connectDatabase();
     }
     if (mongoose.connection.readyState === 1) {
-      application = await MembershipApplication.findOne({ onboardingToken: token }).catch(() => null);
+      if (token) {
+        application = await MembershipApplication.findOne({ onboardingToken: token }).catch(() => null);
+      }
+      if (!application && authUser) {
+        const orQuery: any[] = [];
+        if (authUser._id) orQuery.push({ memberUserId: authUser._id });
+        if (authUser.email) orQuery.push({ email: authUser.email.toLowerCase() });
+        if (orQuery.length) {
+          application = await MembershipApplication.findOne({ $or: orQuery }).sort({ createdAt: -1 }).catch(() => null);
+        }
+      }
     }
-    if (!application) {
+    if (!application && token) {
       application = getFallbackApplications().find((a) => a.onboardingToken === token);
     }
     if (!application) throw new HttpError(404, 'Invalid onboarding token');
-    if (application.onboardingTokenUsed) throw new HttpError(410, 'This onboarding token has already been used');
-    if (application.onboardingTokenExpires && new Date(application.onboardingTokenExpires) < new Date()) {
+    if (token && !authUser && application.onboardingTokenUsed) throw new HttpError(410, 'This onboarding token has already been used');
+    if (token && !authUser && application.onboardingTokenExpires && new Date(application.onboardingTokenExpires) < new Date()) {
       throw new HttpError(410, 'This onboarding token has expired');
     }
 
     const role = application.role === 'supervisor' || application.category === 'teammate' ? 'supervisor' : 'scholar';
     const userRole = role === 'supervisor' ? 'supervisor' : 'youngScholar';
-    const passwordHash = await hashPassword(password);
     const baseSlug = slugify(profile.slug || profile.name);
 
-    // 1. Create or update user account if DB connected
-    let userId: any = new mongoose.Types.ObjectId();
+    // 1. Create or update user account if password provided or link existing authUser
+    let userId: any = authUser?._id || application.memberUserId || new mongoose.Types.ObjectId();
     if (mongoose.connection.readyState === 1) {
       try {
         let user = await User.findOne({ email: application.email.toLowerCase() });
-        if (!user) {
+        if (!user && password) {
           user = await User.create({
             name: profile.name,
             email: application.email.toLowerCase(),
-            passwordHash,
+            passwordHash: await hashPassword(password),
             role: userRole,
             isActive: true
           });
-        } else {
+        } else if (user) {
           user.name = profile.name || user.name;
-          user.passwordHash = passwordHash;
+          if (password) user.passwordHash = await hashPassword(password);
           user.role = userRole;
           user.isActive = true;
           await user.save();
         }
-        userId = user._id;
+        if (user) userId = user._id;
       } catch (uErr) {
         console.warn('[onboarding] User creation fallback:', uErr);
       }
     }
 
-    // 2. Direct insertion / updating in Supervisor or Scholar model AND in fallback arrays
-    let profileDoc: any;
+    // 2. Save Stage 2 profile onto MembershipApplication and transition to final_pending (Stage 2: Profile Review)
     const photo = profile.photo || makeDemoAvatar(profile.name);
+    const rawTags = role === 'supervisor'
+      ? (profile.researchInterests || profile.researchDomains)
+      : (profile.researchTopics || profile.researchDomains);
+    const tags = Array.isArray(rawTags) && rawTags.length > 0
+      ? rawTags.map((s: string) => String(s).trim()).filter(Boolean)
+      : (typeof rawTags === 'string' && rawTags.trim()
+        ? rawTags.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : (Array.isArray(application.researchDomains) && application.researchDomains.length > 0
+          ? application.researchDomains
+          : (application.researchDomain ? application.researchDomain.split(',').map((s: string) => s.trim()).filter(Boolean) : [])));
+    const edu = (profile.education || profile.educationalBackground || application.education || application.educationalBackground || '').trim();
 
-    if (role === 'supervisor') {
-      const interests = (Array.isArray(profile.researchInterests) && profile.researchInterests.length > 0)
-        ? profile.researchInterests
-        : (typeof profile.researchInterests === 'string' && profile.researchInterests.trim()
-          ? profile.researchInterests.split(',').map((s: string) => s.trim()).filter(Boolean)
-          : (Array.isArray(application.researchDomains) && application.researchDomains.length > 0
-            ? application.researchDomains
-            : (application.researchDomain ? application.researchDomain.split(',').map((s: string) => s.trim()).filter(Boolean) : [])));
-      const supEdu = (profile.education || profile.educationalBackground || application.education || application.educationalBackground || '').trim();
-
-      const supDbPayload = {
-        name: profile.name,
-        slug: baseSlug,
-        designation: profile.designation || 'Research Supervisor',
-        affiliation: profile.affiliation || 'ASPIER',
-        education: supEdu,
-        educationalBackground: supEdu,
-        bio: profile.bio || '',
-        photo,
-        email: (application.email || '').toLowerCase(),
-        researchInterests: interests,
-        researchGate: profile.researchGate || '',
-        googleScholar: profile.googleScholar || '',
-        linkedin: profile.linkedin || '',
-        orcid: profile.orcid || '',
-        twitter: profile.twitter || '',
-        website: profile.website || '',
-        socialLinks: {
-          researchGate: profile.researchGate || '',
-          googleScholar: profile.googleScholar || '',
-          linkedin: profile.linkedin || '',
-          orcid: profile.orcid || '',
-          twitter: profile.twitter || '',
-          website: profile.website || ''
-        },
-        isPublished: true,
-        sampleData: false
-      };
-
-      const supData = { _id: new mongoose.Types.ObjectId().toString(), ...supDbPayload };
-      demoSupervisors.unshift(supData as any);
-
-      if (mongoose.connection.readyState === 1) {
-        try {
-          profileDoc = await Supervisor.findOneAndUpdate(
-            { $or: [{ slug: baseSlug }, { email: (application.email || '').toLowerCase() }] },
-            { $set: supDbPayload },
-            { upsert: true, new: true, setDefaultsOnInsert: true }
-          );
-        } catch (sErr) {
-          console.warn('[onboarding] Supervisor DB upsert fallback:', sErr);
-        }
-      }
-      if (!profileDoc) profileDoc = supData;
-    } else {
-      const topics = (Array.isArray(profile.researchTopics) && profile.researchTopics.length > 0)
-        ? profile.researchTopics
-        : (typeof profile.researchTopics === 'string' && profile.researchTopics.trim()
-          ? profile.researchTopics.split(',').map((s: string) => s.trim()).filter(Boolean)
-          : (Array.isArray(application.researchDomains) && application.researchDomains.length > 0
-            ? application.researchDomains
-            : (application.researchDomain ? application.researchDomain.split(',').map((s: string) => s.trim()).filter(Boolean) : [])));
-      const schEdu = (profile.education || profile.educationalBackground || application.education || application.educationalBackground || '').trim();
-
-      const schDbPayload = {
-        name: profile.name,
-        slug: baseSlug,
-        cohort: '2026',
-        designation: 'Young Scholar',
-        affiliation: profile.affiliation || '',
-        education: schEdu,
-        educationalBackground: schEdu,
-        bio: profile.bio || '',
-        photo,
-        researchTopics: topics,
-        researchGate: profile.researchGate || '',
-        googleScholar: profile.googleScholar || '',
-        linkedin: profile.linkedin || '',
-        orcid: profile.orcid || '',
-        twitter: profile.twitter || '',
-        github: profile.github || '',
-        socialLinks: {
-          researchGate: profile.researchGate || '',
-          googleScholar: profile.googleScholar || '',
-          linkedin: profile.linkedin || '',
-          orcid: profile.orcid || '',
-          twitter: profile.twitter || '',
-          github: profile.github || ''
-        },
-        isPublished: true,
-        sampleData: false
-      };
-
-      const schData = { _id: new mongoose.Types.ObjectId().toString(), ...schDbPayload };
-      demoScholars.unshift(schData as any);
-
-      if (mongoose.connection.readyState === 1) {
-        try {
-          profileDoc = await Scholar.findOneAndUpdate(
-            { slug: baseSlug },
-            { $set: schDbPayload },
-            { upsert: true, new: true, setDefaultsOnInsert: true }
-          );
-        } catch (scErr) {
-          console.warn('[onboarding] Scholar DB upsert fallback:', scErr);
-        }
-      }
-      if (!profileDoc) profileDoc = schData;
-    }
-
-    // 3. Mark application as used & published
+    application.name = profile.name.trim();
+    application.slug = baseSlug;
+    application.designation = role === 'scholar' ? 'Young Scholar' : (profile.designation || 'Research Supervisor');
+    application.institution = role === 'scholar' ? '' : (profile.affiliation || 'ASPIER');
+    application.cohort = role === 'scholar' ? '2026' : (profile.cohort || '2026');
+    application.education = edu;
+    application.educationalBackground = edu;
+    application.bio = profile.bio || '';
+    application.photo = photo;
+    application.researchDomains = tags;
+    application.researchDomain = tags.join(', ');
+    application.researchGate = profile.researchGate || '';
+    application.googleScholar = profile.googleScholar || '';
+    application.linkedin = profile.linkedin || '';
+    application.orcid = profile.orcid || '';
+    application.twitter = profile.twitter || '';
+    application.github = profile.github || '';
+    application.website = profile.website || '';
     application.onboardingTokenUsed = true;
-    application.status = 'published';
-    application.publishedProfileId = profileDoc._id;
-    application.publishedProfileType = role;
+    application.status = 'final_pending';
     application.memberUserId = userId;
     if (typeof application.save === 'function') {
       await application.save().catch(() => {});
     }
     fastCache.clear();
 
-    // 4. Notify Administrators of live profile
+    // 3. Notify Administrators for Stage 2 Final Approval
     const roleLabel = role === 'supervisor' ? 'Research Supervisor' : 'Young Scholar';
     try {
       await notifyAdmins({
-        title: `New ${roleLabel} Profile Published: ${profile.name}`,
-        body: `${profile.name} has completed onboarding and their profile is now live on the /team page.`,
-        category: 'onboarding-completed',
-        link: '/admin/team-manager'
+        title: `Stage 2 Profile Submitted: ${profile.name} (${roleLabel})`,
+        body: `${profile.name} has submitted their Stage 2 Final Team Profile and is ready for review & publishing to /team.`,
+        category: 'onboarding-stage2',
+        link: '/admin/membership-applications',
+        applicantName: profile.name,
+        applicantEmail: application.email,
+        referenceId: String(application.id || application._id)
       });
     } catch {
       // ignore
@@ -413,9 +389,9 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
     res.json({
       success: true,
       data: {
-        profile: profileDoc,
+        status: 'final_pending',
         role,
-        redirectUrl: '/team'
+        message: 'Stage 2 profile submitted for Admin review.'
       }
     });
   } catch (error) {
