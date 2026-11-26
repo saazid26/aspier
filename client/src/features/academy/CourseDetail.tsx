@@ -113,19 +113,36 @@ export function CourseDetail() {
   const formattedFee = formatCourseFee(coursePrice);
   const formattedPrice = `৳${formattedFee} BDT`;
 
+  const rawDescription = data.description ? data.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+  const isResearchWritingCourse = /research paper writing/i.test(data.title || '');
+  const isAiProductivityCourse = /ai productivity/i.test(data.title || '');
+  const courseSeoTitle = isResearchWritingCourse
+    ? 'Higher Study-Oriented Research Paper Writing Course (Online) — Learn Journal Publication | ASPIER'
+    : isAiProductivityCourse
+      ? 'Advanced AI Productivity Masterclass: Work Smarter with AI — Practical Training Course | ASPIER'
+      : `${data.title} (${normalizedDeliveryMode}) — Online Training Course | ASPIER`;
+  const courseSeoDescription = isResearchWritingCourse
+    ? 'Step-by-step online course on academic research paper writing, Scopus/Web of Science literature search, methodology, and peer-reviewed journal publication for higher studies abroad.'
+    : isAiProductivityCourse
+      ? '8-week practical live online training on Artificial Intelligence tools, prompt engineering, workflow automation, research analysis, and professional productivity.'
+      : rawDescription
+        ? rawDescription.slice(0, 160)
+        : `Practical ${normalizedDeliveryMode.toLowerCase()} training course on ${data.title} for students, researchers, and professionals in Bangladesh.`;
+
   return (
     <main className="container section">
       <SEO
-        title={`${data.title} | ASPIER Academy`}
+        title={courseSeoTitle}
         exact
-        description={data.description ? data.description.replace(/<[^>]+>/g, '').slice(0, 160) : `Learn ${data.title} at ASPIER Academy with hands-on research mentorship and practical scientific training.`}
-        keywords={`${data.title}, ASPIER Academy, scientific course, ${data.level || 'research'} training, research paper writing`}
+        description={courseSeoDescription}
+        keywords={`${data.title}, online course Bangladesh, ${isAiProductivityCourse ? 'AI tools course, prompt engineering, workflow automation, AI productivity masterclass' : 'research paper writing course, Scopus journal publication, research methodology, higher study research training'}, ${data.level || 'research'} training`}
         canonicalPath={`/academy/courses/${data.slug || id}`}
         courseSchema={{
           name: data.title,
-          description: data.description ? data.description.replace(/<[^>]+>/g, '').slice(0, 300) : data.title,
+          description: rawDescription ? rawDescription.slice(0, 300) : courseSeoDescription,
           price: coursePrice,
           currency: 'BDT',
+          courseMode: normalizedDeliveryMode,
           instructor: typeof data.instructorId === 'object' ? data.instructorId?.name : undefined,
           category: data.level
         }}

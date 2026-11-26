@@ -168,20 +168,22 @@ export function Team() {
     website: founder.founderWebsite
   };
 
+  const teamTitle = 'Find a Research Supervisor & Academic Mentor in Bangladesh — PhD & MSc Researchers | ASPIER';
+  const teamDescription =
+    'Connect with experienced research supervisors and young scholars in Bangladesh working on climate change, hydrology, biotechnology, geospatial intelligence, and engineering.';
   usePageSEO({
-    title: 'ASPIER Team — Research Supervisors & Young Scholars | ASPIER Global',
-    description:
-      'Meet the Research Supervisors and Young Scholars of ASPIER Global leading collaborative research across Bangladesh and internationally.',
+    title: teamTitle,
+    description: teamDescription,
     path: '/team'
   });
 
   return (
     <>
       <SEO
-        title="ASPIER Team — Research Supervisors & Young Scholars | ASPIER Global"
+        title={teamTitle}
         exact
-        description="Meet the Research Supervisors and Young Scholars of ASPIER Global leading collaborative research across Bangladesh and internationally."
-        keywords="ASPIER team, ASPIER supervisors, ASPIER Young Scholar, ASPIER Global, ASPIER Research, ASPIER Bangladesh, ASPIER Research Supervisors, ASPIER Young Scholars"
+        description={teamDescription}
+        keywords="find research supervisor Bangladesh, PhD research mentor Bangladesh, MSc research mentor, undergraduate research supervision, climate change hydrology biotechnology researchers"
         canonicalPath="/team"
         breadcrumbs={[
           { name: 'Home', path: '/' },

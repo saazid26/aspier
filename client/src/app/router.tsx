@@ -111,9 +111,9 @@ function Home(){
     queryKey: ['public-settings'],
     queryFn: async () => (await api.get('/public/settings')).data.data
   });
-  const homeTitle = 'ASPIER Global — ASPIER Research, ASPIER Academy & Young Scholars';
+  const homeTitle = 'Research Paper Writing Courses, AI Training & Research Mentorship in Bangladesh | ASPIER';
   const homeDescription =
-    'Official website of ASPIER Global (ASPIER) — explore ASPIER Academy courses, 10 specialized research wings, supervisors, and Young Scholar mentorship.';
+    'Learn how to write and publish peer-reviewed research papers for higher studies abroad, master AI productivity tools, and collaborate with PhD research supervisors in Bangladesh.';
   usePageSEO({
     title: homeTitle,
     description: homeDescription,
@@ -125,7 +125,7 @@ function Home(){
         title={homeTitle}
         exact
         description={homeDescription}
-        keywords="ASPIER, ASPIER Global, ASPIER Academy, ASPIER Research, ASPIER Bangladesh, ASPIER courses, ASPIER team, ASPIER Young Scholar, ASPIER supervisors, ASPIER research wings, aspierglobal"
+        keywords="research paper writing course in Bangladesh, how to write and publish a research paper, higher study research training, AI productivity masterclass online, find research supervisor Bangladesh, undergraduate research mentorship, Scopus journal publication course"
         canonicalPath="/"
       />
       <Hero />

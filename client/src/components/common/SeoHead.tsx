@@ -12,6 +12,7 @@ export type CourseSchemaProps = {
   currency?: string;
   instructor?: string;
   category?: string;
+  courseMode?: string;
   url?: string;
 };
 
@@ -36,11 +37,11 @@ export type SeoHeadProps = {
   googleSiteVerification?: string;
 };
 
-const DEFAULT_TITLE = 'ASPIER Global — ASPIER Research, ASPIER Academy & Young Scholars';
+const DEFAULT_TITLE = 'Research Paper Writing Courses, AI Training & Research Mentorship in Bangladesh | ASPIER';
 const DEFAULT_DESCRIPTION =
-  'Official website of ASPIER Global (ASPIER) — explore ASPIER Academy research courses, 10 specialized research wings, research supervisors, and Young Scholar opportunities in Bangladesh and worldwide.';
+  'Learn how to write and publish peer-reviewed research papers for higher studies abroad, master AI productivity tools, and collaborate with PhD research supervisors in Bangladesh.';
 const DEFAULT_KEYWORDS =
-  'ASPIER, ASPIER Global, ASPIER Academy, ASPIER Research, ASPIER Bangladesh, ASPIER courses, ASPIER team, ASPIER Young Scholar, ASPIER supervisors, ASPIER research wings, aspierglobal, ASPIER official website, ASPIER research course, ASPIER online course';
+  'research paper writing course in Bangladesh, how to write and publish a research paper, higher study research training, AI productivity masterclass online, find research supervisor Bangladesh, undergraduate research mentorship, Scopus journal publication course';
 
 const DEFAULT_IMAGE = 'https://aspierglobal.vercel.app/aspier-logo.png';
 const BASE_URL =
@@ -50,19 +51,24 @@ const BASE_URL =
 
 const DEFAULT_FAQS: FaqItem[] = [
   {
-    question: 'What is ASPIER (Aeronautical, Spatial, Planetary Institution for Environmental Research)?',
+    question: 'How can I learn to write and publish a research paper in Bangladesh for higher studies abroad?',
     answer:
-      'ASPIER (Aeronautical, Spatial, Planetary Institution for Environmental Research) is an autonomous scientific research institution advancing multidisciplinary science across aerospace systems, satellite remote sensing, planetary exploration, and environmental ecosystems.'
+      'You can enroll in the Higher Study-Oriented Research Paper Writing Course at ASPIER Academy (https://aspierglobal.vercel.app/academy), which provides step-by-step online training in topic selection, Scopus and Web of Science literature search, IMRaD manuscript writing, data analysis, and peer-reviewed journal submission for higher studies abroad.'
   },
   {
-    question: 'What is ASPIER Academy?',
+    question: 'What is the best online course for academic research methodology, Scopus literature review, and IMRaD manuscript writing?',
     answer:
-      'ASPIER Academy is the educational division of ASPIER, providing specialized training programs including the Higher Study Oriented Basic to Advance Research Paper Writing Course, Responsible AI Foundations, Climate Data Modeling, and live mentor-led research masterclasses.'
+      'ASPIER Academy\'s Higher Study-Oriented Research Paper Writing Course covers end-to-end academic research methodology, systematic Scopus and Web of Science literature reviews, reference management, IMRaD manuscript structuring, and journal publication workflows with mentor guidance.'
   },
   {
-    question: 'How to join ASPIER as a Research Mate, Young Scholar, or Supervisor?',
+    question: 'How can undergraduate or graduate students find a research supervisor and join a research team in Bangladesh?',
     answer:
-      'Prospective researchers, students, and academics can apply directly through the ASPIER portal at /wings/apply-research or /join to collaborate as Research Mates, Young Scholars, or Research Supervisors across our 10 Academic Wings.'
+      'Undergraduate and graduate students can browse active PhD and MSc mentors across 10 specialized research wings at https://aspierglobal.vercel.app/team and apply directly through the Young Scholar & Research Supervisor application portal at https://aspierglobal.vercel.app/join to collaborate on peer-reviewed publications.'
+  },
+  {
+    question: 'Which AI tools and productivity workflows are taught in the Advanced AI Productivity Masterclass?',
+    answer:
+      'The Advanced AI Productivity Masterclass: Work Smarter with AI is an 8-week live online training program teaching practical Artificial Intelligence tools, prompt engineering, workflow automation, AI-assisted research analysis, and professional productivity workflows.'
   }
 ];
 
@@ -252,7 +258,7 @@ export function SeoHead({
         },
         hasCourseInstance: {
           '@type': 'CourseInstance',
-          courseMode: 'Online',
+          courseMode: courseSchema.courseMode || 'Online',
           instructor: courseSchema.instructor
             ? {
                 '@type': 'Person',

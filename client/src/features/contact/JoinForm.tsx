@@ -13,9 +13,9 @@ type ApplicationReceipt = { applicationId: string; accessCode: string };
 
 export function JoinForm() {
   usePageSEO({
-    title: 'Join ASPIER Global — Apply as Research Supervisor or Young Scholar',
+    title: 'Undergraduate & Graduate Research Mentorship Program — Apply as Young Scholar or Supervisor',
     description:
-      'Apply online to join ASPIER Global as a Research Supervisor or Young Scholar and collaborate on interdisciplinary research projects.',
+      'Apply online to join an interdisciplinary research team as a Young Scholar or Research Supervisor and collaborate on peer-reviewed scientific publications.',
     path: '/join'
   });
   const { data: remoteWings = [] } = useQuery({
@@ -120,10 +120,10 @@ export function JoinForm() {
 
   return <main className="container section" style={{ maxWidth: 720 }}>
     <SEO
-      title="Join ASPIER Global — Apply as Research Supervisor or Young Scholar"
+      title="Undergraduate & Graduate Research Mentorship Program — Apply as Young Scholar or Supervisor"
       exact
-      description="Apply online to join ASPIER Global as a Research Supervisor or Young Scholar and collaborate on interdisciplinary research projects."
-      keywords="Join ASPIER, ASPIER Global, ASPIER Young Scholar, ASPIER supervisors, ASPIER Research Supervisors, ASPIER Bangladesh, apply ASPIER"
+      description="Apply online to join an interdisciplinary research team as a Young Scholar or Research Supervisor and collaborate on peer-reviewed scientific publications."
+      keywords="undergraduate research mentorship, graduate research fellowship Bangladesh, apply as young scholar, apply as research supervisor, peer-reviewed publication collaboration"
       canonicalPath="/join"
       breadcrumbs={[
         { name: 'Home', path: '/' },

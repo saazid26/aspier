@@ -66,20 +66,22 @@ export function Catalog() {
   }
 
   const data = remoteData && remoteData.length > 0 ? remoteData : (staticCourses as Course[]);
+  const academyTitle = 'Online Research Paper Writing & AI Productivity Courses in Bangladesh | ASPIER Academy';
+  const academyDescription =
+    'Join practical online live and recorded training courses in academic research paper writing, literature review, data analysis, and AI productivity tools for students and professionals.';
   usePageSEO({
-    title: 'ASPIER Academy — Research Courses & Training | ASPIER Global',
-    description:
-      'Enroll in live and recorded research courses at ASPIER Academy. Learn research paper writing, AI productivity, and scientific methodology with ASPIER Global.',
+    title: academyTitle,
+    description: academyDescription,
     path: '/academy'
   });
 
   return (
     <main className="container section academy-catalog">
       <SEO
-        title="ASPIER Academy — Research Courses & Training | ASPIER Global"
+        title={academyTitle}
         exact
-        description="Enroll in live and recorded research courses at ASPIER Academy. Learn research paper writing, AI productivity, and scientific methodology with ASPIER Global."
-        keywords="ASPIER Academy, ASPIER courses, ASPIER research course, ASPIER online course, ASPIER Global, Higher Study Oriented Basic to Advance Research Paper Writing Course, Advanced AI Productivity Masterclass, Research Training Bangladesh"
+        description={academyDescription}
+        keywords="research paper writing course online, research methodology course Bangladesh, higher study research course, AI tools course for researchers, ChatGPT and AI productivity masterclass"
         canonicalPath="/academy"
         coursesList={data.map((c) => ({
           name: c.title,
