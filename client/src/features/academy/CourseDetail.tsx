@@ -60,7 +60,7 @@ export function CourseDetail() {
       : deliveryMode || 'Online Recorded';
 
   const formatStartDate = (startDate?: string) => {
-    if (!startDate) return 'Open Enrollment (Instant Access)';
+    if (!startDate || /instant access/i.test(startDate)) return 'Open Enrollment';
     const date = new Date(startDate);
     if (!Number.isNaN(date.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(startDate)) {
       return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(date);
@@ -678,7 +678,7 @@ export function CourseDetail() {
             Ready to Master Scientific Research Paper Writing?
           </h3>
           <p className="mt-1 mb-0 text-xs sm:text-sm text-[#ccfbf1] leading-relaxed">
-            Get instant access to all 15 classes, practical datasets, LaTeX templates, and direct mentorship.
+            Get full access to all 15 classes, practical datasets, LaTeX templates, and direct mentorship.
           </p>
         </div>
 

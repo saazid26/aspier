@@ -238,7 +238,7 @@ export const fallbackCourses = [
     deliveryMode: "Online Recorded",
     format: "Online Recorded",
     isRecorded: true,
-    startDate: "Instant Access (Recorded)",
+    startDate: "Open Enrollment",
     targetAudience: "Undergraduate and graduate students preparing for higher studies abroad",
     price: 2000,
     level: "beginner",

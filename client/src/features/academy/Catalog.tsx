@@ -26,16 +26,16 @@ function normalizeDeliveryMode(mode?: string) {
   return mode || 'Online Recorded';
 }
 
-function formatStartDate(startDate?: string, deliveryMode?: string) {
+function formatFooterLabel(startDate?: string, deliveryMode?: string) {
   if (deliveryMode === 'Online Recorded' || deliveryMode === 'Online and Recorded') {
-    return 'Instant Access (Recorded)';
+    return 'Course Fee';
   }
-  if (!startDate) return 'Starts: Upcoming Batch';
+  if (!startDate || /instant access/i.test(startDate)) return 'Course Fee';
   const date = new Date(startDate);
   if (!Number.isNaN(date.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(startDate)) {
     return `Starts: ${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(date)}`;
   }
-  return `Starts: ${startDate}`;
+  return 'Course Fee';
 }
 
 export function Catalog() {
@@ -102,7 +102,7 @@ export function Catalog() {
                 </div>
               </div>
               <div className="course-card-footer">
-                <p className="course-start-date">{formatStartDate(course.startDate, course.deliveryMode || course.mode)}</p>
+                <p className="course-start-date">{formatFooterLabel(course.startDate, course.deliveryMode || course.mode)}</p>
                 <strong className="course-price">৳{course.price} BDT</strong>
               </div>
             </div>

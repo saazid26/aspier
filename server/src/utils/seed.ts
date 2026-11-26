@@ -172,7 +172,7 @@ export async function seedAcademyData(force = false): Promise<{
         deliveryMode: 'Online Recorded',
         format: 'Online Recorded',
         isRecorded: true,
-        startDate: 'Instant Access (Recorded)',
+        startDate: 'Open Enrollment',
         targetAudience: 'Undergraduate and graduate students, early-career researchers, and applicants preparing for higher studies abroad.',
         enrollmentContact: 'Enroll through ASPIER Academy and contact aspier.global@gmail.com for cohort information.',
         wingId: policyWing?._id,
