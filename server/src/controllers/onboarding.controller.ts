@@ -343,9 +343,9 @@ export async function completeOnboarding(req: Request, res: Response, next: Next
       const schDbPayload = {
         name: profile.name,
         slug: baseSlug,
-        cohort: profile.cohort || '2026',
-        designation: profile.designation || 'Young Scholar',
-        affiliation: profile.affiliation || 'ASPIER',
+        cohort: '2026',
+        designation: 'Young Scholar',
+        affiliation: profile.affiliation || '',
         education: schEdu,
         educationalBackground: schEdu,
         bio: profile.bio || '',

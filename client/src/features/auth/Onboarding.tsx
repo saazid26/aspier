@@ -73,10 +73,12 @@ export function Onboarding() {
       setName(validationData.name || '');
       setSlug(slugify(validationData.name || ''));
       setDesignation(
-        validationData.designation ||
-        (validationData.role === 'supervisor' ? 'Research Supervisor' : 'Young Scholar')
+        validationData.role === 'supervisor'
+          ? (validationData.designation || 'Research Supervisor')
+          : 'Young Scholar'
       );
-      setAffiliation(validationData.institution || 'ASPIER');
+      setAffiliation(validationData.role === 'supervisor' ? (validationData.institution || 'ASPIER') : '');
+      setCohort('2026');
       setEducationalBackground(validationData.education || validationData.educationalBackground || validationData.academicStatus || '');
       setBio(validationData.bio || '');
       if (validationData.researchDomain || (validationData.researchDomains && validationData.researchDomains.length > 0)) {
@@ -120,13 +122,13 @@ export function Onboarding() {
     const profilePayload = {
       name: name.trim(),
       slug: (slug.trim() || slugify(name)).toLowerCase(),
-      designation: designation.trim(),
-      affiliation: affiliation.trim(),
+      designation: role === 'scholar' ? 'Young Scholar' : designation.trim(),
+      affiliation: role === 'scholar' ? '' : affiliation.trim(),
       education: educationalBackground.trim(),
       educationalBackground: educationalBackground.trim(),
       bio: bio.trim(),
       photo: photo.trim(),
-      cohort: cohort.trim() || '2026',
+      cohort: role === 'scholar' ? '2026' : (cohort.trim() || '2026'),
       ...(role === 'supervisor'
         ? {
             researchInterests: tags,
@@ -431,22 +433,26 @@ export function Onboarding() {
             ) : (
               <>
                 <label>
-                  Cohort / Batch *
+                  Cohort / Batch * <span className="muted" style={{ fontSize: '0.75rem', fontWeight: 600 }}>(Locked)</span>
                   <Input
                     required
-                    value={cohort}
-                    onChange={(e) => setCohort(e.target.value)}
-                    placeholder="e.g. 2026"
+                    readOnly
+                    disabled
+                    value="2026"
+                    style={{ background: '#f1f5f9', color: '#475569', cursor: 'not-allowed', fontWeight: 600 }}
                   />
+                  <small className="muted">Fixed to 2026 for new Young Scholars. Editable only by Admin in Admin CMS.</small>
                 </label>
                 <label>
-                  Designation / Role *
+                  Designation / Role * <span className="muted" style={{ fontSize: '0.75rem', fontWeight: 600 }}>(Locked)</span>
                   <Input
                     required
-                    value={designation}
-                    onChange={(e) => setDesignation(e.target.value)}
-                    placeholder="e.g. Young Scholar · Undergraduate / Master's student"
+                    readOnly
+                    disabled
+                    value="Young Scholar"
+                    style={{ background: '#f1f5f9', color: '#475569', cursor: 'not-allowed', fontWeight: 600 }}
                   />
+                  <small className="muted">Fixed to Young Scholar. Editable only by Admin in Admin CMS.</small>
                 </label>
               </>
             )}

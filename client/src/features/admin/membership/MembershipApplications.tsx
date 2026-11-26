@@ -270,7 +270,6 @@ export function MembershipApplications() {
                 <p><strong>Email:</strong> <span className="font-mono text-slate-800">{application.email}</span></p>
                 <p><strong>Phone:</strong> {application.phone || 'Not provided'}</p>
                 <p><strong>Academic Wing:</strong> {application.wing || application.wingInterest || 'General'}</p>
-                <p><strong>Institution / University:</strong> {application.institution || 'Not provided'}</p>
                 {application.academicStatus && <p><strong>Academic Status:</strong> {application.academicStatus}</p>}
                 {application.designation && <p><strong>Designation:</strong> {application.designation}</p>}
                 {(application.education || application.educationalBackground) && (
@@ -372,7 +371,9 @@ export function MembershipApplications() {
                   )}
                   <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">
                     <div><dt className="text-xs text-slate-500 font-semibold">Designation</dt><dd>{application.designation || '—'}</dd></div>
-                    <div><dt className="text-xs text-slate-500 font-semibold">Institution</dt><dd>{application.institution || '—'}</dd></div>
+                    {isSupervisor && application.institution && (
+                      <div><dt className="text-xs text-slate-500 font-semibold">Affiliation</dt><dd>{application.institution}</dd></div>
+                    )}
                     <div><dt className="text-xs text-slate-500 font-semibold">Education</dt><dd>{application.education || application.educationalBackground || '—'}</dd></div>
                     <div><dt className="text-xs text-slate-500 font-semibold">Research Domains</dt><dd>{application.researchDomain || application.researchDomains?.join(', ') || '—'}</dd></div>
                   </dl>

@@ -612,33 +612,66 @@ export function PublicApplicantBell({ onOpenChange }: { onOpenChange?: (open: bo
                   />
                 </div>
 
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Academic / Professional Role Title <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    placeholder={isSupervisor ? 'e.g. Assistant Professor, Dept. of CSE' : 'e.g. Young Scholar — Hydrology & Climate'}
-                    value={profile.designation}
-                    onChange={(e) => setProfile({ ...profile, designation: e.target.value })}
-                    className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
-                  />
-                </div>
+                {isSupervisor ? (
+                  <>
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                        Academic / Professional Role Title <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        placeholder="e.g. Assistant Professor, Dept. of CSE"
+                        value={profile.designation}
+                        onChange={(e) => setProfile({ ...profile, designation: e.target.value })}
+                        className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
+                      />
+                    </div>
 
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Institution / University / Affiliation <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="e.g. University of Rajshahi / BUET / MIT"
-                    value={profile.institution}
-                    onChange={(e) => setProfile({ ...profile, institution: e.target.value })}
-                    className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
-                  />
-                </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                        Affiliation <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        placeholder="e.g. ASPIER / University Name"
+                        value={profile.institution}
+                        onChange={(e) => setProfile({ ...profile, institution: e.target.value })}
+                        className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                        Cohort / Batch * <span className="text-[10px] text-slate-500">(Locked)</span>
+                      </label>
+                      <input
+                        readOnly
+                        disabled
+                        type="text"
+                        value="2026"
+                        className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-semibold cursor-not-allowed box-border"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-0.5">Editable only by Admin in Admin CMS.</p>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                        Designation / Role * <span className="text-[10px] text-slate-500">(Locked)</span>
+                      </label>
+                      <input
+                        readOnly
+                        disabled
+                        type="text"
+                        value="Young Scholar"
+                        className="w-full min-h-[42px] px-3 py-2 text-base sm:text-xs rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-semibold cursor-not-allowed box-border"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-0.5">Editable only by Admin in Admin CMS.</p>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-700 block mb-1">

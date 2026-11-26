@@ -199,7 +199,9 @@ export function Login() {
       const resolvedRole = rawUser?.role || resData?.data?.role || resData?.role;
       const defaultTarget = ['admin', 'superadmin'].includes(resolvedRole)
         ? '/admin'
-        : '/academy/student';
+        : ['supervisor', 'youngScholar'].includes(resolvedRole)
+          ? '/team'
+          : '/academy/student';
       const target = redirect || defaultTarget;
       navigate(target, { replace: true });
     } catch (error: any) {
@@ -230,7 +232,9 @@ export function Login() {
       const resolvedBioRole = rawUser?.role || resData?.data?.role;
       const defaultTarget = ['admin', 'superadmin'].includes(resolvedBioRole)
         ? '/admin'
-        : '/academy/student';
+        : ['supervisor', 'youngScholar'].includes(resolvedBioRole)
+          ? '/team'
+          : '/academy/student';
       navigate(redirect || defaultTarget, { replace: true });
     } catch (error: any) {
       const message = getApiErrorMessage(error, 'Biometric verification failed');
@@ -402,7 +406,7 @@ export function Login() {
         <Button type="button" variant="secondary" onClick={() => void copyToClipboard(backupCodes.join('\n'), 'Recovery codes')}>Copy recovery codes</Button>
         <a className="button button-secondary" download="aspier-recovery-codes.txt" href={`data:text/plain;charset=utf-8,${encodeURIComponent(`ASPIER one-time recovery codes\n\n${backupCodes.join('\n')}\n`)}`}>Download recovery codes</a>
       </section>}
-      {setupComplete && <Button onClick={() => navigate(['admin', 'superadmin'].includes(role) ? '/admin' : '/academy/student')}>Continue to ASPIER</Button>}
+      {setupComplete && <Button onClick={() => navigate(['admin', 'superadmin'].includes(role) ? '/admin' : ['supervisor', 'youngScholar'].includes(role) ? '/team' : '/academy/student')}>Continue to ASPIER</Button>}
       {!memberRole && !setupToken && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: '0.88rem' }}>
           <Link className="muted" to={isAcademy ? '/academy/forgot' : '/forgot'}>Forgot password?</Link>
