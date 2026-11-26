@@ -27,28 +27,35 @@ export function CourseDetail() {
   const { me } = useMe();
   const playerRef = useRef<HTMLDivElement>(null);
 
+  const isStudentSession = Boolean(me && me.role === 'student');
   const fallback = staticCourses.find((c) => c.slug === id || c._id === id);
   const { data: remoteData, isError } = useQuery({
-    queryKey: ['course', id],
+    queryKey: ['course', id, me?._id || 'anon'],
     queryFn: async () => (await api.get(`/academy/courses/${id}`)).data.data,
     initialData: fallback
   });
   const { data: myEnrollments = [] } = useQuery({
     queryKey: ['my-enrollments-detail', me?._id],
     queryFn: async () => (await api.get('/academy/my-enrollments')).data.data as any[],
-    enabled: Boolean(me)
+    enabled: isStudentSession
   });
   const data = remoteData || fallback;
 
-  const matchedEnrollment = myEnrollments.find(
-    (e: any) => String(e?.courseId?._id || e?.courseId || '') === String(data?._id || '') ||
-      (e?.courseId?.slug && e.courseId.slug === data?.slug)
-  );
-  const effectiveEnrollmentStatus: string = matchedEnrollment?.status || data?.enrollmentStatus || '';
-  const isEnrolledApproved = ['active', 'approved', 'final_approved', 'completed'].includes(effectiveEnrollmentStatus);
-  const isEnrolledPending = effectiveEnrollmentStatus === 'pending';
+  const matchedEnrollment = isStudentSession
+    ? myEnrollments.find(
+        (e: any) => String(e?.courseId?._id || e?.courseId || '') === String(data?._id || '') ||
+          (e?.courseId?.slug && e.courseId.slug === data?.slug)
+      )
+    : undefined;
+  const effectiveEnrollmentStatus: string = isStudentSession
+    ? (matchedEnrollment?.status || data?.userEnrollmentStatus || data?.enrollmentStatus || '')
+    : '';
+  const isEnrolledApproved = isStudentSession && ['active', 'approved', 'final_approved', 'completed'].includes(effectiveEnrollmentStatus);
+  const isEnrolledPending = isStudentSession && ['pending', 'payment_submitted'].includes(effectiveEnrollmentStatus);
   const isAlreadyEnrolled = isEnrolledApproved || isEnrolledPending;
-  const classroomUrl = data?.googleClassroomUrl || matchedEnrollment?.courseId?.googleClassroomUrl || '';
+  const classroomUrl = isEnrolledApproved
+    ? (data?.googleClassroomUrl || matchedEnrollment?.courseId?.googleClassroomUrl || '')
+    : '';
 
   // Determine classes list
   const courseClasses: CourseClassItem[] =

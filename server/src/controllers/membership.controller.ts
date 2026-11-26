@@ -500,10 +500,7 @@ export async function submitMembershipProfile(req: Request, res: Response, next:
         await supervisor.save();
         profileId = supervisor._id;
       } else {
-        const lastSup = await Supervisor.findOne().sort({ order: -1, displayOrder: -1, createdAt: -1 }).select('order displayOrder');
-        const supCount = await Supervisor.countDocuments();
-        const nextOrder = Math.max(Number(lastSup?.order || 0), Number(lastSup?.displayOrder || 0), supCount) + 1;
-        const created = await Supervisor.create({ ...supervisorPayload, order: nextOrder, displayOrder: nextOrder });
+        const created = await Supervisor.create(supervisorPayload);
         profileId = created._id;
       }
       addOrUpdateFallbackSupervisor({ ...supervisorPayload, _id: String(profileId), id: String(profileId) });
@@ -547,6 +544,7 @@ export async function submitMembershipProfile(req: Request, res: Response, next:
           website: data.website || ''
         },
         isPublished: true,
+        order: 0,
         sampleData: false
       };
 
@@ -555,10 +553,7 @@ export async function submitMembershipProfile(req: Request, res: Response, next:
         await scholar.save();
         profileId = scholar._id;
       } else {
-        const lastSch = await Scholar.findOne().sort({ order: -1, displayOrder: -1, createdAt: -1 }).select('order displayOrder');
-        const schCount = await Scholar.countDocuments();
-        const nextOrder = Math.max(Number(lastSch?.order || 0), Number(lastSch?.displayOrder || 0), schCount) + 1;
-        const created = await Scholar.create({ ...scholarPayload, order: nextOrder, displayOrder: nextOrder });
+        const created = await Scholar.create(scholarPayload);
         profileId = created._id;
       }
       addOrUpdateFallbackScholar({ ...scholarPayload, _id: String(profileId), id: String(profileId) });
@@ -831,18 +826,6 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
       };
 
       if (isSupervisor) {
-        const existingSup = await Supervisor.findOne({
-          $or: [
-            ...(application.email ? [{ email: application.email.toLowerCase() }] : []),
-            { slug }
-          ]
-        });
-        const lastSup = !existingSup
-          ? await Supervisor.findOne().sort({ order: -1, displayOrder: -1, createdAt: -1 }).select('order displayOrder')
-          : null;
-        const supCount = !existingSup ? await Supervisor.countDocuments() : 0;
-        const nextSupOrder = Math.max(Number(lastSup?.order || 0), Number(lastSup?.displayOrder || 0), supCount) + 1;
-
         const supPayload = {
           name: application.name,
           slug,
@@ -860,9 +843,14 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
           researchInterests: domains,
           socialLinks: socialPayload,
           isPublished: true,
-          sampleData: false,
-          ...(!existingSup ? { order: nextSupOrder, displayOrder: nextSupOrder } : {})
+          sampleData: false
         };
+        const existingSup = await Supervisor.findOne({
+          $or: [
+            ...(application.email ? [{ email: application.email.toLowerCase() }] : []),
+            { slug }
+          ]
+        });
         if (existingSup) {
           existingSup.set({ ...supPayload, slug: existingSup.slug });
           await existingSup.save();
@@ -873,33 +861,26 @@ export async function publishMembershipApplication(req: AuthRequest, res: Respon
         }
         application.publishedProfileType = 'supervisor';
       } else {
-        const existingSch = await Scholar.findOne({ slug });
-        const lastSch = !existingSch
-          ? await Scholar.findOne().sort({ order: -1, displayOrder: -1, createdAt: -1 }).select('order displayOrder')
-          : null;
-        const schCount = !existingSch ? await Scholar.countDocuments() : 0;
-        const nextSchOrder = Math.max(Number(lastSch?.order || 0), Number(lastSch?.displayOrder || 0), schCount) + 1;
-
         const schPayload = {
           name: application.name,
           slug,
-          cohort: application.cohort || '2026',
+          cohort: String(new Date().getFullYear()),
           wingId: wing?._id,
           bio: application.bio || '',
           photo: application.photo || '',
           presentAddress: application.presentAddress || '',
           permanentAddress: application.permanentAddress || '',
           designation: application.designation || 'Young Scholar',
-          affiliation: application.institution || '',
+          affiliation: application.institution || 'ASPIER',
           education: edu,
           educationalBackground: edu,
           ...socialPayload,
           researchTopics: domains,
           socialLinks: socialPayload,
           isPublished: true,
-          sampleData: false,
-          ...(!existingSch ? { order: nextSchOrder, displayOrder: nextSchOrder } : {})
+          sampleData: false
         };
+        const existingSch = await Scholar.findOne({ slug });
         if (existingSch) {
           existingSch.set({ ...schPayload, slug: existingSch.slug });
           await existingSch.save();
