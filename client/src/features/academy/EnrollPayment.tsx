@@ -28,6 +28,21 @@ export function EnrollPayment() {
     }
   });
 
+  const { data: myEnrollments = [] } = useQuery({
+    queryKey: ['my-enrollments-checkout', me?._id],
+    queryFn: async () => (await api.get('/academy/my-enrollments')).data.data as any[],
+    enabled: Boolean(me)
+  });
+
+  const matchedEnrollment = myEnrollments.find(
+    (e: any) =>
+      String(e?.courseId?._id || e?.courseId || '') === String(course?._id || id || '') ||
+      (e?.courseId?.slug && e.courseId.slug === (course?.slug || id))
+  );
+  const enrStatus = matchedEnrollment?.status || course?.enrollmentStatus || '';
+  const isApproved = ['active', 'approved', 'final_approved', 'completed'].includes(enrStatus);
+  const isPending = enrStatus === 'pending';
+
   useEffect(() => {
     if (course?.price && !form.amount) {
       setForm((prev) => ({ ...prev, amount: String(course.price) }));
@@ -57,6 +72,42 @@ export function EnrollPayment() {
               Create Student Account
             </Link>
           </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (isApproved || isPending) {
+    const classroomUrl = course?.googleClassroomUrl || matchedEnrollment?.courseId?.googleClassroomUrl || '';
+    return (
+      <main className="container section" style={{ maxWidth: 680 }}>
+        <span className="eyebrow">ASPIER Academy · Course Enrollment</span>
+        <h1>{course?.title || 'Course'}</h1>
+        <div className="card" style={{ marginTop: 20, padding: '24px' }}>
+          {isApproved ? (
+            <>
+              <h2 style={{ color: '#0f766e', marginTop: 0 }}>Enrollment Confirmed!</h2>
+              <p>Private YouTube class access will be delivered to your registered email within 6 to 12 hours.</p>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 16 }}>
+                {classroomUrl && (
+                  <a className="button button-primary" href={classroomUrl} target="_blank" rel="noopener noreferrer">
+                    Join Google Classroom →
+                  </a>
+                )}
+                <Link className="button button-secondary" to="/academy/student">
+                  Go to Student Portal
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 style={{ color: '#92400e', marginTop: 0 }}>Enrollment Under Review (Payment Submitted)</h2>
+              <p>Your payment has already been submitted and is currently under verification. Google Classroom access unlocks after final payment verification.</p>
+              <Link className="button button-primary" to="/academy/student" style={{ marginTop: 12, display: 'inline-flex' }}>
+                Go to Student Portal
+              </Link>
+            </>
+          )}
         </div>
       </main>
     );

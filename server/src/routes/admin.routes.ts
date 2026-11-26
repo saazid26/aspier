@@ -61,6 +61,7 @@ import {
   reorderFallbackItems
 } from '../utils/fallbackData.js';
 import { recordAudit } from '../services/audit.service.js';
+import { notifyMember } from '../services/notification.service.js';
 import { seedAcademyData } from '../utils/seed.js';
 import { RESEARCH_PAPER_WRITING_CLASSES, RESEARCH_PAPER_WRITING_MODULES } from '../utils/researchCourseCurriculum.js';
 import { fastCache } from '../utils/fastCache.js';
@@ -1271,6 +1272,21 @@ const handleUpdateEnrollment = async (req: any, res: any) => {
         { userId: enr.userId, courseId: enr.courseId, status: 'pending' },
         { $set: { status: 'approved', reviewedAt: new Date(), reviewedBy: (req as any).user?._id } }
       );
+      try {
+        const enrolledCourse: any = await Course.findById(enr.courseId).select('title googleClassroomUrl').lean();
+        const classroomNote = enrolledCourse?.googleClassroomUrl
+          ? ` You can also join Google Classroom directly (${enrolledCourse.googleClassroomUrl}) from your Student Portal.`
+          : '';
+        await notifyMember({
+          userId: enr.userId,
+          title: 'Enrollment Confirmed — Course Access Unlocked!',
+          body: `Your enrollment for ${enrolledCourse?.title || 'your course'} is approved! Private YouTube class access will be delivered to your registered email within 6 to 12 hours.${classroomNote}`,
+          category: 'course-payment-approved',
+          link: enrolledCourse?.googleClassroomUrl || '/academy/student'
+        });
+      } catch {
+        // ignore
+      }
     } else if (targetStatus === 'rejected') {
       await Payment.updateMany(
         { userId: enr.userId, courseId: enr.courseId, status: 'pending' },

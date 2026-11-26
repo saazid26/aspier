@@ -19,7 +19,7 @@ export function MyCourses() {
   const { data, isLoading } = useQuery({
     queryKey: ['my-courses'],
     queryFn: async () => {
-      const response = await api.get('/me/enrollments');
+      const response = await api.get('/academy/my-enrollments');
       const raw = response.data;
       return Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
     }
@@ -62,6 +62,38 @@ export function MyCourses() {
               <p className="muted" style={{ fontSize: '0.85rem' }}>
                 {total > 0 ? `${completed} of ${total} lessons completed` : 'Access course modules'}
               </p>
+              {['active', 'approved', 'final_approved', 'completed'].includes(x.status) ? (
+                <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#166534', lineHeight: 1.4 }}>
+                    <strong>Enrollment Confirmed!</strong> Private YouTube class access will be delivered to your registered email within 6 to 12 hours.
+                  </p>
+                  {x.courseId?.googleClassroomUrl && (
+                    <a
+                      href={x.courseId.googleClassroomUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        display: 'inline-block',
+                        marginTop: 8,
+                        padding: '6px 12px',
+                        borderRadius: 6,
+                        background: '#0f766e',
+                        color: '#ffffff',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        textDecoration: 'none'
+                      }}
+                    >
+                      Join Google Classroom →
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <p style={{ marginTop: 8, fontSize: '0.78rem', color: '#92400e' }}>
+                  Google Classroom access unlocks after final payment verification.
+                </p>
+              )}
               {x.certificateStatus === 'issued' && x.credentialId && (
                 <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2ece8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
                   <span className="badge badge-green" style={{ fontSize: '0.75rem' }}>

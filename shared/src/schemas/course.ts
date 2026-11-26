@@ -22,6 +22,7 @@ export const courseSchema = z.object({
   instructors: z.array(courseInstructorSchema).optional(),
   price: z.number().nonnegative(),
   thumbnail: z.string().optional(),
+  googleClassroomUrl: z.string().trim().optional().or(z.literal('')),
   duration: z.string().trim().optional(),
   mode: z.enum(courseDeliveryModes).optional(),
   deliveryMode: z.enum(courseDeliveryModes).optional(),

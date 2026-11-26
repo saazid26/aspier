@@ -5,6 +5,7 @@ import { SEO } from '../../components/common/SEO';
 import { RichTextContent } from '../../components/common/RichTextContent';
 import { CoverMedia } from '../../components/common/CoverMedia';
 import { staticCourses } from '../../lib/staticData';
+import { useMe } from '../auth/useMe';
 
 type Course = {
   _id: string;
@@ -39,11 +40,24 @@ function formatFooterLabel(startDate?: string, deliveryMode?: string) {
 }
 
 export function Catalog() {
+  const { me } = useMe();
   const { data: remoteData } = useQuery({
     queryKey: ['courses'],
     queryFn: async () => (await api.get('/academy/courses')).data.data as Course[],
     initialData: staticCourses as Course[]
   });
+  const { data: myEnrollments = [] } = useQuery({
+    queryKey: ['my-enrollments-catalog', me?._id],
+    queryFn: async () => (await api.get('/academy/my-enrollments')).data.data as any[],
+    enabled: Boolean(me)
+  });
+
+  const enrollmentByCourseId = new Map<string, string>();
+  for (const enr of myEnrollments) {
+    const cid = String(enr?.courseId?._id || enr?.courseId || '');
+    if (cid && enr?.status) enrollmentByCourseId.set(cid, enr.status);
+  }
+
   const data = remoteData && remoteData.length > 0 ? remoteData : (staticCourses as Course[]);
 
   return (
@@ -102,8 +116,21 @@ export function Catalog() {
                 </div>
               </div>
               <div className="course-card-footer">
-                <p className="course-start-date">{formatFooterLabel(course.startDate, course.deliveryMode || course.mode)}</p>
-                <strong className="course-price">৳{course.price} BDT</strong>
+                {(() => {
+                  const enrStatus = enrollmentByCourseId.get(String(course._id));
+                  if (enrStatus && ['active', 'approved', 'final_approved', 'completed'].includes(enrStatus)) {
+                    return <span className="badge badge-green">Enrolled · Access Course →</span>;
+                  }
+                  if (enrStatus === 'pending') {
+                    return <span className="badge badge-yellow">Enrollment Under Review</span>;
+                  }
+                  return (
+                    <>
+                      <p className="course-start-date">{formatFooterLabel(course.startDate, course.deliveryMode || course.mode)}</p>
+                      <strong className="course-price">৳{course.price} BDT</strong>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </Link>

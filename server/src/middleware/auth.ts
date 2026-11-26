@@ -56,6 +56,12 @@ export async function authenticate(req: AuthRequest, _res: Response, next: NextF
 
 export const requireAuth = authenticate;
 
+export async function optionalAuthenticate(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  await authenticate(req, res, () => {
+    next();
+  });
+}
+
 export const authorize = (...roles: string[]) => (req: AuthRequest, _res: Response, next: NextFunction) => {
   if (!req.user || !roles.includes(req.user.role)) return next(new HttpError(403, 'Insufficient permissions'));
   next();

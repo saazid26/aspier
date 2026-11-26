@@ -47,9 +47,29 @@ export function Profile() {
   const [saveSuccess, setSaveSuccess] = useState('');
   const [saveError, setSaveError] = useState('');
 
-  // Pre-fill inputs with student's live profile data
+  // Pre-fill inputs strictly with logged-in student's real saved data (never admin defaults)
   useEffect(() => {
     if (me) {
+      const isAdminSession =
+        ['admin', 'superadmin'].includes(me.role) ||
+        me.email === 'admin@gmail.com' ||
+        me.name === 'ASPIER Administrator';
+      if (isAdminSession) {
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          university: '',
+          department: '',
+          academicLevel: '',
+          studentId: '',
+          city: '',
+          bio: '',
+          avatarUrl: ''
+        });
+        setPreviewAvatar('');
+        return;
+      }
       setFormData({
         name: me.name || me.fullName || '',
         email: me.email || '',
@@ -215,15 +235,15 @@ export function Profile() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
               <div>
                 <h2 className="text-lg sm:text-xl font-bold text-slate-900 truncate">
-                  {formData.name || 'Student Name'}
+                  {formData.name || 'ASPIER Student'}
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 truncate font-mono">
-                  {formData.email || 'student@domain.edu'}
+                  {formData.email || 'student@example.com'}
                 </p>
               </div>
               <span className="inline-flex items-center gap-1.5 self-center sm:self-start px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200 uppercase tracking-wider">
                 <User className="w-3.5 h-3.5" />
-                <span>{me?.role === 'student' ? 'Student Member' : me?.role || 'Student'}</span>
+                <span>STUDENT</span>
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-2">
@@ -262,7 +282,7 @@ export function Profile() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full min-h-[44px] px-3.5 py-2.5 text-base sm:text-sm rounded-xl border border-slate-300 bg-white focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 box-border text-slate-900 placeholder:text-slate-400"
-                placeholder="e.g. Abdullah Al Mamun"
+                placeholder="e.g., Tanvir Ahmed"
               />
             </div>
 

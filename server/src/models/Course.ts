@@ -69,6 +69,7 @@ const schema = new Schema({
   price: { type: Number, required: true, default: 2000 },
   thumbnail: String,
   bannerUrl: String,
+  googleClassroomUrl: { type: String, trim: true, default: '' },
   level: { type: String, enum: ['beginner', 'intermediate', 'advanced'], default: 'beginner' },
   status: { type: String, enum: ['draft', 'published', 'archived'], default: 'published', index: true },
   classes: { type: [lessonSchema], default: [] },

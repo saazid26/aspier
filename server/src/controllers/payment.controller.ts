@@ -20,6 +20,9 @@ export async function submitPayment(req: AuthRequest, res: Response, next: NextF
     if (amount !== course.price) throw new HttpError(400, 'Payment amount does not match the course price');
     if (await Payment.exists({ trxId })) throw new HttpError(409, 'This transaction ID has already been submitted');
     if (await Payment.exists({ userId: req.user._id, courseId: course._id, status: 'pending' })) throw new HttpError(409, 'A pending payment already exists for this course');
+    if (await Enrollment.exists({ userId: req.user._id, courseId: course._id, status: { $in: ['active', 'approved', 'final_approved', 'completed'] } })) {
+      throw new HttpError(409, 'You are already enrolled in this course');
+    }
     const payment = await Payment.create({ userId: req.user._id, courseId: course._id, method, senderNumber, trxId: trxId.trim(), amount: course.price });
     await notifyAdmins({
       title: 'New course payment submission',
@@ -81,17 +84,20 @@ export async function approvePayment(req: AuthRequest, res: Response, next: Next
         ? env.CLIENT_URL.replace(/\/$/, '')
         : 'https://aspierglobal.vercel.app');
     if (user) {
+      const classroomNote = course?.googleClassroomUrl
+        ? ` You can also join Google Classroom directly (${course.googleClassroomUrl}) from your Student Portal.`
+        : '';
       await notifyMember({
         userId: user._id,
-        title: 'Course payment approved',
-        body: `Your payment for ${course?.title || 'your course'} was approved. Your enrollment is now active.`,
+        title: 'Enrollment Confirmed — Course Access Unlocked!',
+        body: `Your payment for ${course?.title || 'your course'} is approved! Private YouTube class access will be delivered to your registered email within 6 to 12 hours.${classroomNote}`,
         category: 'course-payment-approved',
-        link: '/student/courses'
+        link: course?.googleClassroomUrl || '/academy/student'
       });
       await sendEmail({
         to: user.email,
-        subject: `Payment Approved: ${course?.title || 'ASPIER Academy Course'}`,
-        html: `<p>Hello ${user.name},</p><p>Your payment for <strong>${course?.title || 'your course'}</strong> has been approved!</p><p>Your enrollment is now active. You can start learning here: <a href="${clientBase}/student/courses">My Courses</a></p>`
+        subject: `Enrollment Confirmed: ${course?.title || 'ASPIER Academy Course'}`,
+        html: `<p>Hello ${user.name},</p><p>Your payment for <strong>${course?.title || 'your course'}</strong> has been approved!</p><p><strong>Private YouTube class access will be delivered to your registered email within 6 to 12 hours.</strong></p>${course?.googleClassroomUrl ? `<p><a href="${course.googleClassroomUrl}" style="background:#0f766e;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Join Google Classroom →</a></p>` : ''}<p>Visit your Student Portal: <a href="${clientBase}/academy/student">${clientBase}/academy/student</a></p>`
       });
     }
     res.json({ success: true, data: payment });

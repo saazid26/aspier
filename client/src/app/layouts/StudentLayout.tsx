@@ -13,7 +13,9 @@ const studentNavLinks = [
 export function StudentLayout() {
   const { me } = useMe();
   const location = useLocation();
-  const avatarUrl = me?.avatarUrl || me?.avatar;
+  const isAdminSession = !me || ['admin', 'superadmin'].includes(me.role) || me.email === 'admin@gmail.com' || me.name === 'ASPIER Administrator';
+  const studentName = isAdminSession ? '' : (me?.name || '');
+  const avatarUrl = isAdminSession ? '' : (me?.avatarUrl || me?.avatar);
 
   const isLinkActive = (to: string, exact?: boolean) => {
     if (exact) {
@@ -37,22 +39,20 @@ export function StudentLayout() {
           <Link to="/academy/student" className="font-bold text-slate-900 text-sm sm:text-base hover:text-teal-800 transition">
             Student Portal
           </Link>
-          {me?.name && (
-            <span className="hidden sm:inline-block text-xs text-slate-500 font-medium">
-              | Welcome, <strong className="text-teal-900">{me.name}</strong>
-            </span>
-          )}
+          <span className="hidden sm:inline-block text-xs text-slate-500 font-medium">
+            | Welcome, <strong className="text-teal-900">{studentName || 'Student'}</strong>
+          </span>
         </div>
         <div className="flex items-center gap-3">
           <Link to="/academy/student/profile" className="flex items-center gap-2 text-xs font-semibold text-slate-700 hover:text-teal-800 transition">
             {avatarUrl ? (
-              <img src={avatarUrl} alt={me?.name || 'Student'} className="w-8 h-8 rounded-full object-cover border border-teal-600/30" />
+              <img src={avatarUrl} alt={studentName || 'Student'} className="w-8 h-8 rounded-full object-cover border border-teal-600/30" />
             ) : (
               <div className="w-8 h-8 rounded-full bg-teal-50 border border-teal-600/30 text-teal-800 flex items-center justify-center font-bold text-xs">
-                {me?.name ? me.name[0].toUpperCase() : 'S'}
+                {studentName ? studentName[0].toUpperCase() : 'S'}
               </div>
             )}
-            <span className="hidden md:inline font-medium">{me?.name || 'Profile'}</span>
+            <span className="hidden md:inline font-medium">{studentName || 'Student'}</span>
           </Link>
           <NotificationBell audience="member" />
         </div>

@@ -5,27 +5,55 @@ import Course from '../models/Course.js';
 import Enrollment from '../models/Enrollment.js';
 import ClassModel from '../models/Class.js';
 import Instructor from '../models/Instructor.js';
+import Payment from '../models/Payment.js';
 import { HttpError } from '../middleware/error.js';
 import { encrypt, decrypt } from '../utils/crypto.js';
 import { fallbackCourses } from '../utils/fallbackData.js';
 import { fastCache } from '../utils/fastCache.js';
 
-export async function catalog(_req: AuthRequest, res: Response) {
-  const cached = fastCache.get('academy:catalog');
-  if (cached) return res.json({ success: true, data: cached });
+const APPROVED_ENROLLMENT_STATUSES = ['active', 'approved', 'final_approved', 'completed'];
+
+async function getApprovedCourseIdSet(user: any): Promise<Set<string>> {
+  if (!user?._id) return new Set();
+  const enrollments = await Enrollment.find({
+    userId: user._id,
+    status: { $in: APPROVED_ENROLLMENT_STATUSES }
+  }).select('courseId').lean();
+  return new Set(enrollments.map((e: any) => String(e.courseId)));
+}
+
+function sanitizeCoursesForUser(courses: any[], isAdmin: boolean, approvedCourseIds: Set<string>) {
+  return courses.map((course) => {
+    const obj = typeof course.toObject === 'function' ? course.toObject() : { ...course };
+    const isApproved = isAdmin || approvedCourseIds.has(String(obj._id));
+    if (!isApproved) {
+      delete obj.googleClassroomUrl;
+    }
+    return obj;
+  });
+}
+
+export async function catalog(req: AuthRequest, res: Response) {
+  const isAdmin = Boolean(req.user && ['admin', 'superadmin'].includes(req.user.role));
+  const approvedCourseIds = isAdmin ? new Set<string>() : await getApprovedCourseIdSet(req.user).catch(() => new Set<string>());
+
+  const cached = fastCache.get('academy:catalog') as any[] | undefined;
+  if (cached) {
+    return res.json({ success: true, data: sanitizeCoursesForUser(cached, isAdmin, approvedCourseIds) });
+  }
 
   try {
     if (mongoose.connection.readyState === 1) {
       const courses = await Course.find({ status: 'published' }).populate('instructorId', 'name title photo').sort({ createdAt: -1 }).lean().maxTimeMS(2000);
       if (courses && courses.length > 0) {
         fastCache.set('academy:catalog', courses, 60);
-        return res.json({ success: true, data: courses });
+        return res.json({ success: true, data: sanitizeCoursesForUser(courses, isAdmin, approvedCourseIds) });
       }
     }
   } catch (err) {
     console.warn('[academy/catalog] fallback:', err instanceof Error ? err.message : err);
   }
-  return res.json({ success: true, data: fallbackCourses });
+  return res.json({ success: true, data: sanitizeCoursesForUser(fallbackCourses, isAdmin, approvedCourseIds) });
 }
 export async function courseDetail(req: AuthRequest, res: Response, next: NextFunction) {
   try {
@@ -40,18 +68,132 @@ export async function courseDetail(req: AuthRequest, res: Response, next: NextFu
     const isAdmin = Boolean(req.user && ['admin', 'superadmin'].includes(req.user.role));
     if (course.status !== 'published' && !isAdmin) throw new HttpError(404, 'Course not found');
     let active = isAdmin;
-    if (req.user) active = Boolean(await Enrollment.findOne({ userId: req.user._id, courseId: course._id, status: 'active' }));
-    if (isAdmin) active = true;
-    const safe = course.toObject();
-    if (course.classes && course.classes.length > 0) {
-      (safe as any).classes = course.classes;
+    let enrollmentStatus: string | null = null;
+    if (req.user) {
+      const enr = await Enrollment.findOne({ userId: req.user._id, courseId: course._id }).lean();
+      if (enr) {
+        enrollmentStatus = enr.status;
+        if (APPROVED_ENROLLMENT_STATUSES.includes(enr.status)) active = true;
+      } else {
+        const pendingPay = await Payment.findOne({ userId: req.user._id, courseId: course._id, status: 'pending' }).lean();
+        if (pendingPay) enrollmentStatus = 'pending';
+      }
     }
-    if (!active) (safe as any).modules = (safe as any).modules.map((module: any) => ({ ...module, lessons: module.lessons.map((lesson: any) => ({ ...lesson, youtubeVideoId: lesson.isFreePreview ? lesson.youtubeVideoId : undefined })) }));
+    if (isAdmin) active = true;
+    const safe = course.toObject() as any;
+    if (course.classes && course.classes.length > 0) {
+      safe.classes = course.classes;
+    }
+    if (!active) {
+      delete safe.googleClassroomUrl;
+      safe.modules = (safe.modules || []).map((module: any) => ({
+        ...module,
+        lessons: (module.lessons || []).map((lesson: any) => ({
+          ...lesson,
+          youtubeVideoId: lesson.isFreePreview ? lesson.youtubeVideoId : undefined
+        }))
+      }));
+    }
+    if (enrollmentStatus) safe.enrollmentStatus = enrollmentStatus;
     res.json({ success: true, data: safe });
   } catch (error) {
     const id = typeof req.params.id === 'string' ? req.params.id : '';
     const fallback = fallbackCourses.find((c) => c._id === id || c.slug === id);
     if (fallback) return res.json({ success: true, data: fallback });
+    next(error);
+  }
+}
+
+export async function myEnrollments(req: AuthRequest, res: Response) {
+  try {
+    if (!req.user?._id) return res.json({ success: true, data: [] });
+    const [enrollments, pendingPayments] = await Promise.all([
+      Enrollment.find({ userId: req.user._id })
+        .populate('courseId', 'title slug thumbnail bannerUrl mode deliveryMode description modules classes instructorId level price status googleClassroomUrl')
+        .sort({ enrolledAt: -1 })
+        .lean(),
+      Payment.find({ userId: req.user._id, status: 'pending' })
+        .populate('courseId', 'title slug thumbnail bannerUrl mode deliveryMode description modules classes instructorId level price status')
+        .sort({ submittedAt: -1 })
+        .lean()
+    ]);
+
+    const seenCourseIds = new Set<string>();
+    const sanitized = (enrollments || []).map((enr: any) => {
+      const cId = String(enr.courseId?._id || enr.courseId || '');
+      if (cId) seenCourseIds.add(cId);
+      const isApproved = APPROVED_ENROLLMENT_STATUSES.includes(enr.status);
+      if (enr.courseId && typeof enr.courseId === 'object' && !isApproved) {
+        const courseCopy = { ...enr.courseId };
+        delete courseCopy.googleClassroomUrl;
+        return { ...enr, courseId: courseCopy };
+      }
+      return enr;
+    });
+
+    for (const pay of (pendingPayments || [])) {
+      const cId = String((pay as any).courseId?._id || (pay as any).courseId || '');
+      if (cId && !seenCourseIds.has(cId)) {
+        seenCourseIds.add(cId);
+        sanitized.push({
+          _id: `pending-pay-${pay._id}`,
+          userId: req.user._id,
+          courseId: (pay as any).courseId,
+          status: 'pending',
+          completedLessonIds: [],
+          paymentMethod: pay.method,
+          trxId: pay.trxId,
+          enrolledAt: pay.submittedAt
+        });
+      }
+    }
+
+    res.json({ success: true, data: sanitized });
+  } catch {
+    res.json({ success: true, data: [] });
+  }
+}
+
+export async function enrollCourse(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { courseId, method = 'bKash', senderNumber, trxId, amount } = req.body || {};
+    if (!courseId) throw new HttpError(400, 'Course ID is required');
+    const course = /^[0-9a-f]{24}$/i.test(String(courseId))
+      ? await Course.findById(courseId)
+      : await Course.findOne({ slug: courseId });
+    if (!course || course.status !== 'published') throw new HttpError(404, 'Course not found');
+
+    const existingEnrollment = await Enrollment.findOne({
+      userId: req.user._id,
+      courseId: course._id,
+      status: { $in: [...APPROVED_ENROLLMENT_STATUSES, 'pending'] }
+    });
+    if (existingEnrollment) {
+      throw new HttpError(409, 'You have already enrolled or have a pending enrollment for this course');
+    }
+    const existingPendingPay = await Payment.findOne({ userId: req.user._id, courseId: course._id, status: 'pending' });
+    if (existingPendingPay) {
+      throw new HttpError(409, 'A pending payment already exists for this course');
+    }
+    if (Number(amount) !== course.price) {
+      throw new HttpError(400, 'Payment amount does not match the course price');
+    }
+    if (!trxId || !senderNumber) {
+      throw new HttpError(400, 'Sender number and transaction ID are required');
+    }
+    if (await Payment.exists({ trxId: String(trxId).trim() })) {
+      throw new HttpError(409, 'This transaction ID has already been submitted');
+    }
+    const payment = await Payment.create({
+      userId: req.user._id,
+      courseId: course._id,
+      method,
+      senderNumber: String(senderNumber).trim(),
+      trxId: String(trxId).trim(),
+      amount: course.price
+    });
+    res.status(201).json({ success: true, data: payment });
+  } catch (error) {
     next(error);
   }
 }
@@ -71,7 +213,17 @@ export async function learn(req: AuthRequest, res: Response, next: NextFunction)
 }
 export async function classSchedule(req: AuthRequest, res: Response) {
   try {
-    const filter: any = req.params.courseId ? { courseId: req.params.courseId } : {};
+    if (!req.user?._id) return res.json({ success: true, data: [] });
+    const isAdmin = ['admin', 'superadmin'].includes(req.user.role);
+    if (isAdmin) {
+      const filter: any = req.params.courseId ? { courseId: req.params.courseId } : {};
+      return res.json({ success: true, data: await ClassModel.find(filter).sort({ scheduledAt: 1 }) });
+    }
+    const approvedIds = await getApprovedCourseIdSet(req.user);
+    if (approvedIds.size === 0) return res.json({ success: true, data: [] });
+    const filter: any = req.params.courseId
+      ? (approvedIds.has(String(req.params.courseId)) ? { courseId: req.params.courseId } : { _id: null })
+      : { courseId: { $in: Array.from(approvedIds) } };
     res.json({ success: true, data: await ClassModel.find(filter).sort({ scheduledAt: 1 }) });
   } catch {
     res.json({ success: true, data: [] });

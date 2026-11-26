@@ -1583,6 +1583,16 @@ export function AcademyCms() {
               />
             </div>
 
+            <label style={{ marginTop: 14 }}>
+              Google Classroom Link (Unlocked for Final-Approved Students Only)
+              <Input
+                type="url"
+                value={editingCourse.googleClassroomUrl || ''}
+                onChange={(e) => setEditingCourse({ ...editingCourse, googleClassroomUrl: e.target.value })}
+                placeholder="https://classroom.google.com/c/..."
+              />
+            </label>
+
             {/* Course Instructors Manager */}
             <div style={{ marginTop: 24, borderTop: '1px solid #e2e8f0', paddingTop: 18 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>

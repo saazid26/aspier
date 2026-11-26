@@ -51,13 +51,15 @@ export interface EnrolledCourse {
   deliveryMode?: string;
   bannerUrl?: string;
   thumbnail?: string;
+  googleClassroomUrl?: string;
   modules?: Module[];
+  classes?: any[];
 }
 
 export interface Enrollment {
   _id: string;
   courseId: EnrolledCourse;
-  status: 'active' | 'pending' | 'rejected' | 'expired';
+  status: 'active' | 'approved' | 'final_approved' | 'completed' | 'pending' | 'rejected' | 'expired';
   completedLessonIds: string[];
   progressPercent?: number;
   certificateStatus?: 'not_claimed' | 'claimed' | 'issued';
@@ -107,9 +109,11 @@ export function Dashboard() {
   const queryClient = useQueryClient();
   const [selectedCertificateCourse, setSelectedCertificateCourse] = useState<EnrolledCourse | null>(null);
   const [activeRecordingUrl, setActiveRecordingUrl] = useState<string | null>(null);
-  const [deliveryFilter, setDeliveryFilter] = useState<'all' | 'live' | 'offline' | 'recorded'>('all');
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [claimMessage, setClaimMessage] = useState<{ id: string; text: string; success: boolean } | null>(null);
+
+  const isAdminSession = !me || ['admin', 'superadmin'].includes(me.role) || me.email === 'admin@gmail.com' || me.name === 'ASPIER Administrator';
+  const studentDisplayName = isAdminSession ? 'Student' : (me?.name || 'Student');
 
   const handleClaimCertificate = async (enrollmentId: string) => {
     setClaimingId(enrollmentId);
@@ -137,16 +141,7 @@ export function Dashboard() {
   const { data: enrollmentsData, isLoading: isLoadingEnrollments } = useQuery<Enrollment[]>({
     queryKey: ['student-enrollments'],
     queryFn: async () => {
-      const response = await api.get('/me/enrollments');
-      const raw = response.data;
-      return Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
-    }
-  });
-
-  const { data: classesData, isLoading: isLoadingClasses } = useQuery<ScheduledClass[]>({
-    queryKey: ['student-classes'],
-    queryFn: async () => {
-      const response = await api.get('/academy/classes');
+      const response = await api.get('/academy/my-enrollments');
       const raw = response.data;
       return Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
     }
@@ -158,14 +153,8 @@ export function Dashboard() {
     ? (enrollmentsData as any).data
     : [];
 
-  const allClasses: ScheduledClass[] = Array.isArray(classesData)
-    ? classesData
-    : Array.isArray((classesData as any)?.data)
-    ? (classesData as any).data
-    : [];
-
   // Active courses count
-  const activeCount = enrollments.filter((x) => x.status === 'active').length;
+  const activeCount = enrollments.filter((x) => ['active', 'approved', 'final_approved', 'completed'].includes(x.status)).length;
 
   // Completed lessons count
   const completedLessonsTotal = enrollments.reduce((acc, curr) => acc + (curr.completedLessonIds?.length || 0), 0);
@@ -176,23 +165,6 @@ export function Dashboard() {
     return percent >= 100;
   });
 
-  // Extract enrolled course IDs
-  const enrolledCourseIds = new Set(
-    enrollments
-      .map((e) => (typeof e.courseId === 'object' ? e.courseId?._id : e.courseId))
-      .filter(Boolean)
-  );
-
-  // Filter scheduled classes relevant to student's enrolled courses (or general academy sessions)
-  const studentClasses = allClasses.filter((c) => {
-    const cId = typeof c.courseId === 'object' ? c.courseId?._id : c.courseId;
-    return !cId || enrolledCourseIds.has(cId);
-  });
-
-  // Filter by delivery mode tab
-  const liveClasses = studentClasses.filter((c) => (c.mode || 'Online and Live') === 'Online and Live');
-  const offlineClasses = studentClasses.filter((c) => c.mode === 'Offline' || Boolean(c.venue));
-  
   // Handlers
   const handlePrintCertificate = () => {
     window.print();
@@ -207,7 +179,7 @@ export function Dashboard() {
             Student Dashboard
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Welcome back, <strong className="text-teal-900 font-semibold">{me?.name || 'Student'}</strong>! Track course progress, attend scheduled classes, and claim your completion certificates.
+            Welcome back, <strong className="text-teal-900 font-semibold">{studentDisplayName}</strong>! Track your enrolled courses and claim completion certificates.
           </p>
         </div>
         <Link
@@ -378,6 +350,31 @@ export function Dashboard() {
                     </div>
                   </div>
 
+                  {/* Course Access Status & Google Classroom */}
+                  {['active', 'approved', 'final_approved', 'completed'].includes(enr.status) ? (
+                    <div className="mt-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2.5">
+                      <p className="text-xs font-medium text-emerald-900 leading-relaxed m-0">
+                        <strong className="font-bold">Enrollment Confirmed!</strong> Private YouTube class access will be delivered to your registered email within 6 to 12 hours.
+                      </p>
+                      {course.googleClassroomUrl && (
+                        <a
+                          href={course.googleClassroomUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-teal-700 text-white hover:bg-teal-800 transition shadow-xs"
+                        >
+                          <ExternalLink size={13} />
+                          Join Google Classroom
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-2 text-xs text-amber-900">
+                      <Lock size={13} className="text-amber-700 shrink-0" />
+                      <span>Google Classroom access unlocks after final payment verification.</span>
+                    </div>
+                  )}
+
                   {/* Actions: View Course & Claim Certificate */}
                   <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
                     <Link
@@ -443,387 +440,6 @@ export function Dashboard() {
                 </div>
               );
             })}
-          </div>
-        )}
-      </section>
-
-      {/* 4. Multi-Mode Class & Module Delivery Section */}
-      <section className="space-y-4 pt-4 border-t border-slate-200">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900">
-              Class & Module Delivery
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600">
-              Access your live interactive classes, offline sessions, and recorded sequential course modules.
-            </p>
-          </div>
-
-          {/* Delivery Mode Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-none text-xs font-semibold shrink-0">
-            <button
-              type="button"
-              onClick={() => setDeliveryFilter('all')}
-              className={`px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-                deliveryFilter === 'all'
-                  ? 'bg-white text-teal-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              All Delivery Modes
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeliveryFilter('live')}
-              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-                deliveryFilter === 'live'
-                  ? 'bg-white text-teal-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Video size={13} className="text-red-600" />
-              Online & Live
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeliveryFilter('offline')}
-              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-                deliveryFilter === 'offline'
-                  ? 'bg-white text-teal-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Building size={13} className="text-teal-700" />
-              Offline (Physical)
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeliveryFilter('recorded')}
-              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-                deliveryFilter === 'recorded'
-                  ? 'bg-white text-teal-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Layers size={13} className="text-blue-700" />
-              Sequential Modules
-            </button>
-          </div>
-        </div>
-
-        {/* 4A. ONLINE & LIVE SESSIONS */}
-        {(deliveryFilter === 'all' || deliveryFilter === 'live') && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 pt-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
-              <h3 className="text-sm sm:text-base font-bold text-slate-800">
-                Online & Live Sessions
-              </h3>
-            </div>
-
-            {liveClasses.length === 0 ? (
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 text-center">
-                <p className="text-xs sm:text-sm text-slate-500">
-                  No live sessions currently scheduled. New session links appear 15 minutes before class start.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {liveClasses.map((session) => {
-                  const scheduledTime = new Date(session.scheduledAt);
-                  const isPast = scheduledTime.getTime() < Date.now();
-                  const hasRecording = Boolean(session.recordingYoutubeId || session.recordingUrl);
-                  const recordingUrl = session.recordingUrl || (session.recordingYoutubeId ? `https://www.youtube.com/watch?v=${session.recordingYoutubeId}` : '');
-                  const joinUrl = session.liveJoinUrl || session.meetingUrl || session.meetLink || '';
-
-                  return (
-                    <div
-                      key={session._id}
-                      className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-teal-600/30 transition"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-600/20 uppercase tracking-wide">
-                            <Video size={11} /> Live Session
-                          </span>
-                          <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
-                            <Clock size={12} />
-                            {session.durationMinutes || 60} mins
-                          </span>
-                        </div>
-
-                        <h4 className="text-sm sm:text-base font-bold text-slate-900">
-                          {session.topic || session.title || 'Scheduled Class Session'}
-                        </h4>
-
-                        <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-2">
-                          <Calendar size={13} className="text-teal-700 shrink-0" />
-                          <span>
-                            {scheduledTime.toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}{' '}
-                            · {scheduledTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-
-                        {session.description && (
-                          <p className="text-xs text-slate-600 mt-2 line-clamp-2">
-                            {session.description}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Dynamic Action: View Recording if uploaded/past, or Join Class if upcoming/live */}
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                        {hasRecording ? (
-                          <button
-                            type="button"
-                            onClick={() => setActiveRecordingUrl(recordingUrl)}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-700 text-white hover:bg-emerald-800 transition shadow-xs"
-                          >
-                            <Play size={14} className="fill-white" />
-                            View Recording
-                          </button>
-                        ) : joinUrl ? (
-                          <a
-                            href={joinUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-teal-800 text-white hover:bg-teal-700 transition shadow-xs"
-                          >
-                            <Video size={14} />
-                            Join Class
-                            <ExternalLink size={12} />
-                          </a>
-                        ) : (
-                          <span className="text-xs font-medium text-slate-500">
-                            Class link opens 15m before start
-                          </span>
-                        )}
-                        <span className="text-[11px] text-slate-400 capitalize">
-                          Status: {session.status || (isPast ? 'completed' : 'scheduled')}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 4B. OFFLINE (PHYSICAL) SESSIONS */}
-        {(deliveryFilter === 'all' || deliveryFilter === 'offline') && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 pt-2">
-              <Building size={16} className="text-teal-800" />
-              <h3 className="text-sm sm:text-base font-bold text-slate-800">
-                Offline (Physical) Sessions & Labs
-              </h3>
-            </div>
-
-            {offlineClasses.length === 0 ? (
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 text-center">
-                <p className="text-xs sm:text-sm text-slate-500">
-                  No offline physical classroom sessions currently scheduled for your courses.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {offlineClasses.map((session) => {
-                  const scheduledTime = new Date(session.scheduledAt);
-                  return (
-                    <div
-                      key={session._id}
-                      className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-teal-600/30 transition"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-600/20 uppercase tracking-wide">
-                            <Building size={11} /> Physical Lab / Hall
-                          </span>
-                          <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
-                            <Clock size={12} />
-                            {session.durationMinutes || 90} mins
-                          </span>
-                        </div>
-
-                        <h4 className="text-sm sm:text-base font-bold text-slate-900">
-                          {session.topic || session.title || 'In-Person Workshop'}
-                        </h4>
-
-                        <div className="flex items-center gap-1.5 text-xs text-slate-700 font-semibold mt-2">
-                          <MapPin size={13} className="text-amber-700 shrink-0" />
-                          <span>Venue: {session.venue || 'Hall B, Aeronautical Labs, ASPIER Complex'}</span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-1.5">
-                          <Calendar size={13} className="text-teal-700 shrink-0" />
-                          <span>
-                            {scheduledTime.toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}{' '}
-                            · {scheduledTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-
-                        {session.description && (
-                          <p className="text-xs text-slate-600 mt-2 line-clamp-2">
-                            {session.description}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                        <span className="inline-flex items-center gap-1 text-[11px] text-teal-900 font-medium">
-                          <CheckCircle2 size={12} className="text-teal-700" />
-                          Physical Attendance Verified on Campus
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 4C. ONLINE & RECORDED SEQUENTIAL MODULE DELIVERY */}
-        {(deliveryFilter === 'all' || deliveryFilter === 'recorded') && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 pt-2">
-              <Layers size={16} className="text-blue-800" />
-              <h3 className="text-sm sm:text-base font-bold text-slate-800">
-                Online & Recorded Modules (Sequential Delivery)
-              </h3>
-            </div>
-
-            {enrollments.length === 0 ? (
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 text-center">
-                <p className="text-xs sm:text-sm text-slate-500">
-                  No courses enrolled to view sequential modules.
-                </p>
-              </div>
-            ) : (
-              enrollments.map((enr) => {
-                const course = enr.courseId;
-                if (!course || !course.modules || course.modules.length === 0) return null;
-                const completedSet = new Set(enr.completedLessonIds || []);
-
-                return (
-                  <div
-                    key={enr._id}
-                    className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-4"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
-                          Course Curriculum
-                        </span>
-                        <h4 className="text-base sm:text-lg font-bold text-slate-900">
-                          {course.title}
-                        </h4>
-                      </div>
-                      <Link
-                        to={`/academy/courses/${course.slug || course._id}`}
-                        className="text-xs font-semibold text-teal-800 hover:text-teal-900 flex items-center gap-1"
-                      >
-                        Explore Syllabus Overview <ExternalLink size={12} />
-                      </Link>
-                    </div>
-
-                    {/* Sequential Modules */}
-                    <div className="space-y-4">
-                      {course.modules.map((mod, modIdx) => {
-                        const lessons = mod.lessons || [];
-                        return (
-                          <div
-                            key={mod._id || modIdx}
-                            className="p-4 rounded-xl bg-slate-50 border border-slate-200/70 space-y-3"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="w-6 h-6 rounded-md bg-teal-800 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
-                                  {mod.moduleNumber || modIdx + 1}
-                                </span>
-                                <h5 className="text-xs sm:text-sm font-bold text-slate-900">
-                                  {mod.title || `Module ${modIdx + 1}`}
-                                </h5>
-                              </div>
-                              <span className="text-[11px] font-medium text-slate-500">
-                                {lessons.length} {lessons.length === 1 ? 'lesson' : 'lessons'}
-                              </span>
-                            </div>
-
-                            {mod.description && (
-                              <p className="text-xs text-slate-600">
-                                {mod.description}
-                              </p>
-                            )}
-
-                            {/* Sequential Lesson Items */}
-                            <div className="space-y-2 mt-2">
-                              {lessons.map((lesson, lessonIdx) => {
-                                const isCompleted = completedSet.has(lesson._id);
-                                const serial = `${mod.moduleNumber || modIdx + 1}.${lesson.order || lessonIdx + 1}`;
-                                const learnUrl = `/academy/courses/${course.slug || course._id}/learn/${lesson._id}`;
-
-                                return (
-                                  <div
-                                    key={lesson._id || lessonIdx}
-                                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2.5 rounded-lg bg-white border border-slate-200 text-xs hover:border-teal-600/40 transition"
-                                  >
-                                    <div className="flex items-center gap-2.5">
-                                      <span className="font-mono text-[11px] font-semibold text-teal-900 w-8 shrink-0">
-                                        #{serial}
-                                      </span>
-                                      <span className="font-semibold text-slate-800">
-                                        {lesson.title}
-                                      </span>
-                                      {lesson.duration && (
-                                        <span className="text-[11px] text-slate-400 font-medium">
-                                          ({lesson.duration})
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    <div className="flex items-center gap-2 sm:ml-auto">
-                                      {isCompleted ? (
-                                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-600/20">
-                                          <Check size={11} /> Completed
-                                        </span>
-                                      ) : (
-                                        <span className="text-[11px] text-slate-400">
-                                          Pending
-                                        </span>
-                                      )}
-
-                                      <Link
-                                        to={learnUrl}
-                                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold bg-teal-800 text-white hover:bg-teal-700 transition shrink-0"
-                                      >
-                                        <Play size={11} className="fill-white" />
-                                        Watch Class
-                                      </Link>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })
-            )}
           </div>
         )}
       </section>

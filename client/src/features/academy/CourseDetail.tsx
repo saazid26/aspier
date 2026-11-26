@@ -33,7 +33,22 @@ export function CourseDetail() {
     queryFn: async () => (await api.get(`/academy/courses/${id}`)).data.data,
     initialData: fallback
   });
+  const { data: myEnrollments = [] } = useQuery({
+    queryKey: ['my-enrollments-detail', me?._id],
+    queryFn: async () => (await api.get('/academy/my-enrollments')).data.data as any[],
+    enabled: Boolean(me)
+  });
   const data = remoteData || fallback;
+
+  const matchedEnrollment = myEnrollments.find(
+    (e: any) => String(e?.courseId?._id || e?.courseId || '') === String(data?._id || '') ||
+      (e?.courseId?.slug && e.courseId.slug === data?.slug)
+  );
+  const effectiveEnrollmentStatus: string = matchedEnrollment?.status || data?.enrollmentStatus || '';
+  const isEnrolledApproved = ['active', 'approved', 'final_approved', 'completed'].includes(effectiveEnrollmentStatus);
+  const isEnrolledPending = effectiveEnrollmentStatus === 'pending';
+  const isAlreadyEnrolled = isEnrolledApproved || isEnrolledPending;
+  const classroomUrl = data?.googleClassroomUrl || matchedEnrollment?.courseId?.googleClassroomUrl || '';
 
   // Determine classes list
   const courseClasses: CourseClassItem[] =
@@ -152,31 +167,76 @@ export function CourseDetail() {
         )}
       </dl>
 
-      {/* Course Enroll & Pricing Bar */}
-      <div className="course-enroll-bar" style={{ borderRadius: 12, padding: '1.25rem 1.5rem', background: 'var(--surface-muted, #f8fafc)', border: '1px solid var(--border, #e2e8f0)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <div style={{ fontSize: '0.825rem', color: 'var(--text-muted, #64748b)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Course Enrollment Fee
+      {/* Course Enroll & Pricing Bar (Hidden once enrolled) */}
+      {isAlreadyEnrolled ? (
+        isEnrolledApproved ? (
+          <div className="mt-5 p-5 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-800">
+                <CheckCircle2 size={15} /> Enrolled
+              </div>
+              <p className="m-0 text-sm text-emerald-950 font-medium leading-relaxed">
+                <strong>Enrollment Confirmed!</strong> Private YouTube class access will be delivered to your registered email within 6 to 12 hours.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              {classroomUrl && (
+                <a
+                  href={classroomUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="button button-primary inline-flex items-center gap-2"
+                >
+                  <ExternalLink size={15} />
+                  Join Google Classroom
+                </a>
+              )}
+              <Link className="button button-secondary" to="/academy/student">
+                Go to Student Portal
+              </Link>
+            </div>
           </div>
-          <strong style={{ fontSize: '1.75rem', color: '#0f766e', lineHeight: 1.2 }}>
-            {formattedPrice}
-          </strong>
-          <span style={{ fontSize: '0.85rem', color: '#64748b', marginLeft: 8 }}>
-            (Full Lifetime Access to Classes 0–14)
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <Link className="button button-primary" to={`/academy/courses/${id}/payment`} style={{ fontSize: '1rem', padding: '10px 22px', fontWeight: 600 }}>
-            Enroll & Pay Now ({formattedPrice})
-          </Link>
-          {!me && (
-            <span className="muted" style={{ fontSize: '0.88rem' }}>
-              New learner? <Link to={`/academy/register?redirect=${encodeURIComponent(`/academy/courses/${id}/payment`)}`} style={{ textDecoration: 'underline', fontWeight: 600, color: '#0f766e' }}>Create account</Link>
+        ) : (
+          <div className="mt-5 p-5 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-800">
+                <Clock size={15} /> Enrollment Under Review (Payment Submitted)
+              </div>
+              <p className="m-0 text-sm text-amber-950 leading-relaxed">
+                Your payment has been submitted for verification. Google Classroom access unlocks after final payment verification.
+              </p>
+            </div>
+            <Link className="button button-secondary shrink-0" to="/academy/student">
+              Go to Student Portal
+            </Link>
+          </div>
+        )
+      ) : (
+        <div className="course-enroll-bar" style={{ borderRadius: 12, padding: '1.25rem 1.5rem', background: 'var(--surface-muted, #f8fafc)', border: '1px solid var(--border, #e2e8f0)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+          <div>
+            <div style={{ fontSize: '0.825rem', color: 'var(--text-muted, #64748b)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Course Enrollment Fee
+            </div>
+            <strong style={{ fontSize: '1.75rem', color: '#0f766e', lineHeight: 1.2 }}>
+              {formattedPrice}
+            </strong>
+            <span style={{ fontSize: '0.85rem', color: '#64748b', marginLeft: 8 }}>
+              (Full Lifetime Access to Classes 0–14)
             </span>
-          )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <Link className="button button-primary" to={`/academy/courses/${id}/payment`} style={{ fontSize: '1rem', padding: '10px 22px', fontWeight: 600 }}>
+              Enroll &amp; Pay Now ({formattedPrice})
+            </Link>
+            {!me && (
+              <span className="muted" style={{ fontSize: '0.88rem' }}>
+                New learner? <Link to={`/academy/register?redirect=${encodeURIComponent(`/academy/courses/${id}/payment`)}`} style={{ textDecoration: 'underline', fontWeight: 600, color: '#0f766e' }}>Create account</Link>
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {data.enrollmentContact && <RichTextContent className="muted" content={data.enrollmentContact} />}
 
@@ -669,38 +729,40 @@ export function CourseDetail() {
         );
       })()}
 
-      {/* Bottom Sticky/Floating Enroll Bar */}
-      <section
-        className="mt-10 mb-8 rounded-2xl bg-[#0f766e] text-white p-4 sm:px-6 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md"
-      >
-        <div className="text-center sm:text-left">
-          <h3 className="m-0 text-lg sm:text-xl font-bold text-white leading-snug">
-            Ready to Master Scientific Research Paper Writing?
-          </h3>
-          <p className="mt-1 mb-0 text-xs sm:text-sm text-[#ccfbf1] leading-relaxed">
-            Get full access to all 15 classes, practical datasets, LaTeX templates, and direct mentorship.
-          </p>
-        </div>
+      {/* Bottom Sticky/Floating Enroll Bar (Hidden once enrolled) */}
+      {!isAlreadyEnrolled && (
+        <section
+          className="mt-10 mb-8 rounded-2xl bg-[#0f766e] text-white p-4 sm:px-6 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md"
+        >
+          <div className="text-center sm:text-left">
+            <h3 className="m-0 text-lg sm:text-xl font-bold text-white leading-snug">
+              Ready to Master Scientific Research Paper Writing?
+            </h3>
+            <p className="mt-1 mb-0 text-xs sm:text-sm text-[#ccfbf1] leading-relaxed">
+              Get full access to all 15 classes, practical datasets, LaTeX templates, and direct mentorship.
+            </p>
+          </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 shrink-0 w-full sm:w-auto">
-          <strong className="text-xl sm:text-2xl text-white whitespace-nowrap">{formattedPrice}</strong>
-          <Link
-            to={`/academy/courses/${id}/payment`}
-            className="button w-full sm:w-auto text-center"
-            style={{
-              background: '#ffffff',
-              color: '#0f766e',
-              fontWeight: 700,
-              fontSize: '1rem',
-              padding: '10px 24px',
-              border: 0,
-              borderRadius: 8
-            }}
-          >
-            Enroll Now
-          </Link>
-        </div>
-      </section>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 shrink-0 w-full sm:w-auto">
+            <strong className="text-xl sm:text-2xl text-white whitespace-nowrap">{formattedPrice}</strong>
+            <Link
+              to={`/academy/courses/${id}/payment`}
+              className="button w-full sm:w-auto text-center"
+              style={{
+                background: '#ffffff',
+                color: '#0f766e',
+                fontWeight: 700,
+                fontSize: '1rem',
+                padding: '10px 24px',
+                border: 0,
+                borderRadius: 8
+              }}
+            >
+              Enroll Now
+            </Link>
+          </div>
+        </section>
+      )}
     </main>
   );
 }
