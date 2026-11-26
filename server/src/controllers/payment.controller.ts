@@ -11,6 +11,9 @@ import { sendEmail } from '../services/email.service.js';
 import { env } from '../config/env.js';
 export async function submitPayment(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    if (['admin', 'superadmin'].includes(req.user?.role)) {
+      throw new HttpError(403, 'Administrator accounts cannot submit student enrollments. Switch to a Student account to enroll.');
+    }
     const { courseId, method, senderNumber, trxId, amount } = req.body;
     const course = /^[0-9a-f]{24}$/i.test(String(courseId))
       ? await Course.findById(courseId)
@@ -61,13 +64,44 @@ export async function paymentQueue(req: AuthRequest, res: Response) {
     const limit = Math.min(100, Number(req.query.limit) || 20);
     const filter: any = req.query.status ? { status: req.query.status } : {};
     const [items, total] = await Promise.all([
-      Payment.find(filter).populate('userId', 'name email').populate('courseId', 'title price').sort({ submittedAt: -1 }).skip((page - 1) * limit).limit(limit),
+      Payment.find(filter).populate('userId', 'name email role').populate('courseId', 'title price').sort({ submittedAt: -1 }).skip((page - 1) * limit).limit(limit),
       Payment.countDocuments(filter)
     ]);
-    res.json({ success: true, data: items || [], pagination: { page, limit, total: total || 0, pages: Math.ceil((total || 0) / limit) } });
+    const sanitized = (items || []).map((item: any) => {
+      const obj = typeof item.toObject === 'function' ? item.toObject() : item;
+      const u = obj.userId;
+      const isAdminUser = u && (['admin', 'superadmin'].includes(u.role) || u.email === 'admin@gmail.com' || u.name === 'ASPIER Administrator');
+      return {
+        ...obj,
+        studentName: !isAdminUser ? (u?.name || '') : '',
+        studentEmail: !isAdminUser ? (u?.email || '') : ''
+      };
+    });
+    res.json({ success: true, data: sanitized, pagination: { page, limit, total: total || 0, pages: Math.ceil((total || 0) / limit) } });
   } catch {
     res.json({ success: true, data: [], pagination: { page: 1, limit: 20, total: 0, pages: 0 } });
   }
+}
+
+export async function deletePayment(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const payment = await Payment.findById(req.params.id);
+    if (!payment) throw new HttpError(404, 'Payment record not found');
+
+    // Clean up any linked pending/rejected enrollment (or explicit enrollmentId when requested)
+    if (req.query.deleteEnrollment === 'true' && payment.enrollmentId) {
+      await Enrollment.findByIdAndDelete(payment.enrollmentId);
+    } else if (payment.userId && payment.courseId) {
+      await Enrollment.deleteMany({
+        userId: payment.userId,
+        courseId: payment.courseId,
+        status: { $in: ['pending', 'rejected'] }
+      });
+    }
+
+    await Payment.findByIdAndDelete(payment._id);
+    res.json({ success: true, message: 'Payment record permanently deleted' });
+  } catch (error) { next(error); }
 }
 export async function approvePayment(req: AuthRequest, res: Response, next: NextFunction) {
   try {

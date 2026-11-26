@@ -12,6 +12,9 @@ router.use(authenticate, noStore);
 // POST /api/enrollments - Enroll authenticated student in a course
 router.post('/', async (req: any, res, next) => {
   try {
+    if (['admin', 'superadmin'].includes(req.user?.role)) {
+      throw new HttpError(403, 'Administrator accounts cannot enroll as students. Switch to a Student account to enroll.');
+    }
     const { courseId } = req.body;
     if (!courseId) throw new HttpError(400, 'Course ID or slug is required');
 

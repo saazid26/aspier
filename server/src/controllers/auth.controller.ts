@@ -783,18 +783,26 @@ export async function updateProfile(req: AuthRequest, res: Response, next: NextF
 
 export async function uploadAvatar(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    if (!req.file) throw new HttpError(400, 'Profile image file is required');
-    const media = await saveMedia(req.file, String(req.user._id));
+    let url = '';
+    if (req.file) {
+      const media = await saveMedia(req.file, String(req.user._id));
+      url = media.url;
+    } else if (typeof req.body?.dataUrl === 'string' && req.body.dataUrl.startsWith('data:image/')) {
+      url = req.body.dataUrl;
+    } else {
+      throw new HttpError(400, 'Profile image file is required');
+    }
+
     const user = await User.findById(req.user._id);
     if (user) {
-      user.avatar = media.url;
-      user.avatarUrl = media.url;
+      user.avatar = url;
+      user.avatarUrl = url;
       await user.save();
 
       void recordAudit({
         actor: user,
         action: 'upload_avatar',
-        description: `Profile photo uploaded: ${media.url}`,
+        description: `Profile photo uploaded: ${url.slice(0, 120)}`,
         resource: 'User',
         status: 'success',
         req
@@ -803,7 +811,7 @@ export async function uploadAvatar(req: AuthRequest, res: Response, next: NextFu
     res.status(201).json({
       success: true,
       message: 'Profile photo uploaded successfully',
-      data: { url: media.url, avatarUrl: media.url }
+      data: { url, avatarUrl: url }
     });
   } catch (error) {
     next(error);

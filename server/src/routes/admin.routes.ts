@@ -29,7 +29,7 @@ import { migrateAllImagesToCloudinary } from '../services/migration.service.js';
 import { getSettings, updateSettings } from '../controllers/settings.controller.js';
 import { upsertClass, deleteClass } from '../controllers/class.controller.js';
 import ClassModel from '../models/Class.js';
-import { paymentQueue } from '../controllers/payment.controller.js';
+import { paymentQueue, deletePayment } from '../controllers/payment.controller.js';
 import { adminMembershipApplications, approveApplicantSignup, approveInitialApplication, deleteMembershipApplication, publishMembershipApplication } from '../controllers/membership.controller.js';
 import { approveAndSendOnboarding } from '../controllers/onboarding.controller.js';
 import { listAdminNotifications, markAdminNotificationRead, markAllAdminNotificationsRead } from '../controllers/notification.controller.js';
@@ -916,6 +916,7 @@ const mountCrud = (path: string, model: any) => {
 mountCrud('news', News); mountCrud('courses', Course); mountCrud('users', User); mountCrud('messages', Message); mountCrud('inquiries', Message); mountCrud('instructors', Instructor);
 
 router.get('/payments', paymentQueue);
+router.delete('/payments/:id', audit('delete', 'Payment'), deletePayment);
 router.get('/membership-applications', adminMembershipApplications);
 router.post('/membership-applications/:id/approve-onboarding', approveAndSendOnboarding);
 router.post('/membership-applications/:id/approve-signup', approveApplicantSignup);
@@ -1097,7 +1098,7 @@ router.get('/enrollments', async (_req, res) => {
     }
     const [enrollments, allStudents] = await Promise.all([
       Enrollment.find()
-        .populate('userId', 'name email phone university department isActive createdAt')
+        .populate('userId', 'name email role phone university department isActive createdAt')
         .populate('courseId', 'title slug price thumbnail bannerUrl modules')
         .sort({ createdAt: -1 }),
       User.find({ role: 'student' }).sort({ createdAt: -1 })
@@ -1115,7 +1116,13 @@ router.get('/enrollments', async (_req, res) => {
       if (p.trxId) paymentMap.set(p.trxId, p);
     });
 
-    const enrollmentRows = enrollments.map((enr: any) => {
+    const enrollmentRows = enrollments
+      .filter((enr: any) => {
+        const u = enr.userId;
+        if (!u) return true;
+        return !['admin', 'superadmin'].includes(u.role) && u.email !== 'admin@gmail.com' && u.name !== 'ASPIER Administrator';
+      })
+      .map((enr: any) => {
       const user = enr.userId || {};
       const course = enr.courseId || {};
       const payment = paymentMap.get(`${user._id}_${course._id}`);

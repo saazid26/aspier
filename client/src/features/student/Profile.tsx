@@ -46,6 +46,7 @@ export function Profile() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState('');
   const [saveError, setSaveError] = useState('');
+  const hydratedUserIdRef = useRef<string>('');
 
   // Pre-fill inputs strictly with logged-in student's real saved data (never admin defaults)
   useEffect(() => {
@@ -70,19 +71,26 @@ export function Profile() {
         setPreviewAvatar('');
         return;
       }
-      setFormData({
-        name: me.name || me.fullName || '',
-        email: me.email || '',
-        phone: me.phone || '',
-        university: me.university || me.institution || '',
-        department: me.department || '',
-        academicLevel: me.academicLevel || me.session || '',
-        studentId: me.studentId || me.rollNumber || '',
-        city: me.city || '',
-        bio: me.bio || '',
-        avatarUrl: me.avatarUrl || me.avatar || ''
-      });
-      setPreviewAvatar(me.avatarUrl || me.avatar || '');
+      const incomingAvatar = me.avatarUrl || me.avatar || '';
+      if (hydratedUserIdRef.current !== me._id) {
+        hydratedUserIdRef.current = me._id;
+        setFormData({
+          name: me.name || me.fullName || '',
+          email: me.email || '',
+          phone: me.phone || '',
+          university: me.university || me.institution || '',
+          department: me.department || '',
+          academicLevel: me.academicLevel || me.session || '',
+          studentId: me.studentId || me.rollNumber || '',
+          city: me.city || '',
+          bio: me.bio || '',
+          avatarUrl: incomingAvatar
+        });
+        setPreviewAvatar(incomingAvatar);
+      } else if (incomingAvatar && !formData.avatarUrl) {
+        setFormData((prev) => ({ ...prev, avatarUrl: incomingAvatar }));
+        setPreviewAvatar(incomingAvatar);
+      }
     }
   }, [me]);
 
@@ -218,11 +226,15 @@ export function Profile() {
                 setFormData((prev) => ({ ...prev, avatarUrl: url }));
                 setPreviewAvatar(url);
                 updateMe({ avatar: url, avatarUrl: url });
+                if (url && (url.startsWith('http') || url.startsWith('data:image/'))) {
+                  void api.patch('/auth/profile', { avatar: url, avatarUrl: url }).catch(() => {});
+                }
               }}
               onRemove={() => {
                 setFormData((prev) => ({ ...prev, avatarUrl: '' }));
                 setPreviewAvatar('');
                 updateMe({ avatar: '', avatarUrl: '' });
+                void api.patch('/auth/profile', { avatar: '', avatarUrl: '' }).catch(() => {});
               }}
               endpoint="/auth/profile/avatar"
               shape="circle"

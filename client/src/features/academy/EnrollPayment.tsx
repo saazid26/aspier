@@ -55,18 +55,21 @@ export function EnrollPayment() {
 
   const returnUrl = `/academy/courses/${id}/payment`;
 
-  if (!me) {
+  if (!me || ['admin', 'superadmin'].includes(me.role) || me.email === 'admin@gmail.com') {
+    const isAdminAccount = Boolean(me);
     return (
       <main className="container section" style={{ maxWidth: 680 }}>
         <h1>Enroll in {course?.title || 'Course'}</h1>
         <div className="card" style={{ marginTop: 20, textAlign: 'center', padding: '32px 20px' }}>
-          <h2>Sign in required</h2>
+          <h2>{isAdminAccount ? 'Student account required' : 'Sign in required'}</h2>
           <p className="muted" style={{ maxWidth: 460, margin: '12px auto 24px' }}>
-            You need a student account to enroll in courses, submit payments, and access learning materials.
+            {isAdminAccount
+              ? 'You are currently signed in as an Administrator. Please switch to a Student account to enroll in courses and submit payments.'
+              : 'You need a student account to enroll in courses, submit payments, and access learning materials.'}
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link className="button button-primary" to={`/academy/login?redirect=${encodeURIComponent(returnUrl)}`}>
-              Sign In
+              {isAdminAccount ? 'Sign In as Student' : 'Sign In'}
             </Link>
             <Link className="button button-secondary" to={`/academy/register?redirect=${encodeURIComponent(returnUrl)}`}>
               Create Student Account
