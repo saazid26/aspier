@@ -111,7 +111,7 @@ function Home(){
     queryKey: ['public-settings'],
     queryFn: async () => (await api.get('/public/settings')).data.data
   });
-  const homeTitle = 'Research Paper Writing Courses, AI Productivity Training & Research Mentorship in Bangladesh | ASPIER';
+  const homeTitle = 'ASPIER | Home';
   const homeDescription =
     'Build a strong research profile for higher studies abroad: learn how to write and publish a research paper in Scopus journals, master AI productivity tools, and collaborate with PhD research supervisors in Bangladesh.';
   usePageSEO({

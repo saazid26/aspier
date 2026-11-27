@@ -37,7 +37,7 @@ export type SeoHeadProps = {
   googleSiteVerification?: string;
 };
 
-const DEFAULT_TITLE = 'Research Paper Writing Courses, AI Productivity Training & Research Mentorship in Bangladesh | ASPIER';
+const DEFAULT_TITLE = 'ASPIER | Home';
 const DEFAULT_DESCRIPTION =
   'Build a strong research profile for higher studies abroad: learn how to write and publish a research paper in Scopus journals, master AI productivity tools, and collaborate with PhD research supervisors in Bangladesh.';
 const DEFAULT_KEYWORDS =
